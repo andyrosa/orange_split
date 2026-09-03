@@ -59,9 +59,8 @@ const TOY_PASS2 = new Map(TOY_PASS1);
 TOY_PASS2.delete('12|2');
 TOY_PASS2.set('7|2', 'B');
 
-const TOY_EXPECTED_ORDER = [3, 4, 2, 1, 5, 6];
-const TOY_EXPECTED_SCORE_X1 = (2 / 3) * Math.log(4);
-const TOY_EXPECTED_SCORE_EVEN_PAIR = Math.log(3);
+// Order by agreed comments, then commenters, then axis id: axes 1 and 5 have 3 comments by 3 commenters each.
+const TOY_EXPECTED_ORDER = [1, 5, 2, 3, 4, 6];
 
 // ---------------------------------------------------------------------------
 // Stage 0: thread parsing
@@ -193,11 +192,14 @@ test('buildExtractMessages omits author names and allows verdict axes', () => {
     assert.ok(!/sentiments/i.test(messages[0].content), 'system prompt no longer excludes sentiments wholesale');
 });
 
-test('buildConsolidateMessages allows verdict axes and lists candidates as statement pairs with counts', () => {
-    const messages = core.buildConsolidateMessages('Ember', [{ statementA: 'p', statementB: 'q', commentsA: [1], commentsB: [] }], 40, 60);
+test('buildConsolidateMessages states the merge test instead of a count, allows verdict axes, lists candidates with counts', () => {
+    const messages = core.buildConsolidateMessages('Ember', [{ statementA: 'p', statementB: 'q', commentsA: [1], commentsB: [] }]);
+    assert.ok(/same disagreement/i.test(messages[0].content));
+    assert.ok(!/between \d+ and \d+/i.test(messages[0].content));
     assert.ok(/verdict/i.test(messages[0].content));
     assert.ok(!/sentiments/i.test(messages[0].content));
     assert.ok(messages[1].content.includes('[nA=1, nB=0] A: p | B: q'));
+    assert.equal(core.DEFAULT_CONFIG.axesMin, undefined);
 });
 
 test('buildScoreMessages truncates the parent snippet', () => {
@@ -333,15 +335,13 @@ test('parseScoreResponse keeps the first stance for a duplicated pair', () => {
 // Aggregation
 // ---------------------------------------------------------------------------
 
-test('mergePasses keeps agreed stances and counts reliability per axis', () => {
-    const merged = core.mergePasses(TOY_PASS1, TOY_PASS2);
-    assert.equal(merged.agreed.get('5|2'), 'A');
-    assert.equal(merged.agreed.get('6|2'), 'B');
-    assert.equal(merged.agreed.has('7|2'), false);
-    assert.equal(merged.agreed.has('12|2'), false);
-    assert.deepEqual(merged.reliability.get(2), { agreed: 2, total: 4 });
-    assert.deepEqual(merged.reliability.get(1), { agreed: 3, total: 3 });
-    assert.deepEqual(merged.reliability.get(5), { agreed: 3, total: 3 });
+test('mergePasses keeps only the stances both passes agree on', () => {
+    const agreed = core.mergePasses(TOY_PASS1, TOY_PASS2);
+    assert.equal(agreed.get('5|2'), 'A');
+    assert.equal(agreed.get('6|2'), 'B');
+    assert.equal(agreed.has('7|2'), false);
+    assert.equal(agreed.has('12|2'), false);
+    assert.equal(agreed.size, 13);
 });
 
 test('aggregateByAuthor takes the majority stance per author and M on ties', () => {
@@ -360,60 +360,39 @@ test('aggregateByAuthor takes the majority stance per author and M on ties', () 
 function toyRows() {
     const thread = core.flattenThread(TOY_THREAD);
     const commentsById = new Map(thread.comments.map(comment => [comment.id, comment]));
-    const merged = core.mergePasses(TOY_PASS1, TOY_PASS2);
-    const byAuthor = core.aggregateByAuthor(merged.agreed, commentsById);
-    return core.computeRows(TOY_AXES, byAuthor, merged.agreed, merged.reliability);
+    const agreed = core.mergePasses(TOY_PASS1, TOY_PASS2);
+    const byAuthor = core.aggregateByAuthor(agreed, commentsById);
+    return core.computeRows(TOY_AXES, byAuthor, agreed);
 }
 
-test('computeRows produces counts, balance, reliability and score for the toy thread', () => {
+test('computeRows produces per-commenter counts and the comment count for the toy thread', () => {
     const rows = toyRows();
     const byId = new Map(rows.map(row => [row.axisId, row]));
     const portions = byId.get(1);
-    assert.equal(portions.statementA, 'Portions are adequate for the price');
-    assert.equal(portions.statementB, 'Portions are too small for the price');
-    assert.equal(portions.countA, 2);
-    assert.equal(portions.countB, 1);
-    assert.equal(portions.countM, 0);
-    assert.equal(portions.authors, 3);
-    assert.equal(portions.comments, 3);
-    assertClose(portions.balance, 2 / 3, 'balance X1');
-    assert.equal(portions.reliability, 1);
-    assertClose(portions.score, TOY_EXPECTED_SCORE_X1, 'score X1');
-
-    const tasting = byId.get(2);
-    assert.equal(tasting.reliability, 0.5);
-    assertClose(tasting.score, TOY_EXPECTED_SCORE_EVEN_PAIR, 'score X2');
-
+    assert.deepEqual(portions, {
+        axisId: 1,
+        statementA: 'Portions are adequate for the price',
+        statementB: 'Portions are too small for the price',
+        countA: 2,
+        countB: 1,
+        countM: 0,
+        authors: 3,
+        comments: 3,
+    });
     const service = byId.get(5);
     assert.equal(service.countA, 2);
     assert.equal(service.countM, 1);
-    assert.equal(service.balance, 0);
-    assert.equal(service.score, 0);
+    assert.equal(service.authors, 3);
+    assert.equal(service.comments, 3);
+    const opening = byId.get(6);
+    assert.equal(opening.countA, 1);
+    assert.equal(opening.comments, 1);
 });
 
-test('computeRows reports null reliability when no pass data exists for an axis', () => {
-    const byAuthor = new Map([[1, new Map([['p', 'A'], ['q', 'B']])]]);
-    const rows = core.computeRows([TOY_AXES[0]], byAuthor, new Map(), new Map());
-    assert.equal(rows[0].reliability, null);
-    assert.equal(rows[0].authors, 2);
-});
-
-test('computeRows adds a consensus score, zero below the minimum-authors threshold', () => {
-    const minAuthors = core.CONSTANTS.MIN_CONSENSUS_AUTHORS;
-    assert.ok(minAuthors >= 2 && minAuthors <= 10, 'fixture assumes a threshold between 2 and 10');
-    const lopsided = new Map();
-    for (let index = 0; index < 9; index += 1) lopsided.set('a' + index, 'A');
-    lopsided.set('b0', 'B');
-    const small = new Map();
-    for (let index = 0; index < minAuthors - 1; index += 1) small.set('s' + index, 'A');
-    const even = new Map();
-    for (let index = 0; index < 5; index += 1) { even.set('x' + index, 'A'); even.set('y' + index, 'B'); }
-    const byAuthor = new Map([[1, lopsided], [2, small], [3, even]]);
-    const axes = [TOY_AXES[0], TOY_AXES[1], TOY_AXES[2]];
-    const rows = core.computeRows(axes, byAuthor, new Map(), new Map());
-    assertClose(rows[0].consensus, 0.8 * Math.log(11), 'consensus 9 vs 1');
-    assert.equal(rows[1].consensus, 0, 'below threshold');
-    assert.equal(rows[2].consensus, 0, 'even split');
+test('computeRows counts an axis with no agreed stances as empty', () => {
+    const rows = core.computeRows([TOY_AXES[0]], new Map(), new Map());
+    assert.equal(rows[0].authors, 0);
+    assert.equal(rows[0].comments, 0);
 });
 
 test('barCells splits a fixed number of cells by largest remainder so they always sum exactly', () => {
@@ -428,42 +407,32 @@ test('splitBar draws < for side 1, - for middle, > for side 2', () => {
     assert.equal(core.splitBar({ countA: 0, countM: 0, countB: 0 }, 20), ' '.repeat(20));
 });
 
-test('attachSpreads sets half the gap between the two single-pass scores on each row', () => {
-    const agreedRows = [
-        { axisId: 1, score: 1.0, consensus: 0.5 },
-        { axisId: 2, score: 2.0, consensus: 0.0 },
+test('orientRows puts the larger side on statement 1, keeping ties as they are', () => {
+    const rows = [
+        { axisId: 1, statementA: 'p', statementB: 'q', countA: 2, countB: 5, countM: 1 },
+        { axisId: 2, statementA: 'r', statementB: 's', countA: 3, countB: 3, countM: 0 },
+        { axisId: 3, statementA: 't', statementB: 'u', countA: 4, countB: 0, countM: 0 },
     ];
-    const pass1Rows = [{ axisId: 1, score: 1.2, consensus: 0.5 }, { axisId: 2, score: 2.0, consensus: 0.4 }];
-    const pass2Rows = [{ axisId: 1, score: 0.8, consensus: 0.5 }, { axisId: 2, score: 2.0, consensus: 0.0 }];
-    const rows = core.attachSpreads(agreedRows, pass1Rows, pass2Rows);
-    assertClose(rows[0].scoreSpread, 0.2, 'score spread axis 1');
-    assert.equal(rows[0].consensusSpread, 0);
-    assert.equal(rows[1].scoreSpread, 0);
-    assertClose(rows[1].consensusSpread, 0.2, 'consensus spread axis 2');
-    assert.equal(agreedRows[0].scoreSpread, undefined, 'input rows are not mutated');
+    const oriented = core.orientRows(rows);
+    assert.deepEqual(oriented.map(row => [row.statementA, row.statementB, row.countA, row.countB]), [['q', 'p', 5, 2], ['r', 's', 3, 3], ['t', 'u', 4, 0]]);
+    assert.equal(rows[0].statementA, 'p');
 });
 
-test('runPipeline attaches two-pass spreads computed from each pass alone', async () => {
+test('runPipeline rows always have at least as many commenters on statement 1 as on statement 2', async () => {
     const thread = core.flattenThread(TOY_THREAD);
-    const result = await core.runPipeline({
-        thread,
-        callChat: makeFakeCallChat([]),
-        onProgress: () => {},
-        config: { extractBatchTokens: 200, scoreBatchComments: 5, concurrency: 2 },
-    });
-    const tasting = result.rows.find(row => row.axisId === 2);
-    // Pass 1 on axis 2: erin A, frank B, grace M, leo B -> 2*1/4*ln(5). Pass 2: erin A, frank B, grace B -> 2*1/3*ln(4).
-    const pass1Score = (2 * 1 / 4) * Math.log(5);
-    const pass2Score = (2 * 1 / 3) * Math.log(4);
-    assertClose(tasting.scoreSpread, Math.abs(pass1Score - pass2Score) / 2, 'axis 2 spread');
+    const result = await core.runPipeline({ thread, callChat: makeFakeCallChat([]), onProgress: () => {}, config: { extractBatchTokens: 200, scoreBatchComments: 5, concurrency: 2 } });
+    assert.ok(result.rows.every(row => row.countA >= row.countB));
     const portions = result.rows.find(row => row.axisId === 1);
-    assert.equal(portions.scoreSpread, 0, 'identical passes give no spread');
-    assert.equal(typeof tasting.consensusSpread, 'number');
+    assert.equal(portions.statementA, 'Portions are adequate for the price');
+    const parking = result.rows.find(row => row.axisId === 4);
+    assert.equal(parking.countA, parking.countB);
+    assert.equal(parking.statementA, 'Parking nearby is difficult');
 });
 
-test('rankRows sorts by score, then reliability, then authors, then axis id', () => {
+test('rankRows orders by agreed comments, then commenters, then axis id, and numbers the rows', () => {
     const ranked = core.rankRows(toyRows());
     assert.deepEqual(ranked.map(row => row.axisId), TOY_EXPECTED_ORDER);
+    assert.deepEqual(ranked.map(row => row.rank), [1, 2, 3, 4, 5, 6]);
     assert.deepEqual(ranked.map(row => row.rank), [1, 2, 3, 4, 5, 6]);
 });
 
@@ -655,8 +624,6 @@ test('runPipeline reproduces the toy ranking end to end with a fake model', asyn
         config: { extractBatchTokens: 200, scoreBatchComments: 5, concurrency: 2 },
     });
     assert.deepEqual(result.rows.map(row => row.axisId), TOY_EXPECTED_ORDER);
-    const tasting = result.rows.find(row => row.axisId === 2);
-    assert.equal(tasting.reliability, 0.5);
     assert.equal(result.axes.length, 6);
 
     const stages = log.map(call => call.stage);
@@ -688,6 +655,34 @@ function makeTruncatingFake(log, truncateWhen) {
         throw new core.TruncationError(`fake truncated ${call.stage}`, { promptTokens: 100, completionTokens: 32000, cost: 0.001 });
     });
 }
+
+test('formatRunCost and formatRunSummary describe a run in plain words', () => {
+    const result = { rows: [1, 2, 3, 4], cost: 0.0449, calls: 7, stats: { comments: 32, authors: 20, cachedCalls: 0, agreedStances: 10, classifiedPairs: 17 } };
+    assert.equal(core.formatRunCost(result), '$0.04, 7 model calls (0 cached)');
+    assert.deepEqual(core.formatRunSummary(result), [
+        '4 rows from 32 comments by 20 commenters.',
+        '10 of 17 classifications matched between the two scoring passes; only matching ones count.',
+    ]);
+});
+
+test('runPipeline counts the comment-row pairs classified by either pass', async () => {
+    const thread = core.flattenThread(TOY_THREAD);
+    const result = await core.runPipeline({ thread, callChat: makeFakeCallChat([]), onProgress: () => {}, config: { extractBatchTokens: 200, scoreBatchComments: 5, concurrency: 2 } });
+    assert.equal(result.stats.classifiedPairs, 15, 'pass 1 has 15 pairs, pass 2 a subset of them');
+    assert.equal(result.stats.agreedStances, 13);
+});
+
+test('runPipeline reports calls in flight, never more than the concurrency', async () => {
+    const progress = [];
+    const thread = core.flattenThread(TOY_THREAD);
+    await core.runPipeline({ thread, callChat: makeFakeCallChat([]), onProgress: update => progress.push(update), config: { extractBatchTokens: 200, scoreBatchComments: 5, concurrency: 2 } });
+    const inFlight = progress.map(update => update.inFlight);
+    assert.ok(inFlight.some(count => count > 0), 'some report shows a call in flight');
+    assert.ok(inFlight.every(count => count >= 0 && count <= 2), 'never more than the concurrency');
+    assert.equal(progress[progress.length - 1].inFlight, 0);
+    assert.equal(core.formatProgress({ stage: 'extract', done: 0, total: 38, inFlight: 30, calls: 40, cachedCalls: 0, cost: 0.2138 }),
+        'extract: 0/38 done, 30 in flight, 40 calls (0 from cache), $0.2138 spent');
+});
 
 test('runPipeline splits a scoring batch that truncates and still completes', async () => {
     const log = [];
@@ -856,12 +851,15 @@ test('parseFrontPage maps Algolia hits to id, title, comment count and date, ski
     assert.throws(() => core.parseFrontPage({ nope: [] }), /hits/);
 });
 
-test('storyLabel shows title, posting date and id; sortStoriesNewestFirst orders by date descending', () => {
+test('storyLabel shows title, comment count, posting date and id; sortStoriesNewestFirst orders by date descending', () => {
     const older = { id: 1, title: 'Older', numComments: 5, createdAt: '2026-08-30T10:00:00.000Z' };
     const newer = { id: 2, title: 'Newer', numComments: 7, createdAt: '2026-09-02T09:00:00.000Z' };
     const undated = { id: 3, title: 'Undated', numComments: 0, createdAt: null };
-    assert.equal(core.storyLabel(newer), 'Newer (2026-09-02, 2)');
-    assert.equal(core.storyLabel(undated), 'Undated (unknown date, 3)');
+    assert.equal(core.storyLabel(newer), 'Newer (7 comments, 2026-09-02, 2)');
+    assert.equal(core.storyDetails(newer), '(7 comments, 2026-09-02, 2)');
+    assert.equal(core.storyDate(newer), '2026-09-02');
+    assert.equal(core.storyDate(undated), 'unknown date');
+    assert.equal(core.storyLabel(undated), 'Undated (0 comments, unknown date, 3)');
     assert.deepEqual(core.sortStoriesNewestFirst([older, undated, newer]).map(story => story.id), [2, 1, 3]);
 });
 
@@ -1043,13 +1041,12 @@ test('probeCache stops reporting after the first stage with a miss', async () =>
     assert.deepEqual(probe.stages[1], { stage: 'consolidate', hits: 0, total: 1 });
 });
 
-test('formatCacheProbe describes complete, partial, and empty caches', () => {
+test('formatCacheProbe gives a clause for a full cache, a sentence for a partial one, nothing for an empty one', () => {
     assert.equal(core.formatCacheProbe({ stages: [{ stage: 'extract', hits: 2, total: 2 }, { stage: 'consolidate', hits: 1, total: 1 }, { stage: 'score', hits: 4, total: 4 }], complete: true }),
-        'All 7 model calls for this run are cached, so it costs nothing.');
+        'all 7 model calls are cached');
     assert.equal(core.formatCacheProbe({ stages: [{ stage: 'extract', hits: 2, total: 2 }, { stage: 'consolidate', hits: 1, total: 1 }, { stage: 'score', hits: 3, total: 4 }], complete: false }),
-        'Cached model calls for this run: 2 of 2 extraction, 1 of 1 consolidation, 3 of 4 scoring.');
+        'Cached: 2 of 2 extraction, 1 of 1 consolidation, 3 of 4 scoring calls, so it will cost and take less.');
     assert.equal(core.formatCacheProbe({ stages: [{ stage: 'extract', hits: 1, total: 2 }], complete: false }),
-        'Cached model calls for this run: 1 of 2 extraction; later stages depend on the missing results and cannot be checked yet.');
-    assert.equal(core.formatCacheProbe({ stages: [{ stage: 'extract', hits: 0, total: 2 }], complete: false }),
-        'No model calls for this run are cached.');
+        'Cached: 1 of 2 extraction calls, so it will cost and take less.');
+    assert.equal(core.formatCacheProbe({ stages: [{ stage: 'extract', hits: 0, total: 2 }], complete: false }), '');
 });

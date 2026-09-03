@@ -89,9 +89,9 @@ async function loadThreadItem(threadId, threadFile) {
     return item;
 }
 
-// Each axis prints as three lines: statement 1, statement 2, then the split bar and metrics.
+// Each axis prints as three lines: statement 1, statement 2, then the split bar and counts.
 function formatRow(row) {
-    const metrics = `mid ${row.countM}  authors ${row.authors}  comments ${row.comments}  polar ${core.formatWithSpread(row.score, row.scoreSpread)}  cons ${core.formatWithSpread(row.consensus, row.consensusSpread)}`;
+    const metrics = `mid ${row.countM}  authors ${row.authors}  comments ${row.comments}`;
     return [
         `#${String(row.rank).padStart(3)} ${row.statementA}`,
         `${STATEMENT_INDENT}${row.statementB}`,
@@ -107,7 +107,7 @@ function report(result, elapsedSeconds) {
     for (const line of core.formatRunSummary(result)) {
         console.log(line);
     }
-    console.log(`${result.warnings.length} warnings, ${core.formatDuration(elapsedSeconds)}`);
+    console.log(`${core.formatRunCost(result)}, ${result.warnings.length} warnings, ${core.formatDuration(elapsedSeconds)}`);
 }
 
 async function main() {

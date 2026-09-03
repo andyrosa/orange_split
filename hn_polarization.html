@@ -3,17 +3,26 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HN For and Against</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EHvN%3C/text%3E%3C/svg%3E">
+<title>HN Split</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EHN:s%3C/text%3E%3C/svg%3E">
 <style>
-body { font-family: system-ui, sans-serif; margin: 1rem; }
+body { font-family: system-ui, sans-serif; margin: 0.5rem 1rem; }
+h1 { font-size: 1.4rem; margin: 0 0 0.5rem; }
 label { display: inline-block; margin-right: 1rem; }
 input[type="text"], input[type="password"] { width: 22rem; }
-#thread-id { width: 32rem; }
-input[type="range"] { width: 16rem; vertical-align: middle; }
+#thread-id { width: 16rem; }
+.row { margin: 1em 0; }
+#thread-picker { position: relative; display: inline-block; vertical-align: middle; }
+#story-list { position: absolute; left: 0; top: 100%; z-index: 1; margin: 0; padding: 0; list-style: none; min-width: 100%; max-height: 24rem; overflow-y: auto; background: #fff; border: 1px solid #999; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2); }
+#story-list li { padding: 0.25rem 0.5rem; cursor: pointer; white-space: nowrap; }
+#story-list li.header { color: #666; font-size: 0.9em; cursor: default; background: #eee; }
+#story-list li.active { background: #cde; }
+#story-list li.cached { font-weight: bold; }
+input[type="range"] { width: 8rem; vertical-align: middle; }
 select { max-width: 40rem; }
+select.model { display: block; width: 100%; max-width: 70rem; margin-top: 0.25rem; }
 button { margin-right: 0.5rem; }
-#status { margin: 0.75rem 0; white-space: pre-wrap; }
+#status { margin: 0.5rem 0; white-space: pre-wrap; }
 #status.error { color: #b00020; }
 .hint { color: #666; font-size: 0.9em; }
 table { border-collapse: collapse; margin-top: 1rem; }
@@ -31,43 +40,43 @@ svg.split .side2 { fill: #c05621; }
 </style>
 </head>
 <body>
-<h1>HN For and Against</h1>
+<h1>HN Split</h1>
+<div class="row">
+<label for="thread-id">Thread</label>
+<div id="thread-picker">
+<input id="thread-id" type="text" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="story-list" placeholder="id, or search">
+<ul id="story-list" role="listbox" hidden></ul>
+</div>
+<button id="load-thread" type="button" hidden>Load thread</button>
+<span id="thread-title"></span>
+</div>
 <p>
-<label>Thread <input id="thread-id" type="text" list="story-options" autocomplete="off" placeholder="id, or pick from the front page, or type to search"></label>
-<datalist id="story-options"></datalist>
-<span id="suggestions-caption" class="hint">Loading the home page</span>
-<button id="load-thread" type="button">Load thread</button>
-</p>
-<p>
-<span id="thread-info"></span>
-<button id="refresh-thread" type="button" hidden>Refresh thread</button>
-</p>
-<p id="share-row" hidden>
-<label>Comments to analyze <input id="share" type="range" min="0" max="100" value="100"></label>
-<span id="share-text"></span>
-</p>
-<p>
-<label>Extraction and scoring model <select id="volume-model"></select></label>
-<label>Consolidation model <select id="consolidation-model"></select></label>
-</p>
-<p id="estimate"></p>
-<p id="cache-info"></p>
-<p>
-<span id="key-entry"><label>OpenRouter key <input id="api-key" type="password" autocomplete="off"></label> <button id="connect-openrouter" type="button" hidden>Sign in with OpenRouter instead</button></span>
 <button id="run" type="button" disabled>Run</button>
 <button id="cancel" type="button" hidden>Cancel</button>
+<span id="thread-info"></span>
+<button id="refresh-thread" type="button" hidden>Refetch</button>
+</p>
+<p>
+<label for="volume-model">Extraction and scoring model</label>
+<select id="volume-model" class="model"></select>
+</p>
+<p>
+<label for="consolidation-model">Consolidation model</label>
+<select id="consolidation-model" class="model"></select>
+</p>
+<p id="share-row" hidden>
+<label for="share">% of comments to analyze</label> <input id="share" type="range" min="0" max="100" value="100">
+<span id="estimate"></span>
+</p>
+<p id="key-entry">
+<label>OpenRouter key <input id="api-key" type="password" autocomplete="off"></label> <button id="connect-openrouter" type="button" hidden>Sign in with OpenRouter instead</button>
 </p>
 <p>
 <span id="storage-info"></span>
 <button id="delete-cached" type="button" hidden>Delete</button>
-</p>
-<p id="key-stored" hidden>
-OpenRouter key is stored in this browser
-<button id="wipe-key" type="button">Delete</button>
+<span id="key-stored" hidden>OpenRouter key <button id="wipe-key" type="button">Delete</button></span>
 </p>
 <div id="status"></div>
-<div id="elapsed"></div>
-<div id="summary"></div>
 <details id="warnings" hidden><summary></summary><ul></ul></details>
 <div id="results"></div>
 
@@ -90,7 +99,6 @@ const CONSTANTS = Object.freeze({
     TEMPERATURE: 0,
     MAX_ATTEMPTS: 4,
     RETRY_BASE_MS: 2000,
-    MIN_CONSENSUS_AUTHORS: 5,
     BAR_CELLS: 20,
     SAMPLE_SEED: 4242,
 });
@@ -110,7 +118,7 @@ const DEFAULT_CONSOLIDATION_KEY = 'sonnet5';
 
 const VOLUME_MODELS = Object.freeze({
     haiku: Object.freeze({
-        label: 'Claude Haiku 4.5: About $0.96 and 70 seconds per 1000 comments',
+        label: 'Claude Haiku 4.5: About $0.96 and 70 seconds per 1000 comments. Quality: about 0.5 confirmed stances per comment, clean output.',
         config: {
             modelExtract: 'anthropic/claude-haiku-4.5', modelScore: 'anthropic/claude-haiku-4.5',
             samplingExtract: { temperature: CONSTANTS.TEMPERATURE }, samplingScore: { temperature: CONSTANTS.TEMPERATURE },
@@ -121,7 +129,7 @@ const VOLUME_MODELS = Object.freeze({
         secondsPerThousandTokens: 0.87,
     }),
     glmFlash: Object.freeze({
-        label: 'GLM 5.3 Flash: About $0.19 and 23 to 42 minutes per 1000 comments',
+        label: 'GLM 5.3 Flash: About $0.19 and 23 to 42 minutes per 1000 comments. Quality: 0.5 to 0.6 confirmed stances per comment, the best coverage; some malformed output, which the page repairs.',
         config: {
             modelExtract: 'z-ai/glm-5.3-flash', modelScore: 'z-ai/glm-5.3-flash',
             samplingExtract: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED }, samplingScore: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED },
@@ -132,7 +140,7 @@ const VOLUME_MODELS = Object.freeze({
         secondsPerThousandTokens: 31,
     }),
     geminiFlash: Object.freeze({
-        label: 'Gemini 3.8 Flash: About $1.96 and 3 minutes per 1000 comments',
+        label: 'Gemini 3.8 Flash: About $1.96 and 3 minutes per 1000 comments. Quality: about 0.3 confirmed stances per comment, the least coverage, the most stable ranking.',
         config: {
             modelExtract: 'google/gemini-3.8-flash', modelScore: 'google/gemini-3.8-flash',
             samplingExtract: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED }, samplingScore: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED },
@@ -146,25 +154,25 @@ const VOLUME_MODELS = Object.freeze({
 
 const CONSOLIDATION_MODELS = Object.freeze({
     sonnet5: Object.freeze({
-        label: 'Claude Sonnet 5: About $0.23 and 3 minutes per 1000 comments',
+        label: 'Claude Sonnet 5: About $0.23 and 3 minutes per 1000 comments. Quality: 43 of 58 axes two-sided in the measured run.',
         config: { modelConsolidate: 'anthropic/claude-sonnet-5', samplingConsolidate: null, reasoningConsolidate: null, maxTokensConsolidate: 32000 },
         costPerThousandTokensUsd: 0.0029,
         secondsPerThousandTokens: 2.4,
     }),
     glm53: Object.freeze({
-        label: 'GLM 5.3: About $0.19 and 5 to 7 minutes per 1000 comments',
+        label: 'GLM 5.3: About $0.19 and 5 to 7 minutes per 1000 comments. Quality: 46 to 53 of about 60 axes two-sided, the most measured.',
         config: { modelConsolidate: 'z-ai/glm-5.3', samplingConsolidate: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED }, reasoningConsolidate: { effort: 'high' }, maxTokensConsolidate: 128000 },
         costPerThousandTokensUsd: 0.0018,
         secondsPerThousandTokens: 4.6,
     }),
     geminiFlash: Object.freeze({
-        label: 'Gemini 3.8 Flash: About $0.02 and 15 seconds per 1000 comments',
+        label: 'Gemini 3.8 Flash: About $0.02 and 15 seconds per 1000 comments. Quality: 42 of 45 axes two-sided, measured only with Gemini scoring.',
         config: { modelConsolidate: 'google/gemini-3.8-flash', samplingConsolidate: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED }, reasoningConsolidate: null, maxTokensConsolidate: 32000 },
         costPerThousandTokensUsd: 0.0003,
         secondsPerThousandTokens: 0.2,
     }),
     opus5: Object.freeze({
-        label: 'Claude Opus 5: About $0.26 and 45 seconds per 1000 comments',
+        label: 'Claude Opus 5: About $0.26 and 45 seconds per 1000 comments. Quality: finer axes, 35 of 60 two-sided, the same stances spread over more rows.',
         config: { modelConsolidate: 'anthropic/claude-opus-5', samplingConsolidate: null, reasoningConsolidate: null, maxTokensConsolidate: 32000 },
         costPerThousandTokensUsd: 0.0033,
         secondsPerThousandTokens: 0.6,
@@ -210,8 +218,6 @@ const DEFAULT_CONFIG = Object.freeze({
     parentSnippetChars: 300,
     concurrency: 30,
     shuffleSeed: 777,
-    axesMin: 40,
-    axesMax: 60,
     budgetUsd: 5.0,
 });
 
@@ -394,10 +400,17 @@ function parseFrontPage(json) {
 
 const DATE_ONLY_LENGTH = 'YYYY-MM-DD'.length;
 
-// Suggestion text for a story: title, posting date, id. The id makes the text unique.
+// The facts that tell stories apart: comment count, posting date, id. Shown after the title in the list.
+function storyDate(story) {
+    return story.createdAt ? story.createdAt.slice(0, DATE_ONLY_LENGTH) : 'unknown date';
+}
+
+function storyDetails(story) {
+    return `(${story.numComments} comments, ${storyDate(story)}, ${story.id})`;
+}
+
 function storyLabel(story) {
-    const date = story.createdAt ? story.createdAt.slice(0, DATE_ONLY_LENGTH) : 'unknown date';
-    return `${story.title} (${date}, ${story.id})`;
+    return `${story.title} ${storyDetails(story)}`;
 }
 
 // Newest first; undated stories last.
@@ -460,14 +473,13 @@ Rules:
 
 const CONSOLIDATE_SYSTEM_PROMPT = `You are consolidating candidate axes of disagreement extracted from a Hacker News thread. The submission title is: "{title}". Candidates were extracted from separate batches of comments and overlap heavily. Each candidate shows how many comments held each pole (nA, nB).
 
-Produce between {min} and {max} canonical axes. Produce fewer only if the candidates cannot support that many distinct, genuine axes.
+Produce one canonical axis per distinct disagreement in the thread, however many that is. There is no target count: do not split one disagreement into facets to make more axes, and do not blur different disagreements together to make fewer.
 
 Rules:
-- Merge candidates that express the same pair of rival statements, including pairs listed in the opposite order.
-- Keep distinct disagreements distinct. Do not merge into vague umbrella claims.
+- Two candidates are the same disagreement when a commenter holding side A of one would almost certainly hold side A of the other. Merge such candidates into one axis, including pairs listed in the opposite order and candidates that state one facet, cause, or consequence of the same disagreement. Word the merged axis after the candidate with the most comments.
+- Keep candidates apart only when commenters could plausibly split differently on them.
 - Each axis: statementA and statementB, each one full sentence about the same specific thing, the two incompatible with each other so a commenter can hold at most one, and each understandable on its own.
 - Exclude topics, mood statements without a claim about the subject, and traits of commenters. Keep whole-subject verdict axes when phrased as statements ("the release is a worthwhile upgrade" versus "the release is not a meaningful upgrade").
-- Prefer candidates with evidence on both poles, then candidates with the most comments overall.
 - Order the axes from most contested to least contested.
 - Return JSON matching the schema and nothing else.`;
 
@@ -575,11 +587,11 @@ function buildExtractMessages(title, batch) {
     ];
 }
 
-function buildConsolidateMessages(title, candidates, axesMin, axesMax) {
+function buildConsolidateMessages(title, candidates) {
     const lines = candidates.map((candidate, index) =>
         `#${index + 1} [nA=${candidate.commentsA.length}, nB=${candidate.commentsB.length}] A: ${candidate.statementA} | B: ${candidate.statementB}`);
     return [
-        { role: 'system', content: fillTemplate(CONSOLIDATE_SYSTEM_PROMPT, { title, min: String(axesMin), max: String(axesMax) }) },
+        { role: 'system', content: fillTemplate(CONSOLIDATE_SYSTEM_PROMPT, { title }) },
         { role: 'user', content: 'Candidates:\n\n' + lines.join('\n') },
     ];
 }
@@ -797,23 +809,15 @@ function parseScoreResponse(json, validIds, presentedAxes, swapPoles) {
 // Aggregation
 // ---------------------------------------------------------------------------
 
+// Keeps the stances on which both scoring passes agree.
 function mergePasses(pass1, pass2) {
     const agreed = new Map();
-    const reliability = new Map();
-    const keys = new Set([...pass1.keys(), ...pass2.keys()]);
-    for (const key of keys) {
-        const { axisId } = parseStanceKey(key);
-        const first = pass1.get(key);
-        const second = pass2.get(key);
-        const entry = reliability.get(axisId) || { agreed: 0, total: 0 };
-        entry.total += 1;
-        if (first !== undefined && first === second) {
-            agreed.set(key, first);
-            entry.agreed += 1;
+    for (const [key, stance] of pass1) {
+        if (pass2.get(key) === stance) {
+            agreed.set(key, stance);
         }
-        reliability.set(axisId, entry);
     }
-    return { agreed, reliability };
+    return agreed;
 }
 
 function majorityStance(tally) {
@@ -850,7 +854,8 @@ function aggregateByAuthor(agreed, commentsById) {
     return byAuthor;
 }
 
-function computeRows(axes, byAuthor, agreed, reliability) {
+// One row per axis: commenters on each statement and in the middle, their total, and the agreed comments.
+function computeRows(axes, byAuthor, agreed) {
     const commentCounts = new Map();
     for (const key of agreed.keys()) {
         const { axisId } = parseStanceKey(key);
@@ -866,12 +871,6 @@ function computeRows(axes, byAuthor, agreed, reliability) {
             else if (stance === STANCE_B) countB += 1;
             else countM += 1;
         }
-        const sided = countA + countB;
-        const total = sided + countM;
-        const minoritySpan = 2 * Math.min(countA, countB);
-        const reliabilityEntry = reliability.get(axis.id);
-        const coverageWeight = Math.log(1 + total);
-        const hasConsensusSignal = total >= CONSTANTS.MIN_CONSENSUS_AUTHORS;
         return {
             axisId: axis.id,
             statementA: axis.statementA,
@@ -879,12 +878,8 @@ function computeRows(axes, byAuthor, agreed, reliability) {
             countA,
             countB,
             countM,
-            authors: total,
+            authors: countA + countB + countM,
             comments: commentCounts.get(axis.id) || 0,
-            balance: sided > 0 ? minoritySpan / sided : 0,
-            reliability: reliabilityEntry && reliabilityEntry.total > 0 ? reliabilityEntry.agreed / reliabilityEntry.total : null,
-            score: total > 0 ? (minoritySpan / total) * coverageWeight : 0,
-            consensus: hasConsensusSignal ? (Math.abs(countA - countB) / total) * coverageWeight : 0,
         };
     });
 }
@@ -917,7 +912,6 @@ function splitBar(row, cells) {
 }
 
 // Display helpers shared by the page and the headless runner. All return plain strings.
-const DISPLAY_DIGITS = 2;
 const COST_DIGITS = 4;
 const SECONDS_SHOWN_AS_SECONDS_LIMIT = 90;
 
@@ -925,51 +919,40 @@ function formatSplit(row) {
     return `${row.countA} ${splitBar(row, CONSTANTS.BAR_CELLS)} ${row.countB}`;
 }
 
-function formatWithSpread(value, spread) {
-    return `${value.toFixed(DISPLAY_DIGITS)} ±${spread.toFixed(DISPLAY_DIGITS)}`;
-}
-
 function formatDuration(seconds) {
     return seconds < SECONDS_SHOWN_AS_SECONDS_LIMIT ? `${Math.round(seconds)} seconds` : `${Math.round(seconds / 60)} minutes`;
 }
 
 function formatProgress(update) {
-    return `${update.stage}: ${update.done}/${update.total}, ${update.calls} calls (${update.cachedCalls} from cache), $${update.cost.toFixed(COST_DIGITS)} spent`;
+    return `${update.stage}: ${update.done}/${update.total} done, ${update.inFlight} in flight, ${update.calls} calls (${update.cachedCalls} from cache), $${update.cost.toFixed(COST_DIGITS)} spent`;
 }
 
+const SUMMARY_COST_DIGITS = 2;
+
+function formatRunCost(result) {
+    return `$${result.cost.toFixed(SUMMARY_COST_DIGITS)}, ${result.calls} model calls (${result.stats.cachedCalls} cached)`;
+}
+
+// What came out and why the counts are lower than the comment count.
 function formatRunSummary(result) {
     const stats = result.stats;
     return [
-        `${result.rows.length} axes from ${stats.comments} comments by ${stats.authors} authors, ${result.candidates.length} candidates.`,
-        `${result.calls} model calls (${stats.cachedCalls} from cache), $${result.cost.toFixed(COST_DIGITS)}.`,
-        `Stances: pass 1 ${stats.pass1Stances}, pass 2 ${stats.pass2Stances}, agreed ${stats.agreedStances}.`,
+        `${result.rows.length} rows from ${stats.comments} comments by ${stats.authors} commenters.`,
+        `${stats.agreedStances} of ${stats.classifiedPairs} classifications matched between the two scoring passes; only matching ones count.`,
     ];
 }
 
-// Adds scoreSpread and consensusSpread: half the gap between the scores computed from each scoring pass alone.
-function attachSpreads(rows, pass1Rows, pass2Rows) {
-    const byId = passRows => new Map(passRows.map(row => [row.axisId, row]));
-    const first = byId(pass1Rows);
-    const second = byId(pass2Rows);
-    return rows.map(row => {
-        const rowPass1 = first.get(row.axisId);
-        const rowPass2 = second.get(row.axisId);
-        if (!rowPass1 || !rowPass2) {
-            throw new Error(`missing single-pass rows for axis ${row.axisId}`);
-        }
-        return {
-            ...row,
-            scoreSpread: Math.abs(rowPass1.score - rowPass2.score) / 2,
-            consensusSpread: Math.abs(rowPass1.consensus - rowPass2.consensus) / 2,
-        };
-    });
+// The side with more commenters is always statement 1, so the larger arm of the split is on the left.
+function orientRows(rows) {
+    return rows.map(row => (row.countB > row.countA
+        ? { ...row, statementA: row.statementB, statementB: row.statementA, countA: row.countB, countB: row.countA }
+        : row));
 }
 
+// Biggest axes first: by agreed comments, then commenters, then axis id.
 function rankRows(rows) {
-    const reliabilityOrNegative = row => (row.reliability === null ? -1 : row.reliability);
     const sorted = rows.slice().sort((left, right) =>
-        right.score - left.score
-        || reliabilityOrNegative(right) - reliabilityOrNegative(left)
+        right.comments - left.comments
         || right.authors - left.authors
         || left.axisId - right.axisId);
     return sorted.map((row, index) => ({ ...row, rank: index + 1 }));
@@ -1252,18 +1235,19 @@ async function probeCache({ thread, store, config }) {
     return { stages, complete: stages.length === STAGE_ORDER.length && stages.every(count => count.hits === count.total) };
 }
 
+// Text for the estimate line: a clause when every call is cached, a sentence listing the cached calls
+// per stage when some are, and nothing when none are.
 function formatCacheProbe(probe) {
     const totalCalls = probe.stages.reduce((sum, stage) => sum + stage.total, 0);
     const totalHits = probe.stages.reduce((sum, stage) => sum + stage.hits, 0);
     if (probe.complete) {
-        return `All ${totalCalls} model calls for this run are cached, so it costs nothing.`;
+        return `all ${totalCalls} model calls are cached`;
     }
     if (totalHits === 0) {
-        return 'No model calls for this run are cached.';
+        return '';
     }
     const parts = probe.stages.map(stage => `${stage.hits} of ${stage.total} ${STAGE_CALL_NAMES[stage.stage]}`).join(', ');
-    const tail = probe.stages.length < STAGE_ORDER.length ? '; later stages depend on the missing results and cannot be checked yet.' : '.';
-    return `Cached model calls for this run: ${parts}${tail}`;
+    return `Cached: ${parts} calls, so it will cost and take less.`;
 }
 
 // ---------------------------------------------------------------------------
@@ -1286,8 +1270,18 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
     let callCount = 0;
     let cachedCalls = 0;
 
-    function report(stage, done, total) {
-        onProgress({ stage, done, total, cost, calls: callCount, cachedCalls });
+    let inFlight = 0;
+    let stage = { label: 'start', done: 0, total: 0 };
+
+    // Progress goes out when a stage starts, a unit completes, and a model call starts or ends, so the
+    // calls in flight are visible while a wave of parallel calls is still running.
+    function emit() {
+        onProgress({ stage: stage.label, done: stage.done, total: stage.total, inFlight, cost, calls: callCount, cachedCalls });
+    }
+
+    function report(label, done, total) {
+        stage = { label, done, total };
+        emit();
     }
 
     function addSpend(usage) {
@@ -1302,6 +1296,8 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
     }
 
     async function callModel(call) {
+        inFlight += 1;
+        emit();
         let response;
         try {
             response = await callChat({ ...call, signal });
@@ -1310,8 +1306,11 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
                 addSpend(error.usage);
             }
             throw error;
+        } finally {
+            inFlight -= 1;
         }
         addSpend(response.usage);
+        emit();
         return response;
     }
 
@@ -1378,7 +1377,7 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
     const consolidateResponse = await callModel({
         stage: 'consolidate',
         model: cfg.modelConsolidate,
-        messages: buildConsolidateMessages(thread.title, candidates, cfg.axesMin, cfg.axesMax),
+        messages: buildConsolidateMessages(thread.title, candidates),
         schema: CONSOLIDATE_SCHEMA,
         sampling: cfg.samplingConsolidate,
         reasoning: cfg.reasoningConsolidate,
@@ -1427,11 +1426,9 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
     });
 
     // Stage 4: aggregate.
-    const { agreed, reliability } = mergePasses(passMaps[0], passMaps[1]);
+    const agreed = mergePasses(passMaps[0], passMaps[1]);
     const byAuthor = aggregateByAuthor(agreed, commentsById);
-    const rowsForPass = stanceMap => computeRows(axes, aggregateByAuthor(stanceMap, commentsById), stanceMap, new Map());
-    const agreedRows = computeRows(axes, byAuthor, agreed, reliability);
-    const rows = rankRows(attachSpreads(agreedRows, rowsForPass(passMaps[0]), rowsForPass(passMaps[1])));
+    const rows = orientRows(rankRows(computeRows(axes, byAuthor, agreed)));
     report('done', 1, 1);
     return {
         rows,
@@ -1448,6 +1445,7 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
             scoreBatches: scoreBatches.length,
             pass1Stances: passMaps[0].size,
             pass2Stances: passMaps[1].size,
+            classifiedPairs: new Set([...passMaps[0].keys(), ...passMaps[1].keys()]).size,
             agreedStances: agreed.size,
         },
     };
@@ -1458,12 +1456,12 @@ if (typeof module !== 'undefined' && module.exports) {
         CONSTANTS, DEFAULT_CONFIG, VOLUME_MODELS, CONSOLIDATION_MODELS, DEFAULT_VOLUME_KEY, DEFAULT_CONSOLIDATION_KEY,
         buildStageConfig, combinedRate, estimateRunSeconds, applyToAllStages,
         stripHtml, flattenThread, estimateTokens, makeExtractBatches, makeScoreBatches, seededShuffle,
-        selectCommentShare, estimateRunCost, parseFrontPage, storyLabel, sortStoriesNewestFirst, storySearchUrl, isThreadId, fetchThreadItem, fetchStories,
+        selectCommentShare, estimateRunCost, parseFrontPage, storyDate, storyDetails, storyLabel, sortStoriesNewestFirst, storySearchUrl, isThreadId, fetchThreadItem, fetchStories,
         buildExtractMessages, buildConsolidateMessages, buildScoreMessages,
         parseExtractResponse, parseConsolidateResponse, parseScoreResponse,
         stanceKey, parseStanceKey, flipStance,
-        mergePasses, aggregateByAuthor, computeRows, rankRows, barCells, splitBar, attachSpreads,
-        formatSplit, formatWithSpread, formatDuration, formatProgress, formatRunSummary,
+        mergePasses, aggregateByAuthor, computeRows, orientRows, rankRows, barCells, splitBar,
+        formatSplit, formatDuration, formatProgress, formatRunCost, formatRunSummary,
         runPool, callOpenRouter, runPipeline, TruncationError, InvalidResponseError,
         requestCacheKey, makeCachedCallChat, probeCache, formatCacheProbe,
         makePkceVerifier, pkceChallenge, openRouterAuthUrl, exchangeOpenRouterCode,
@@ -1474,17 +1472,14 @@ if (typeof module !== 'undefined' && module.exports) {
 <script id="page">
 // Page glue: DOM only. All computation lives in the core script above.
 
-// Rows are shown in rank order (polarization). A column with a render function shows that text, one with a
-// cell function shows the element it returns, else the value under its key.
+// Rows are shown biggest first (agreed comments, then commenters). A column with a render function shows
+// that text, one with a cell function shows the element it returns, else the value under its key.
 const COLUMNS = [
-    { key: 'rank', label: 'Rank', className: 'num' },
-    { key: 'statementA', label: 'Statement 1', className: 'right' },
-    { key: 'balance', label: 'Split', cell: (row, context) => renderSplitCell(row, context.splitScale), className: 'bar' },
-    { key: 'statementB', label: 'Statement 2' },
-    { key: 'authors', label: 'Authors', className: 'num' },
     { key: 'comments', label: 'Comments', className: 'num' },
-    { key: 'score', label: 'Polarization', render: row => formatWithSpread(row.score, row.scoreSpread), className: 'num' },
-    { key: 'consensus', label: 'Consensus', render: row => formatWithSpread(row.consensus, row.consensusSpread), className: 'num' },
+    { key: 'authors', label: 'Authors', className: 'num' },
+    { key: 'statementA', label: 'Statement 1', className: 'right' },
+    { key: 'split', label: 'Split', cell: (row, context) => renderSplitCell(row, context.splitScale), className: 'bar' },
+    { key: 'statementB', label: 'Statement 2' },
 ];
 
 // A JSON store over localStorage keys sharing one prefix. get returns null when absent; set returns
@@ -1550,16 +1545,13 @@ function storedApiKey() {
 }
 
 const elements = {
-    storyOptions: document.getElementById('story-options'),
-    suggestionsCaption: document.getElementById('suggestions-caption'),
-    cacheInfo: document.getElementById('cache-info'),
+    threadPicker: document.getElementById('thread-picker'),
+    storyList: document.getElementById('story-list'),
     threadId: document.getElementById('thread-id'),
-    elapsed: document.getElementById('elapsed'),
     loadThread: document.getElementById('load-thread'),
     refreshThread: document.getElementById('refresh-thread'),
     shareRow: document.getElementById('share-row'),
     share: document.getElementById('share'),
-    shareText: document.getElementById('share-text'),
     volumeModel: document.getElementById('volume-model'),
     consolidationModel: document.getElementById('consolidation-model'),
     estimate: document.getElementById('estimate'),
@@ -1573,8 +1565,8 @@ const elements = {
     storageInfo: document.getElementById('storage-info'),
     deleteCached: document.getElementById('delete-cached'),
     threadInfo: document.getElementById('thread-info'),
+    threadTitle: document.getElementById('thread-title'),
     status: document.getElementById('status'),
-    summary: document.getElementById('summary'),
     warnings: document.getElementById('warnings'),
     results: document.getElementById('results'),
 };
@@ -1587,8 +1579,13 @@ function setStatus(text, isError) {
     elements.status.classList.toggle('error', Boolean(isError));
 }
 
+// The slider's share of a thread's comments, as a seeded sample.
+function sampleComments(thread) {
+    return selectCommentShare(thread.comments, Number(elements.share.value), CONSTANTS.SAMPLE_SEED);
+}
+
 function selectedComments() {
-    return loadedThread === null ? [] : selectCommentShare(loadedThread.comments, Number(elements.share.value), CONSTANTS.SAMPLE_SEED);
+    return loadedThread === null ? [] : sampleComments(loadedThread);
 }
 
 function selectedModelKeys() {
@@ -1605,6 +1602,8 @@ function selectedThread(comments) {
 }
 
 let probeSequence = 0;
+// Set by a thread load and consumed by the next estimate: when that load's run is fully cached, it starts by itself.
+let runWhenFullyCached = false;
 
 // Counts the run's model calls already cached, then hands the result to onProbe unless a newer probe
 // has started since (the slider and the model selects can change faster than a probe finishes).
@@ -1618,27 +1617,27 @@ async function refreshCacheInfo(comments, onProbe) {
     }
 }
 
-// Writes the estimate line and the cached-call line under it. Until the probe finishes, probe is null
-// and the estimate stands alone; a complete probe turns the estimate into the zero-cost statement.
+// Writes the estimate line. Until the probe finishes, probe is null and the estimate stands alone; a
+// complete probe turns it into the zero-cost statement, a partial one appends the cached-call sentence.
 function renderEstimate(comments, estimate, seconds, probe) {
-    const header = `Estimate for ${comments.length} comments (${Math.round(estimate.tokens / 1000)}k tokens): `;
+    const header = `${elements.share.value}%, ${comments.length} of ${loadedThread.comments.length} comments, ${Math.round(estimate.tokens / 1000)}k tokens: `;
+    const cacheText = probe === null ? '' : formatCacheProbe(probe);
     if (probe !== null && probe.complete) {
-        const calls = probe.stages.reduce((sum, stage) => sum + stage.total, 0);
-        elements.estimate.textContent = `${header}$0, since all ${calls} model calls for this run are cached.`;
-        elements.cacheInfo.textContent = '';
+        elements.estimate.textContent = `${header}$0 and 0 seconds, ${cacheText}.`;
         return;
     }
-    elements.estimate.textContent = `${header}about $${estimate.usd.toFixed(2)} and about ${formatDuration(seconds)} if nothing were cached, from measured runs.`;
-    elements.cacheInfo.textContent = probe === null ? '' : formatCacheProbe(probe);
+    const cacheSentence = cacheText === '' ? '' : ` ${cacheText}`;
+    elements.estimate.textContent = `${header}about $${estimate.usd.toFixed(2)} and about ${formatDuration(seconds)}, from measured runs.${cacheSentence}`;
 }
 
-// Refreshes the share text, the cost and time estimate, the cached-call line, and whether Run is possible.
+// Refreshes the share text, the cost and time estimate with its cached-call note, and whether Run is possible.
 function updateEstimate() {
     probeSequence += 1;
+    const autoRun = runWhenFullyCached;
+    runWhenFullyCached = false;
     if (loadedThread === null) {
         elements.shareRow.hidden = true;
         elements.estimate.textContent = '';
-        elements.cacheInfo.textContent = '';
         elements.run.disabled = true;
         return;
     }
@@ -1647,13 +1646,16 @@ function updateEstimate() {
     const estimate = estimateRunCost(comments, combinedRate(volumeKey, consolidationKey));
     const seconds = estimateRunSeconds(estimate.tokens, volumeKey, consolidationKey);
     elements.shareRow.hidden = false;
-    elements.shareText.textContent = `${elements.share.value}%: ${comments.length} of ${loadedThread.comments.length} comments`;
     if (comments.length === 0) {
-        elements.estimate.textContent = 'Nothing selected.';
-        elements.cacheInfo.textContent = '';
+        elements.estimate.textContent = `${elements.share.value}%, 0 of ${loadedThread.comments.length} comments.`;
     } else {
         renderEstimate(comments, estimate, seconds, null);
-        refreshCacheInfo(comments, probe => renderEstimate(comments, estimate, seconds, probe))
+        refreshCacheInfo(comments, probe => {
+            renderEstimate(comments, estimate, seconds, probe);
+            if (autoRun && probe.complete && activeController === null) {
+                runFromPage(true);
+            }
+        })
             .catch(error => setStatus(`Cache check failed: ${error.message}`, true));
     }
     elements.run.disabled = activeController !== null || comments.length === 0 || !keyAvailable();
@@ -1668,15 +1670,12 @@ function setRunning() {
     updateEstimate();
 }
 
-const CHARS_PER_KB = 1024;
 
 // The storage line reads every stored value to size it, so it runs only when the contents change.
 function refreshStorageInfo() {
     const cache = cacheStore.usage();
     const snapshots = snapshotStore.usage();
-    const kilobytes = chars => Math.round(chars / CHARS_PER_KB);
-    elements.storageInfo.textContent = `Cached in this browser: ${cache.count} model calls (about ${kilobytes(cache.chars)} KB), `
-        + `${snapshots.count} threads (about ${kilobytes(snapshots.chars)} KB).`;
+    elements.storageInfo.textContent = `Cached in this browser: ${cache.count} model calls, ${snapshots.count} threads.`;
     elements.deleteCached.hidden = cache.count === 0 && snapshots.count === 0;
 }
 
@@ -1705,71 +1704,169 @@ function fillModelOptions(select, choices, defaultKey) {
     select.value = defaultKey;
 }
 
-// The thread box accepts a numeric id or a story title picked from the suggestions. Suggestions start
-// with the front page and are replaced by Algolia story search results while text is typed; each
-// suggestion's text maps back to its story id. After a load the box shows the loaded thread's title.
+// The thread box holds a numeric id typed by hand, or search text that drives the list under it; picking a
+// row from the list loads that story directly. After a load the box is emptied.
 const SEARCH_MIN_CHARS = 3;
 const SEARCH_DEBOUNCE_MS = 300;
 let searchTimer = null;
 let searchSequence = 0;
-const storyIdsByLabel = new Map();
 
 // The thread id the box currently denotes: a typed id, or the id behind a picked or loaded title.
 function threadIdInBox() {
     const text = elements.threadId.value.trim();
-    if (isThreadId(text)) {
-        return text;
-    }
-    const storyId = storyIdsByLabel.get(text);
-    return storyId === undefined ? null : String(storyId);
+    return isThreadId(text) ? text : null;
 }
 
-// The caption beside the box says what the suggestion list holds, since a datalist has no header.
-const CAPTION_HOME_PAGE = 'Home page';
-const CAPTION_SEARCHING = 'Searching sorted by date';
-const CAPTION_MATCHES = 'Matches sorted by date';
-const CAPTION_NO_MATCHES = 'No matches';
-
-function setCaption(text) {
-    elements.suggestionsCaption.textContent = text;
-}
-
-function setStoryOptions(stories, caption) {
-    elements.storyOptions.replaceChildren(...sortStoriesNewestFirst(stories).map(story => {
-        const label = storyLabel(story);
-        storyIdsByLabel.set(label, story.id);
-        const option = document.createElement('option');
-        option.value = label;
-        return option;
-    }));
-    setCaption(caption);
-}
+// The list under the box is drawn by the page (a combobox with a listbox): a header row says what the
+// list holds and story rows follow. The browser's own datalist could not show a header, filtered the rows
+// by the box text itself, and could not be opened or closed from the page.
+const HEADER_HOME_PAGE = 'Home page';
+const HEADER_SEARCHING = 'Searching sorted by date';
+const HEADER_MATCHES = 'Matches sorted by date';
+const HEADER_NO_MATCHES = 'No matches';
+const HEADER_LOADING_HOME_PAGE = 'Loading the home page';
+const HEADER_HOME_PAGE_UNAVAILABLE = 'Home page unavailable';
+const HEADER_SEARCH_FAILED = 'Search failed';
 
 let homePageStories = null;
+let homePageHeader = HEADER_LOADING_HOME_PAGE;
+let listStories = [];
+let activeIndex = -1;
+let listSequence = 0;
+
+// Bolds the rows whose run would be served entirely from the cache at the current share and models,
+// so picking them gives the result at once. Probing builds every request of the run, so it runs after
+// the list is shown and only for stored threads; a list drawn later makes the probe's marks moot.
+async function markFullyCachedRows(rows) {
+    const sequence = listSequence;
+    const { volumeKey, consolidationKey } = selectedModelKeys();
+    const config = buildStageConfig(volumeKey, consolidationKey);
+    for (const { story, item } of rows) {
+        const snapshot = snapshotStore.get(String(story.id));
+        if (snapshot === null) {
+            continue;
+        }
+        const thread = flattenThread(snapshot.item);
+        const comments = sampleComments(thread);
+        if (comments.length === 0) {
+            continue;
+        }
+        const probe = await probeCache({ thread: { ...thread, comments, contextComments: thread.comments }, store: pageCacheStore, config });
+        if (sequence !== listSequence) {
+            return;
+        }
+        if (probe.complete) {
+            item.classList.add('cached');
+            item.title = 'Fully cached: the run is instant';
+        }
+    }
+}
+
+function listIsOpen() {
+    return !elements.storyList.hidden;
+}
+
+// Fills and opens the list: the header row, then one row per story, newest first.
+function showList(stories, header) {
+    listStories = sortStoriesNewestFirst(stories);
+    activeIndex = -1;
+    listSequence += 1;
+    const headerItem = document.createElement('li');
+    headerItem.className = 'header';
+    headerItem.textContent = header;
+    const rows = listStories.map((story, index) => {
+        const item = document.createElement('li');
+        item.setAttribute('role', 'option');
+        item.id = `story-option-${index}`;
+        item.textContent = storyLabel(story);
+        item.addEventListener('mousedown', () => pickStory(story));
+        return { story, item };
+    });
+    elements.storyList.replaceChildren(headerItem, ...rows.map(row => row.item));
+    elements.storyList.hidden = false;
+    elements.threadId.setAttribute('aria-expanded', 'true');
+    elements.threadId.removeAttribute('aria-activedescendant');
+    markFullyCachedRows(rows.filter(row => snapshotStore.has(String(row.story.id))))
+        .catch(error => setStatus(`Cache check failed: ${error.message}`, true));
+}
+
+function closeList() {
+    elements.storyList.hidden = true;
+    elements.threadId.setAttribute('aria-expanded', 'false');
+    elements.threadId.removeAttribute('aria-activedescendant');
+    activeIndex = -1;
+}
+
+// Moves the keyboard highlight, wrapping at both ends.
+function setActiveItem(index) {
+    const items = elements.storyList.querySelectorAll('li[role="option"]');
+    if (items.length === 0) {
+        return;
+    }
+    activeIndex = (index + items.length) % items.length;
+    items.forEach((item, itemIndex) => item.classList.toggle('active', itemIndex === activeIndex));
+    const active = items[activeIndex];
+    elements.threadId.setAttribute('aria-activedescendant', active.id);
+    active.scrollIntoView({ block: 'nearest' });
+}
+
+function pickStory(story) {
+    closeList();
+    loadThreadFromPage(String(story.id));
+}
+
+// Shows what fits the box text: the home page while the text is short (filtered by it), the search
+// results once it is long enough; a numeric id needs no list.
+function refreshList() {
+    const text = elements.threadId.value.trim();
+    if (isThreadId(text)) {
+        closeList();
+        return;
+    }
+    if (text.length >= SEARCH_MIN_CHARS) {
+        scheduleStorySearch(text);
+        return;
+    }
+    clearTimeout(searchTimer);
+    searchSequence += 1;
+    if (homePageStories === null) {
+        showList([], homePageHeader);
+        return;
+    }
+    const needle = text.toLowerCase();
+    showList(homePageStories.filter(story => story.title.toLowerCase().includes(needle)), HEADER_HOME_PAGE);
+}
 
 async function populateFrontPage() {
     try {
         homePageStories = await fetchStories(CONSTANTS.HN_FRONT_PAGE_URL, 'the home page');
-        setStoryOptions(homePageStories, CAPTION_HOME_PAGE);
+        homePageHeader = HEADER_HOME_PAGE;
     } catch (error) {
-        setCaption('Home page unavailable');
+        homePageHeader = HEADER_HOME_PAGE_UNAVAILABLE;
         setStatus(`Home page suggestions unavailable: ${error.message}. A thread id can still be typed.`, true);
+    }
+    if (listIsOpen()) {
+        refreshList();
     }
 }
 
+// Keeps the current rows under a "searching" header until the results arrive; a result for a search that
+// is no longer the latest, or that arrives after the list was closed, is dropped.
 function scheduleStorySearch(text) {
-    setCaption(CAPTION_SEARCHING);
+    showList(listStories, HEADER_SEARCHING);
     clearTimeout(searchTimer);
     searchTimer = setTimeout(async () => {
         searchSequence += 1;
         const sequence = searchSequence;
         try {
             const stories = await fetchStories(storySearchUrl(text), `the search "${text}"`);
-            if (sequence === searchSequence) {
-                setStoryOptions(stories, stories.length === 0 ? CAPTION_NO_MATCHES : CAPTION_MATCHES);
+            if (sequence === searchSequence && listIsOpen()) {
+                showList(stories, stories.length === 0 ? HEADER_NO_MATCHES : HEADER_MATCHES);
             }
         } catch (error) {
-            setCaption('Search failed');
+            if (sequence === searchSequence && listIsOpen()) {
+                showList([], HEADER_SEARCH_FAILED);
+            }
             setStatus(`Story search failed: ${error.message}`, true);
         }
     }, SEARCH_DEBOUNCE_MS);
@@ -1780,15 +1877,22 @@ function scheduleStorySearch(text) {
 function loadThreadFromBox() {
     const threadId = threadIdInBox();
     if (threadId === null) {
-        setStatus('Enter a numeric Hacker News thread id, or pick a story from the suggestions.', true);
+        setStatus('Enter a numeric Hacker News thread id, or pick a story from the list.', true);
         return;
     }
     loadThreadFromPage(threadId);
 }
 
 // Loads the thread from the stored copy or from the API, then shows its size and the estimate.
+// The results describe one thread; loading any thread, including a refresh of the same one, removes them.
+function clearResults() {
+    elements.results.replaceChildren();
+    elements.warnings.hidden = true;
+}
+
 async function loadThreadFromPage(threadId) {
     loadedThread = null;
+    clearResults();
     updateEstimate();
     try {
         let snapshot = snapshotStore.get(threadId);
@@ -1803,21 +1907,22 @@ async function loadThreadFromPage(threadId) {
         }
         loadedThread = flattenThread(snapshot.item);
         elements.threadId.value = '';
-        if (homePageStories !== null) {
-            setStoryOptions(homePageStories, CAPTION_HOME_PAGE);
-        }
-        elements.threadInfo.textContent = `${storyLabel(loadedThread)}: ${loadedThread.comments.length} comments, fetched ${new Date(snapshot.fetchedAt).toLocaleString()}${stored ? '' : ', not stored'}`;
+        closeList();
+        elements.threadTitle.textContent = loadedThread.title;
+        elements.threadInfo.textContent = `${loadedThread.comments.length} comments, posted ${storyDate(loadedThread)}, id ${loadedThread.id}, fetched ${new Date(snapshot.fetchedAt).toLocaleString()}${stored ? '' : ', not stored'}`;
     } catch (error) {
+        elements.threadTitle.textContent = '';
         elements.threadInfo.textContent = '';
         setStatus(`Error: ${error.message}`, true);
     }
+    runWhenFullyCached = loadedThread !== null;
     updateEstimate();
     refreshThreadButtons();
     refreshStorageInfo();
 }
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
-const SPLIT_ARM_PX = 160;
+const SPLIT_ARM_PX = 120;
 const SPLIT_COUNT_PX = 24;
 const SPLIT_MIN_GAP_PX = 16;
 const SPLIT_HEIGHT_PX = 14;
@@ -1912,7 +2017,6 @@ function renderTable(rows) {
 }
 
 function renderResults(result) {
-    elements.summary.textContent = formatRunSummary(result).join(' ');
     const warningList = elements.warnings.querySelector('ul');
     warningList.replaceChildren(...result.warnings.map(text => {
         const item = document.createElement('li');
@@ -1982,27 +2086,32 @@ function resolveApiKey() {
     return typed;
 }
 
-// Elapsed-time counter shown while a run is in progress and frozen at its final value afterwards.
+// While a run is in progress the status line shows the latest progress report with the elapsed time,
+// ticking once a second; afterwards it shows the outcome with the time taken.
 const ELAPSED_TICK_MS = 1000;
 let elapsedTimer = null;
+let progressText = '';
+
+function elapsedSince(startedAt) {
+    return formatDuration((Date.now() - startedAt) / 1000);
+}
 
 function startElapsedCounter() {
     const startedAt = Date.now();
-    const tick = () => {
-        elements.elapsed.textContent = `Elapsed ${formatDuration((Date.now() - startedAt) / 1000)}`;
-    };
+    progressText = 'Starting';
+    const tick = () => setStatus(`${progressText}, ${elapsedSince(startedAt)} elapsed`);
     tick();
     elapsedTimer = setInterval(tick, ELAPSED_TICK_MS);
     return startedAt;
 }
 
-function stopElapsedCounter(startedAt) {
+function stopElapsedCounter() {
     clearInterval(elapsedTimer);
     elapsedTimer = null;
-    elements.elapsed.textContent = `Elapsed ${formatDuration((Date.now() - startedAt) / 1000)}`;
 }
 
-async function runFromPage() {
+// fullyCached is true when every model call is known to be in the cache; such a run needs no key.
+async function runFromPage(fullyCached) {
     if (loadedThread === null) {
         setStatus('Load a thread first.', true);
         return;
@@ -2012,8 +2121,8 @@ async function runFromPage() {
         setStatus('Nothing selected: move the slider above 0%.', true);
         return;
     }
-    const apiKey = resolveApiKey();
-    if (apiKey === null) {
+    const apiKey = fullyCached === true ? storedApiKey() : resolveApiKey();
+    if (apiKey === null && fullyCached !== true) {
         return;
     }
     const { volumeKey, consolidationKey } = selectedModelKeys();
@@ -2021,9 +2130,7 @@ async function runFromPage() {
     activeController = new AbortController();
     const signal = activeController.signal;
     setRunning();
-    elements.results.replaceChildren();
-    elements.summary.textContent = '';
-    elements.warnings.hidden = true;
+    clearResults();
     const pageWarnings = [];
     const startedAt = startElapsedCounter();
     try {
@@ -2033,21 +2140,25 @@ async function runFromPage() {
             thread,
             signal,
             config: stageConfig,
-            onProgress: update => setStatus(formatProgress(update)),
+            onProgress: update => {
+                progressText = formatProgress(update);
+                setStatus(`${progressText}, ${elapsedSince(startedAt)} elapsed`);
+            },
             callChat: makeCachedCallChat(call => callOpenRouter({ apiKey, request: call, signal }), pageCacheStore),
         });
         if (pageCacheStore.writeFailures > 0) {
             pageWarnings.push(`${pageCacheStore.writeFailures} cache writes failed (browser storage full); those calls will be repeated on a rerun`);
         }
         result.warnings.push(...pageWarnings);
+        stopElapsedCounter();
         renderResults(result);
-        setStatus('Done.');
+        setStatus(`Done in ${elapsedSince(startedAt)}, ${formatRunCost(result)}. ${formatRunSummary(result).join(' ')}`);
     } catch (error) {
-        setStatus(signal.aborted ? 'Cancelled.' : `Error: ${error.message}`, !signal.aborted);
+        stopElapsedCounter();
+        setStatus(signal.aborted ? `Cancelled after ${elapsedSince(startedAt)}.` : `Error after ${elapsedSince(startedAt)}: ${error.message}`, !signal.aborted);
         console.error(error);
     } finally {
         activeController = null;
-        stopElapsedCounter(startedAt);
         setRunning();
         refreshStorageInfo();
     }
@@ -2075,19 +2186,39 @@ elements.deleteCached.addEventListener('click', () => {
     setStatus(`Deleted from this browser: ${removedCalls} cached model calls and ${removedSnapshots} threads. The OpenRouter key is kept.`);
 });
 elements.loadThread.addEventListener('click', loadThreadFromBox);
-elements.threadId.addEventListener('keydown', event => {
-    if (event.key === 'Enter') {
-        loadThreadFromBox();
+// The list opens on focus, click, or typing; arrows move the highlight, Enter picks it (or loads a typed
+// id), Escape closes; leaving the box closes it too. A press inside the list keeps the focus in the box.
+elements.threadId.addEventListener('focus', refreshList);
+elements.threadId.addEventListener('click', () => {
+    if (!listIsOpen()) {
+        refreshList();
     }
 });
 elements.threadId.addEventListener('input', () => {
     refreshThreadButtons();
-    const text = elements.threadId.value.trim();
-    if (threadIdInBox() === null && text.length >= SEARCH_MIN_CHARS) {
-        scheduleStorySearch(text);
+    refreshList();
+});
+elements.threadId.addEventListener('keydown', event => {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        if (!listIsOpen()) {
+            refreshList();
+        }
+        setActiveItem(activeIndex + (event.key === 'ArrowDown' ? 1 : -1));
+    } else if (event.key === 'Enter') {
+        event.preventDefault();
+        if (listIsOpen() && activeIndex >= 0) {
+            pickStory(listStories[activeIndex]);
+        } else {
+            loadThreadFromBox();
+        }
+    } else if (event.key === 'Escape') {
+        closeList();
     }
 });
-// A suggestion pick, or a typed id followed by leaving the box, loads the thread unless it is already loaded.
+elements.threadId.addEventListener('blur', closeList);
+elements.storyList.addEventListener('mousedown', event => event.preventDefault());
+// A typed id followed by leaving the box loads the thread unless it is already loaded.
 elements.threadId.addEventListener('change', () => {
     const threadId = threadIdInBox();
     if (threadId !== null && !(loadedThread !== null && String(loadedThread.id) === threadId)) {
