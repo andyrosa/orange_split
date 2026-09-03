@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="">
 <title>HN Split</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EHN:s%3C/text%3E%3C/svg%3E">
 <style>
@@ -71,12 +72,12 @@ button { margin-right: 0.5rem; }
 <span id="estimate"></span>
 </p>
 <p id="key-entry">
-<label>OpenRouter key <input id="api-key" type="password" autocomplete="off"></label> <button id="connect-openrouter" type="button" hidden>Sign in with OpenRouter instead</button>
+<label>OpenRouter key <input id="api-key" type="password" autocomplete="off"></label> <button id="connect-openrouter" type="button" hidden>Sign in with OpenRouter instead</button> <label><input id="remember-key" type="checkbox"> Remember in this browser</label>
 </p>
 <p>
 <span id="storage-info"></span>
 <button id="delete-cached" type="button" hidden>Delete</button>
-<span id="key-stored" hidden>OpenRouter key <button id="wipe-key" type="button">Delete</button></span>
+<span id="key-stored" hidden>OpenRouter key <span id="key-scope"></span> <button id="wipe-key" type="button">Delete</button></span>
 </p>
 <div id="status"></div>
 <details id="warnings" hidden><summary></summary><ul></ul></details>
@@ -93,6 +94,7 @@ const CONSTANTS = Object.freeze({
     OPENROUTER_AUTH_URL: 'https://openrouter.ai/auth',
     OPENROUTER_KEY_EXCHANGE_URL: 'https://openrouter.ai/api/v1/auth/keys',
     PKCE_VERIFIER_STORAGE_KEY: 'openrouter_pkce_verifier',
+    PKCE_REMEMBER_STORAGE_KEY: 'openrouter_pkce_remember',
     STORAGE_KEY_OPENROUTER: 'openrouter_api_key',
     CACHE_KEY_PREFIX: 'hn_polarization_cache:',
     THREAD_KEY_PREFIX: 'hn_polarization_thread:',
@@ -107,7 +109,8 @@ const CONSTANTS = Object.freeze({
 // Models are chosen per role: one for the high-volume stages (extraction and scoring) and one for
 // consolidation. Sampling and reasoning are per stage because providers differ: Haiku 4.5 accepts
 // temperature but not seed; Sonnet 5 and Opus 5 accept neither and think adaptively; GLM 5.3 Flash
-// cannot run without reasoning and needs large output ceilings; Gemini accepts temperature and seed.
+// cannot run without reasoning and needs large output ceilings; Gemini accepts temperature and seed;
+// the GPT-5.6 models (Luna, Sol) accept seed and a reasoning effort but not temperature.
 // null omits the field from the request.
 //
 // The cost and time rates come from measured runs on a 1300-comment thread (about 104k comment
@@ -115,12 +118,12 @@ const CONSTANTS = Object.freeze({
 // consolidation included, since its thinking grows with the number of candidates. minimumSeconds is the
 // latency of one call of the model in its role, the floor for a stage no matter how small the thread.
 const SAMPLING_SEED = 12345;
-const DEFAULT_VOLUME_KEY = 'haiku';
+const DEFAULT_VOLUME_KEY = 'lunaLow';
 const DEFAULT_CONSOLIDATION_KEY = 'sonnet5';
 
 const VOLUME_MODELS = Object.freeze({
     haiku: Object.freeze({
-        label: 'Claude Haiku 4.5: About $0.96 and 70 seconds per 1000 comments. Quality: about 0.5 confirmed stances per comment, clean output.',
+        label: 'Claude Haiku 4.5: $0.96 and 70 seconds per 1000 comments. 0.5 stances per comment; 59% of stances held under blind review, 12% wrong; clean output.',
         config: {
             modelExtract: 'anthropic/claude-haiku-4.5', modelScore: 'anthropic/claude-haiku-4.5',
             samplingExtract: { temperature: CONSTANTS.TEMPERATURE }, samplingScore: { temperature: CONSTANTS.TEMPERATURE },
@@ -132,7 +135,7 @@ const VOLUME_MODELS = Object.freeze({
         minimumSeconds: 8,
     }),
     glmFlash: Object.freeze({
-        label: 'GLM 5.3 Flash: About $0.19 and 23 to 42 minutes per 1000 comments. Quality: 0.5 to 0.6 confirmed stances per comment, the best coverage; some malformed output, which the page repairs.',
+        label: 'GLM 5.3 Flash: $0.19 and 23 to 42 minutes per 1000 comments. 0.5 to 0.6 stances per comment; the most coverage; some nonstandard output shapes, which the page accepts.',
         config: {
             modelExtract: 'z-ai/glm-5.3-flash', modelScore: 'z-ai/glm-5.3-flash',
             samplingExtract: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED }, samplingScore: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED },
@@ -144,7 +147,7 @@ const VOLUME_MODELS = Object.freeze({
         minimumSeconds: 100,
     }),
     geminiFlash: Object.freeze({
-        label: 'Gemini 3.8 Flash: About $1.96 and 3 minutes per 1000 comments. Quality: about 0.3 confirmed stances per comment, the least coverage, the most stable ranking.',
+        label: 'Gemini 3.8 Flash: $1.96 and 3 minutes per 1000 comments. 0.3 stances per comment; the least coverage; the most stable ranking.',
         config: {
             modelExtract: 'google/gemini-3.8-flash', modelScore: 'google/gemini-3.8-flash',
             samplingExtract: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED }, samplingScore: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED },
@@ -156,7 +159,7 @@ const VOLUME_MODELS = Object.freeze({
         minimumSeconds: 8,
     }),
     opus5: Object.freeze({
-        label: 'Claude Opus 5: About $10.50 and 4 minutes per 1000 comments. Quality: about 0.7 confirmed stances per comment and three times the two-sided rows of Haiku 4.5 on a 484-comment thread; the extra stances hold up under blind review.',
+        label: 'Claude Opus 5: $10.50 and 4 minutes per 1000 comments. 0.7 stances per comment; 3 times the two-sided rows of Haiku 4.5; 74% of stances held under blind review, 0% wrong.',
         config: {
             modelExtract: 'anthropic/claude-opus-5', modelScore: 'anthropic/claude-opus-5',
             samplingExtract: null, samplingScore: null,
@@ -167,36 +170,62 @@ const VOLUME_MODELS = Object.freeze({
         secondsPerThousandTokens: 3.18,
         minimumSeconds: 50,
     }),
+    lunaLow: Object.freeze({
+        label: 'GPT-5.6 Luna, reasoning low: $0.26 and 90 seconds per 1000 comments. 0.5 stances per comment; 1.5 times the two-sided rows of Haiku 4.5; 80% of stances held under blind review, 6% wrong.',
+        config: {
+            modelExtract: 'openai/gpt-5.6-luna', modelScore: 'openai/gpt-5.6-luna',
+            samplingExtract: { seed: SAMPLING_SEED }, samplingScore: { seed: SAMPLING_SEED },
+            reasoningExtract: { effort: 'low' }, reasoningScore: { effort: 'low' },
+            maxTokensExtract: 32000, maxTokensScore: 16000,
+        },
+        costPerThousandTokensUsd: 0.0033,
+        secondsPerThousandTokens: 1.16,
+        minimumSeconds: 20,
+    }),
 });
 
 const CONSOLIDATION_MODELS = Object.freeze({
     sonnet5: Object.freeze({
-        label: 'Claude Sonnet 5: About $0.23 and 3 minutes per 1000 comments. Quality: 39 to 43 of 58 to 64 axes two-sided in the measured runs.',
+        label: 'Claude Sonnet 5: $0.23 and 3 minutes per 1000 comments. 61% to 74% of axes two-sided across three runs.',
         config: { modelConsolidate: 'anthropic/claude-sonnet-5', samplingConsolidate: null, reasoningConsolidate: null, maxTokensConsolidate: 128000 },
         costPerThousandTokensUsd: 0.0029,
         secondsPerThousandTokens: 2.4,
         minimumSeconds: 15,
     }),
     glm53: Object.freeze({
-        label: 'GLM 5.3: About $0.19 and 5 to 7 minutes per 1000 comments. Quality: 46 to 53 of about 60 axes two-sided, the most measured.',
+        label: 'GLM 5.3: $0.19 and 5 to 7 minutes per 1000 comments. 79% to 88% of axes two-sided across two runs.',
         config: { modelConsolidate: 'z-ai/glm-5.3', samplingConsolidate: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED }, reasoningConsolidate: { effort: 'high' }, maxTokensConsolidate: 128000 },
         costPerThousandTokensUsd: 0.0018,
         secondsPerThousandTokens: 4.6,
         minimumSeconds: 120,
     }),
     geminiFlash: Object.freeze({
-        label: 'Gemini 3.8 Flash: About $0.02 and 15 seconds per 1000 comments. Quality: 42 of 45 axes two-sided, measured only with Gemini scoring.',
+        label: 'Gemini 3.8 Flash: $0.02 and 15 seconds per 1000 comments. 93% of axes two-sided, measured only with Gemini scoring.',
         config: { modelConsolidate: 'google/gemini-3.8-flash', samplingConsolidate: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED }, reasoningConsolidate: null, maxTokensConsolidate: 32000 },
         costPerThousandTokensUsd: 0.0003,
         secondsPerThousandTokens: 0.2,
         minimumSeconds: 8,
     }),
     opus5: Object.freeze({
-        label: 'Claude Opus 5: About $0.26 and 45 seconds per 1000 comments. Quality: finer axes, 35 of 60 two-sided, the same stances spread over more rows.',
+        label: 'Claude Opus 5: $0.26 and 45 seconds per 1000 comments. 58% of axes two-sided; finer axes that spread the same stances over more rows.',
         config: { modelConsolidate: 'anthropic/claude-opus-5', samplingConsolidate: null, reasoningConsolidate: null, maxTokensConsolidate: 128000 },
         costPerThousandTokensUsd: 0.0033,
         secondsPerThousandTokens: 0.6,
         minimumSeconds: 10,
+    }),
+    solLow: Object.freeze({
+        label: 'GPT-5.6 Sol, reasoning low: $0.08 and 90 seconds per 1000 comments. 38% of axes two-sided; merges less than Sonnet 5.',
+        config: { modelConsolidate: 'openai/gpt-5.6-sol', samplingConsolidate: { seed: SAMPLING_SEED }, reasoningConsolidate: { effort: 'low' }, maxTokensConsolidate: 128000 },
+        costPerThousandTokensUsd: 0.0010,
+        secondsPerThousandTokens: 1.16,
+        minimumSeconds: 8,
+    }),
+    lunaMax: Object.freeze({
+        label: 'GPT-5.6 Luna, reasoning max: $0.20 and 29 minutes per 1000 comments. 56% of axes two-sided; as many two-sided rows as Sonnet 5 at a third of the cost and 3.6 times the time.',
+        config: { modelConsolidate: 'openai/gpt-5.6-luna', samplingConsolidate: { seed: SAMPLING_SEED }, reasoningConsolidate: { effort: 'max' }, maxTokensConsolidate: 128000 },
+        costPerThousandTokensUsd: 0.0025,
+        secondsPerThousandTokens: 21.6,
+        minimumSeconds: 190,
     }),
 });
 
@@ -1634,8 +1663,40 @@ const cacheStore = makePrefixedStore(CONSTANTS.CACHE_KEY_PREFIX);
 // change every prompt and miss the result cache.
 const snapshotStore = makePrefixedStore(CONSTANTS.THREAD_KEY_PREFIX);
 
-function storedApiKey() {
+// The OpenRouter key is held in this variable, gone on reload, unless "Remember in this browser" was
+// ticked when it was obtained, in which case it is in localStorage. Never both.
+let memoryApiKey = null;
+
+// Where the key lives, shown after "OpenRouter key" while one is held.
+const KEY_SCOPE_REMEMBERED = 'remembered in this browser';
+const KEY_SCOPE_MEMORY = 'held until reload';
+
+function rememberedApiKey() {
     return localStorage.getItem(CONSTANTS.STORAGE_KEY_OPENROUTER);
+}
+
+function currentApiKey() {
+    return rememberedApiKey() ?? memoryApiKey;
+}
+
+function keyScopeText() {
+    return rememberedApiKey() !== null ? KEY_SCOPE_REMEMBERED : KEY_SCOPE_MEMORY;
+}
+
+// Takes a newly obtained key into localStorage or into memory, as the remember choice says.
+function holdApiKey(key, remember) {
+    if (remember) {
+        localStorage.setItem(CONSTANTS.STORAGE_KEY_OPENROUTER, key);
+    } else {
+        memoryApiKey = key;
+    }
+    refreshKeyState();
+}
+
+function forgetApiKey() {
+    localStorage.removeItem(CONSTANTS.STORAGE_KEY_OPENROUTER);
+    memoryApiKey = null;
+    refreshKeyState();
 }
 
 const elements = {
@@ -1653,7 +1714,9 @@ const elements = {
     keyEntry: document.getElementById('key-entry'),
     connectOpenRouter: document.getElementById('connect-openrouter'),
     keyStored: document.getElementById('key-stored'),
+    keyScope: document.getElementById('key-scope'),
     apiKey: document.getElementById('api-key'),
+    rememberKey: document.getElementById('remember-key'),
     wipeKey: document.getElementById('wipe-key'),
     run: document.getElementById('run'),
     cancel: document.getElementById('cancel'),
@@ -1714,7 +1777,7 @@ function selectedModelKeys() {
 }
 
 function keyAvailable() {
-    return storedApiKey() !== null || elements.apiKey.value.trim() !== '';
+    return currentApiKey() !== null || elements.apiKey.value.trim() !== '';
 }
 
 // The run as the page would start it now: DEFAULT_CONFIG, then the two model choices, then the Max cost box.
@@ -1896,11 +1959,12 @@ function refreshThreadButtons() {
     elements.loadThread.hidden = threadId === null || isLoadedThread(threadId);
 }
 
-// The stored key is never written back into the input; while one is stored the input is hidden.
+// The held key is never written back into the input; while one is held the input is hidden.
 function refreshKeyState() {
-    const stored = storedApiKey() !== null;
-    elements.keyEntry.hidden = stored;
-    elements.keyStored.hidden = !stored;
+    const held = currentApiKey() !== null;
+    elements.keyEntry.hidden = held;
+    elements.keyStored.hidden = !held;
+    elements.keyScope.textContent = keyScopeText();
 }
 
 function fillModelOptions(select, choices, defaultKey) {
@@ -2208,13 +2272,15 @@ function pageCallbackUrl() {
     return location.origin + location.pathname;
 }
 
+// The remember choice rides along in sessionStorage with the verifier, since the page is left and re-entered.
 async function startOpenRouterSignIn() {
     const verifier = makePkceVerifier();
     sessionStorage.setItem(CONSTANTS.PKCE_VERIFIER_STORAGE_KEY, verifier);
+    sessionStorage.setItem(CONSTANTS.PKCE_REMEMBER_STORAGE_KEY, String(elements.rememberKey.checked));
     location.assign(openRouterAuthUrl(pageCallbackUrl(), await pkceChallenge(verifier)));
 }
 
-// On return from OpenRouter the URL carries ?code=; exchange it for a key, store the key, and remove
+// On return from OpenRouter the URL carries ?code=; exchange it for a key, hold the key, and remove
 // the code from the URL so a reload does not repeat the exchange.
 async function finishOpenRouterSignIn() {
     const params = new URLSearchParams(location.search);
@@ -2223,36 +2289,36 @@ async function finishOpenRouterSignIn() {
         return;
     }
     const verifier = sessionStorage.getItem(CONSTANTS.PKCE_VERIFIER_STORAGE_KEY);
+    const remember = sessionStorage.getItem(CONSTANTS.PKCE_REMEMBER_STORAGE_KEY) === 'true';
     sessionStorage.removeItem(CONSTANTS.PKCE_VERIFIER_STORAGE_KEY);
+    sessionStorage.removeItem(CONSTANTS.PKCE_REMEMBER_STORAGE_KEY);
     history.replaceState(null, '', pageCallbackUrl());
     if (verifier === null) {
         setStatus('OpenRouter sign-in returned a code, but this browser has no matching sign-in in progress. Start the sign-in again from this page.', true);
         return;
     }
     try {
-        localStorage.setItem(CONSTANTS.STORAGE_KEY_OPENROUTER, await exchangeOpenRouterCode({ code, verifier }));
-        refreshKeyState();
+        holdApiKey(await exchangeOpenRouterCode({ code, verifier }), remember);
         updateEstimate();
-        setStatus('Signed in with OpenRouter; the key is stored in this browser.');
+        setStatus(`Signed in with OpenRouter; the key is ${keyScopeText()}.`);
     } catch (error) {
         setStatus(`OpenRouter sign-in failed: ${error.message}`, true);
     }
 }
 
-// Uses the stored key, or stores the typed one on first use. Returns null when there is neither.
+// Uses the held key, or takes the typed one on first use. Returns null when there is neither.
 function resolveApiKey() {
-    const stored = storedApiKey();
-    if (stored !== null) {
-        return stored;
+    const held = currentApiKey();
+    if (held !== null) {
+        return held;
     }
     const typed = elements.apiKey.value.trim();
     if (typed === '') {
         setStatus('Enter an OpenRouter key.', true);
         return null;
     }
-    localStorage.setItem(CONSTANTS.STORAGE_KEY_OPENROUTER, typed);
+    holdApiKey(typed, elements.rememberKey.checked);
     elements.apiKey.value = '';
-    refreshKeyState();
     return typed;
 }
 
@@ -2292,7 +2358,7 @@ async function runFromPage() {
         return;
     }
     const fullyCached = runIsFullyCached();
-    const apiKey = fullyCached ? storedApiKey() : resolveApiKey();
+    const apiKey = fullyCached ? currentApiKey() : resolveApiKey();
     if (apiKey === null && !fullyCached) {
         return;
     }
@@ -2338,8 +2404,7 @@ elements.cancel.addEventListener('click', () => {
     }
 });
 elements.wipeKey.addEventListener('click', () => {
-    localStorage.removeItem(CONSTANTS.STORAGE_KEY_OPENROUTER);
-    refreshKeyState();
+    forgetApiKey();
     refreshRunButton();
     setStatus('OpenRouter key wiped from this browser.');
 });

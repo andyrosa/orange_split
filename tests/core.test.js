@@ -771,16 +771,16 @@ test('runPipeline passes per-stage sampling and reasoning settings to the model 
 // ---------------------------------------------------------------------------
 
 test('model choices exist per role with labels, config fragments, and per-token rates', () => {
-    assert.equal(core.DEFAULT_VOLUME_KEY, 'haiku');
+    assert.equal(core.DEFAULT_VOLUME_KEY, 'lunaLow');
     assert.equal(core.DEFAULT_CONSOLIDATION_KEY, 'sonnet5');
-    for (const key of ['haiku', 'glmFlash', 'geminiFlash', 'opus5']) {
+    for (const key of ['haiku', 'glmFlash', 'geminiFlash', 'opus5', 'lunaLow']) {
         const choice = core.VOLUME_MODELS[key];
         assert.ok(choice.label.length > 0, key + ' has a label');
         assert.ok(choice.config.modelExtract && choice.config.modelScore, key + ' names the extraction and scoring model');
         assert.equal(choice.config.modelConsolidate, undefined, key + ' does not set the consolidation model');
         assert.equal(typeof choice.costPerThousandTokensUsd, 'number');
     }
-    for (const key of ['sonnet5', 'glm53', 'geminiFlash', 'opus5']) {
+    for (const key of ['sonnet5', 'glm53', 'geminiFlash', 'opus5', 'solLow', 'lunaMax']) {
         const choice = core.CONSOLIDATION_MODELS[key];
         assert.ok(choice.label.length > 0, key + ' has a label');
         assert.ok(choice.config.modelConsolidate, key + ' names the consolidation model');
