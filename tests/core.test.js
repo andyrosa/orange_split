@@ -62,8 +62,6 @@ TOY_PASS2.set('7|2', 'B');
 const TOY_EXPECTED_ORDER = [3, 4, 2, 1, 5, 6];
 const TOY_EXPECTED_SCORE_X1 = (2 / 3) * Math.log(4);
 const TOY_EXPECTED_SCORE_EVEN_PAIR = Math.log(3);
-const TOY_EXPECTED_COSINE_X1_X3 = 1 / Math.sqrt(6);
-const TOY_EXPECTED_COSINE_X2_X4 = 0.5;
 
 // ---------------------------------------------------------------------------
 // Stage 0: thread parsing
@@ -393,30 +391,11 @@ test('computeRows produces counts, balance, reliability and score for the toy th
     assert.equal(service.score, 0);
 });
 
-test('computeRows finds the nearest related axis by absolute cosine over author stance vectors', () => {
-    const rows = toyRows();
-    const byId = new Map(rows.map(row => [row.axisId, row]));
-    assert.equal(byId.get(1).nearest.axisId, 3);
-    assertClose(byId.get(1).nearest.cosine, TOY_EXPECTED_COSINE_X1_X3, 'cosine X1-X3');
-    assert.equal(byId.get(1).nearest.shared, 1);
-    assert.equal(byId.get(2).nearest.axisId, 4);
-    assertClose(byId.get(2).nearest.cosine, TOY_EXPECTED_COSINE_X2_X4, 'cosine X2-X4');
-    assert.equal(byId.get(5).nearest, null);
-    assert.equal(byId.get(6).nearest, null);
-});
-
-test('computeRows treats opposite orientation as related', () => {
-    const byAuthor = new Map([
-        [1, new Map([['p', 'A'], ['q', 'B']])],
-        [2, new Map([['p', 'B'], ['q', 'A']])],
-    ]);
-    const agreed = new Map();
-    const reliability = new Map();
-    const axes = [TOY_AXES[0], TOY_AXES[1]];
-    const rows = core.computeRows(axes, byAuthor, agreed, reliability);
-    assertClose(rows[0].nearest.cosine, 1, 'mirror-image axes');
-    assert.equal(rows[0].nearest.shared, 2);
-    assert.equal(rows[0].reliability, null, 'no pass data means null reliability');
+test('computeRows reports null reliability when no pass data exists for an axis', () => {
+    const byAuthor = new Map([[1, new Map([['p', 'A'], ['q', 'B']])]]);
+    const rows = core.computeRows([TOY_AXES[0]], byAuthor, new Map(), new Map());
+    assert.equal(rows[0].reliability, null);
+    assert.equal(rows[0].authors, 2);
 });
 
 test('computeRows adds a consensus score, zero below the minimum-authors threshold', () => {
@@ -435,11 +414,6 @@ test('computeRows adds a consensus score, zero below the minimum-authors thresho
     assertClose(rows[0].consensus, 0.8 * Math.log(11), 'consensus 9 vs 1');
     assert.equal(rows[1].consensus, 0, 'below threshold');
     assert.equal(rows[2].consensus, 0, 'even split');
-});
-
-test('computeRows can skip the nearest-axis search', () => {
-    const rows = core.computeRows(TOY_AXES.slice(0, 2), new Map(), new Map(), new Map(), { withNearest: false });
-    assert.equal(rows[0].nearest, null);
 });
 
 test('barCells splits a fixed number of cells by largest remainder so they always sum exactly', () => {
@@ -824,12 +798,33 @@ test('combinedRate sums the per-token rates and estimateRunSeconds adds volume t
     assert.equal(core.estimateRunSeconds(0, 'haiku', 'sonnet5'), 0);
 });
 
-test('selectCommentShare keeps the first share of comments in thread order', () => {
-    const comments = Array.from({ length: 10 }, (_, index) => fakeComment(index + 1, 0, 1));
-    assert.deepEqual(core.selectCommentShare(comments, 100).map(comment => comment.id), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-    assert.deepEqual(core.selectCommentShare(comments, 25).map(comment => comment.id), [1, 2, 3]);
-    assert.deepEqual(core.selectCommentShare(comments, 0), []);
-    assert.throws(() => core.selectCommentShare(comments, 101), /percent/);
+test('selectCommentShare takes a seeded random sample of the share, kept in thread order', () => {
+    const comments = Array.from({ length: 40 }, (_, index) => fakeComment(index + 1, 0, 1));
+    const ids = list => list.map(comment => comment.id);
+    assert.deepEqual(ids(core.selectCommentShare(comments, 100, 7)), ids(comments), '100% keeps everything');
+    assert.deepEqual(core.selectCommentShare(comments, 0, 7), []);
+    const quarter = core.selectCommentShare(comments, 25, 7);
+    assert.equal(quarter.length, 10);
+    assert.deepEqual(ids(quarter), ids(quarter).slice().sort((left, right) => left - right), 'thread order kept');
+    assert.notDeepEqual(ids(quarter), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 'not simply the first comments');
+    assert.deepEqual(ids(quarter), ids(core.selectCommentShare(comments, 25, 7)), 'same seed, same sample');
+    assert.notDeepEqual(ids(quarter), ids(core.selectCommentShare(comments, 25, 8)), 'different seed, different sample');
+    assert.throws(() => core.selectCommentShare(comments, 101, 7), /percent/);
+});
+
+test('runPipeline draws parent snippets from contextComments when a sampled reply\'s parent was not sampled', async () => {
+    const log = [];
+    const full = core.flattenThread(TOY_THREAD);
+    const sampled = full.comments.filter(comment => comment.id !== 1);
+    await core.runPipeline({
+        thread: { ...full, comments: sampled, contextComments: full.comments },
+        callChat: makeFakeCallChat(log),
+        onProgress: () => {},
+        config: { extractBatchTokens: 200, scoreBatchComments: 5, concurrency: 2 },
+    });
+    const scoreCall = log.find(call => call.stage === 'score' && call.meta.commentIds.includes(2));
+    assert.ok(scoreCall.messages[1].content.includes('replying to 1: "Portions are tiny'), 'parent 1 supplies the snippet although it was not sampled');
+    assert.ok(!scoreCall.meta.commentIds.includes(1), 'the parent itself is not scored');
 });
 
 test('estimateRunCost applies a per-thousand-token rate to the selected comments', () => {
@@ -996,4 +991,65 @@ test('runPipeline stops when the budget is exceeded', async () => {
         onProgress: () => {},
         config: { extractBatchTokens: 200, scoreBatchComments: 5, concurrency: 2, budgetUsd: 0.0015 },
     }), /budget/i);
+});
+
+// ---------------------------------------------------------------------------
+// Cache probe: how much of a run the store already holds
+// ---------------------------------------------------------------------------
+
+const PROBE_CONFIG = { extractBatchTokens: 200, scoreBatchComments: 5, concurrency: 2 };
+
+test('probeCache on an empty store reports only the extraction stage, with no hits', async () => {
+    const { api } = mapStore();
+    const thread = core.flattenThread(TOY_THREAD);
+    const probe = await core.probeCache({ thread, store: api, config: PROBE_CONFIG });
+    const batches = core.makeExtractBatches(thread.comments, PROBE_CONFIG.extractBatchTokens).length;
+    assert.deepEqual(probe, { stages: [{ stage: 'extract', hits: 0, total: batches }], complete: false });
+});
+
+test('probeCache after a full run reports every stage fully cached without calling a model', async () => {
+    const { api } = mapStore();
+    const thread = core.flattenThread(TOY_THREAD);
+    const run = await core.runPipeline({ thread, callChat: core.makeCachedCallChat(makeFakeCallChat([]), api), onProgress: () => {}, config: PROBE_CONFIG });
+    const probe = await core.probeCache({ thread, store: api, config: PROBE_CONFIG });
+    assert.equal(probe.complete, true);
+    assert.deepEqual(probe.stages.map(stage => stage.stage), ['extract', 'consolidate', 'score']);
+    for (const stage of probe.stages) {
+        assert.equal(stage.hits, stage.total, stage.stage);
+    }
+    assert.equal(probe.stages.reduce((sum, stage) => sum + stage.total, 0), run.calls);
+});
+
+test('probeCache counts a missing scoring call and stays incomplete', async () => {
+    const { store, api } = mapStore();
+    const thread = core.flattenThread(TOY_THREAD);
+    await core.runPipeline({ thread, callChat: core.makeCachedCallChat(makeFakeCallChat([]), api), onProgress: () => {}, config: PROBE_CONFIG });
+    const scoreKey = [...store.entries()].find(([, value]) => Array.isArray(value.json.stances))[0];
+    store.delete(scoreKey);
+    const probe = await core.probeCache({ thread, store: api, config: PROBE_CONFIG });
+    assert.equal(probe.complete, false);
+    const score = probe.stages.find(stage => stage.stage === 'score');
+    assert.equal(score.hits, score.total - 1);
+});
+
+test('probeCache stops reporting after the first stage with a miss', async () => {
+    const { store, api } = mapStore();
+    const thread = core.flattenThread(TOY_THREAD);
+    await core.runPipeline({ thread, callChat: core.makeCachedCallChat(makeFakeCallChat([]), api), onProgress: () => {}, config: PROBE_CONFIG });
+    const consolidateKey = [...store.entries()].find(([, value]) => Array.isArray(value.json.axes))[0];
+    store.delete(consolidateKey);
+    const probe = await core.probeCache({ thread, store: api, config: PROBE_CONFIG });
+    assert.deepEqual(probe.stages.map(stage => stage.stage), ['extract', 'consolidate']);
+    assert.deepEqual(probe.stages[1], { stage: 'consolidate', hits: 0, total: 1 });
+});
+
+test('formatCacheProbe describes complete, partial, and empty caches', () => {
+    assert.equal(core.formatCacheProbe({ stages: [{ stage: 'extract', hits: 2, total: 2 }, { stage: 'consolidate', hits: 1, total: 1 }, { stage: 'score', hits: 4, total: 4 }], complete: true }),
+        'All 7 model calls for this run are cached, so it costs nothing.');
+    assert.equal(core.formatCacheProbe({ stages: [{ stage: 'extract', hits: 2, total: 2 }, { stage: 'consolidate', hits: 1, total: 1 }, { stage: 'score', hits: 3, total: 4 }], complete: false }),
+        'Cached model calls for this run: 2 of 2 extraction, 1 of 1 consolidation, 3 of 4 scoring.');
+    assert.equal(core.formatCacheProbe({ stages: [{ stage: 'extract', hits: 1, total: 2 }], complete: false }),
+        'Cached model calls for this run: 1 of 2 extraction; later stages depend on the missing results and cannot be checked yet.');
+    assert.equal(core.formatCacheProbe({ stages: [{ stage: 'extract', hits: 0, total: 2 }], complete: false }),
+        'No model calls for this run are cached.');
 });

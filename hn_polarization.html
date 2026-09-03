@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>HN For and Against</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EHvN%3C/text%3E%3C/svg%3E">
 <style>
 body { font-family: system-ui, sans-serif; margin: 1rem; }
 label { display: inline-block; margin-right: 1rem; }
@@ -17,10 +18,15 @@ button { margin-right: 0.5rem; }
 .hint { color: #666; font-size: 0.9em; }
 table { border-collapse: collapse; margin-top: 1rem; }
 th, td { border: 1px solid #999; padding: 0.25rem 0.5rem; vertical-align: top; }
-th { cursor: pointer; background: #eee; text-align: left; }
+th { background: #eee; text-align: left; }
 td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 td.right { text-align: right; }
-td.bar { font-family: monospace; white-space: nowrap; }
+td.bar { white-space: nowrap; }
+svg.split { vertical-align: middle; }
+svg.split text { font-size: 11px; dominant-baseline: central; }
+svg.split .side1 { fill: #2b6cb0; }
+svg.split .mid { fill: #b0b0b0; }
+svg.split .side2 { fill: #c05621; }
 #warnings ul { margin: 0; padding-left: 1.5rem; }
 </style>
 </head>
@@ -45,16 +51,19 @@ td.bar { font-family: monospace; white-space: nowrap; }
 <label>Consolidation model <select id="consolidation-model"></select></label>
 </p>
 <p id="estimate"></p>
+<p id="cache-info"></p>
 <p>
 <span id="key-entry"><label>OpenRouter key <input id="api-key" type="password" autocomplete="off"></label> <button id="connect-openrouter" type="button" hidden>Sign in with OpenRouter instead</button></span>
-<span id="key-stored" hidden>OpenRouter key is stored in this browser.</span>
 <button id="run" type="button" disabled>Run</button>
 <button id="cancel" type="button" hidden>Cancel</button>
 </p>
 <p>
 <span id="storage-info"></span>
-<button id="delete-cached" type="button" hidden>Delete cached data</button>
-<button id="wipe-key" type="button" hidden>Wipe OpenRouter key</button>
+<button id="delete-cached" type="button" hidden>Delete</button>
+</p>
+<p id="key-stored" hidden>
+OpenRouter key is stored in this browser
+<button id="wipe-key" type="button">Delete</button>
 </p>
 <div id="status"></div>
 <div id="elapsed"></div>
@@ -83,6 +92,7 @@ const CONSTANTS = Object.freeze({
     RETRY_BASE_MS: 2000,
     MIN_CONSENSUS_AUTHORS: 5,
     BAR_CELLS: 20,
+    SAMPLE_SEED: 4242,
 });
 
 // Models are chosen per role: one for the high-volume stages (extraction and scoring) and one for
@@ -316,13 +326,19 @@ function makeExtractBatches(comments, maxTokens) {
     return batches;
 }
 
-// Keeps the first `percent` of comments in thread order. Ancestors precede replies in that order,
-// so every kept reply still has its parent available for context.
-function selectCommentShare(comments, percent) {
+// Keeps a random `percent` of the comments, chosen with `seed` so the same thread and percentage
+// always give the same sample, returned in thread order. Parents that were not sampled can still
+// supply context through the pipeline's contextComments.
+function selectCommentShare(comments, percent, seed) {
     if (!Number.isFinite(percent) || percent < 0 || percent > 100) {
         throw new Error(`percent must be between 0 and 100, got ${percent}`);
     }
-    return comments.slice(0, Math.ceil((comments.length * percent) / 100));
+    const count = Math.ceil((comments.length * percent) / 100);
+    if (count >= comments.length) {
+        return comments.slice();
+    }
+    const indices = seededShuffle(comments.map((comment, index) => index), seed).slice(0, count).sort((left, right) => left - right);
+    return indices.map(index => comments[index]);
 }
 
 function estimateRunCost(comments, ratePerThousandTokensUsd) {
@@ -834,54 +850,14 @@ function aggregateByAuthor(agreed, commentsById) {
     return byAuthor;
 }
 
-function stanceVector(authorStances) {
-    const vector = new Map();
-    for (const [author, stance] of authorStances) {
-        if (stance === STANCE_A) vector.set(author, 1);
-        if (stance === STANCE_B) vector.set(author, -1);
-    }
-    return vector;
-}
-
-function nearestAxis(axisId, vectors) {
-    const own = vectors.get(axisId);
-    let best = null;
-    for (const [otherId, other] of vectors) {
-        if (otherId === axisId || own.size === 0 || other.size === 0) {
-            continue;
-        }
-        let dot = 0;
-        let shared = 0;
-        for (const [author, value] of own) {
-            if (other.has(author)) {
-                dot += value * other.get(author);
-                shared += 1;
-            }
-        }
-        if (shared === 0 || dot === 0) {
-            continue;
-        }
-        const cosine = Math.abs(dot) / Math.sqrt(own.size * other.size);
-        if (best === null || cosine > best.cosine || (cosine === best.cosine && shared > best.shared)) {
-            best = { axisId: otherId, cosine, shared };
-        }
-    }
-    return best;
-}
-
-// options.withNearest (default true) controls the pairwise nearest-axis search, which callers that
-// only need scores can skip.
-function computeRows(axes, byAuthor, agreed, reliability, options) {
-    const withNearest = !options || options.withNearest !== false;
+function computeRows(axes, byAuthor, agreed, reliability) {
     const commentCounts = new Map();
     for (const key of agreed.keys()) {
         const { axisId } = parseStanceKey(key);
         commentCounts.set(axisId, (commentCounts.get(axisId) || 0) + 1);
     }
-    const vectors = new Map();
-    const rows = axes.map(axis => {
+    return axes.map(axis => {
         const authorStances = byAuthor.get(axis.id) || new Map();
-        vectors.set(axis.id, stanceVector(authorStances));
         let countA = 0;
         let countB = 0;
         let countM = 0;
@@ -909,15 +885,8 @@ function computeRows(axes, byAuthor, agreed, reliability, options) {
             reliability: reliabilityEntry && reliabilityEntry.total > 0 ? reliabilityEntry.agreed / reliabilityEntry.total : null,
             score: total > 0 ? (minoritySpan / total) * coverageWeight : 0,
             consensus: hasConsensusSignal ? (Math.abs(countA - countB) / total) * coverageWeight : 0,
-            nearest: null,
         };
     });
-    if (withNearest) {
-        for (const row of rows) {
-            row.nearest = nearestAxis(row.axisId, vectors);
-        }
-    }
-    return rows;
 }
 
 // Splits `cells` among the three counts by largest remainder, so the parts always sum to `cells`.
@@ -958,10 +927,6 @@ function formatSplit(row) {
 
 function formatWithSpread(value, spread) {
     return `${value.toFixed(DISPLAY_DIGITS)} ±${spread.toFixed(DISPLAY_DIGITS)}`;
-}
-
-function formatNearest(nearest, rankByAxisId) {
-    return nearest ? `#${rankByAxisId.get(nearest.axisId)} (cos ${nearest.cosine.toFixed(DISPLAY_DIGITS)}, ${nearest.shared} shared)` : '-';
 }
 
 function formatDuration(seconds) {
@@ -1248,6 +1213,59 @@ function makeCachedCallChat(callChat, store) {
     };
 }
 
+// Placeholder responses let the pipeline keep building later requests after a cache miss. They are
+// valid but empty, so no truncation or shape error can occur while probing.
+const PROBE_PLACEHOLDER_STATEMENTS = { statementA: 'placeholder', statementB: 'placeholder' };
+const PROBE_PLACEHOLDER_RESPONSES = Object.freeze({
+    extract: { candidates: [{ ...PROBE_PLACEHOLDER_STATEMENTS, commentsA: [], commentsB: [] }] },
+    consolidate: { axes: [PROBE_PLACEHOLDER_STATEMENTS] },
+    score: { stances: [] },
+});
+const PROBE_PLACEHOLDER_USAGE = Object.freeze({ promptTokens: 0, completionTokens: 0, cost: 0 });
+const STAGE_ORDER = Object.freeze(['extract', 'consolidate', 'score']);
+const STAGE_CALL_NAMES = Object.freeze({ extract: 'extraction', consolidate: 'consolidation', score: 'scoring' });
+
+// Counts, stage by stage, how many of a run's model calls the store already holds, without calling any
+// model. Stages after the first stage with a miss are left out of the result, because their requests
+// depend on the missing responses; complete is true when every call of every stage is cached.
+async function probeCache({ thread, store, config }) {
+    const counts = new Map(STAGE_ORDER.map(stage => [stage, { stage, hits: 0, total: 0 }]));
+    async function probingCallChat(call) {
+        const count = counts.get(call.stage);
+        count.total += 1;
+        const hit = await store.get(requestCacheKey(call));
+        if (hit) {
+            count.hits += 1;
+            return { json: hit.json, usage: { ...hit.usage, cost: 0, cached: true } };
+        }
+        return { json: PROBE_PLACEHOLDER_RESPONSES[call.stage], usage: PROBE_PLACEHOLDER_USAGE };
+    }
+    await runPipeline({ thread, callChat: probingCallChat, onProgress: () => {}, config });
+    const stages = [];
+    for (const stage of STAGE_ORDER) {
+        const count = counts.get(stage);
+        stages.push(count);
+        if (count.hits < count.total) {
+            break;
+        }
+    }
+    return { stages, complete: stages.length === STAGE_ORDER.length && stages.every(count => count.hits === count.total) };
+}
+
+function formatCacheProbe(probe) {
+    const totalCalls = probe.stages.reduce((sum, stage) => sum + stage.total, 0);
+    const totalHits = probe.stages.reduce((sum, stage) => sum + stage.hits, 0);
+    if (probe.complete) {
+        return `All ${totalCalls} model calls for this run are cached, so it costs nothing.`;
+    }
+    if (totalHits === 0) {
+        return 'No model calls for this run are cached.';
+    }
+    const parts = probe.stages.map(stage => `${stage.hits} of ${stage.total} ${STAGE_CALL_NAMES[stage.stage]}`).join(', ');
+    const tail = probe.stages.length < STAGE_ORDER.length ? '; later stages depend on the missing results and cannot be checked yet.' : '.';
+    return `Cached model calls for this run: ${parts}${tail}`;
+}
+
 // ---------------------------------------------------------------------------
 // Pipeline
 // ---------------------------------------------------------------------------
@@ -1260,6 +1278,9 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
     }
     const commentsById = new Map(comments.map(comment => [comment.id, comment]));
     const validIds = new Set(commentsById.keys());
+    // Parent snippets may come from comments outside the analyzed set (a sampled reply whose parent
+    // was not sampled); thread.contextComments, when given, is the full thread for that lookup.
+    const contextById = new Map((thread.contextComments || comments).map(comment => [comment.id, comment]));
     const warnings = [];
     let cost = 0;
     let callCount = 0;
@@ -1387,7 +1408,7 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
         const response = await callModel({
             stage: 'score',
             model: cfg.modelScore,
-            messages: [pass.systemMessage, buildScoreUserMessage(part, commentsById, cfg.parentSnippetChars)],
+            messages: [pass.systemMessage, buildScoreUserMessage(part, contextById, cfg.parentSnippetChars)],
             schema: SCORE_SCHEMA,
             sampling: cfg.samplingScore,
             reasoning: cfg.reasoningScore,
@@ -1408,7 +1429,7 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
     // Stage 4: aggregate.
     const { agreed, reliability } = mergePasses(passMaps[0], passMaps[1]);
     const byAuthor = aggregateByAuthor(agreed, commentsById);
-    const rowsForPass = stanceMap => computeRows(axes, aggregateByAuthor(stanceMap, commentsById), stanceMap, new Map(), { withNearest: false });
+    const rowsForPass = stanceMap => computeRows(axes, aggregateByAuthor(stanceMap, commentsById), stanceMap, new Map());
     const agreedRows = computeRows(axes, byAuthor, agreed, reliability);
     const rows = rankRows(attachSpreads(agreedRows, rowsForPass(passMaps[0]), rowsForPass(passMaps[1])));
     report('done', 1, 1);
@@ -1442,9 +1463,9 @@ if (typeof module !== 'undefined' && module.exports) {
         parseExtractResponse, parseConsolidateResponse, parseScoreResponse,
         stanceKey, parseStanceKey, flipStance,
         mergePasses, aggregateByAuthor, computeRows, rankRows, barCells, splitBar, attachSpreads,
-        formatSplit, formatWithSpread, formatNearest, formatDuration, formatProgress, formatRunSummary,
+        formatSplit, formatWithSpread, formatDuration, formatProgress, formatRunSummary,
         runPool, callOpenRouter, runPipeline, TruncationError, InvalidResponseError,
-        requestCacheKey, makeCachedCallChat,
+        requestCacheKey, makeCachedCallChat, probeCache, formatCacheProbe,
         makePkceVerifier, pkceChallenge, openRouterAuthUrl, exchangeOpenRouterCode,
     };
 }
@@ -1453,18 +1474,17 @@ if (typeof module !== 'undefined' && module.exports) {
 <script id="page">
 // Page glue: DOM only. All computation lives in the core script above.
 
-// A column with a render function shows that text but sorts by its key. The split bar sorts by balance.
+// Rows are shown in rank order (polarization). A column with a render function shows that text, one with a
+// cell function shows the element it returns, else the value under its key.
 const COLUMNS = [
-    { key: 'rank', label: 'Rank', numeric: true, className: 'num' },
-    { key: 'countA', label: 'Statement 1', numeric: true, render: row => row.statementA, className: 'right' },
-    { key: 'balance', label: 'Split', numeric: true, render: formatSplit, className: 'bar' },
-    { key: 'countB', label: 'Statement 2', numeric: true, render: row => row.statementB },
-    { key: 'countM', label: 'Mid', numeric: true, className: 'num' },
-    { key: 'authors', label: 'Authors', numeric: true, className: 'num' },
-    { key: 'comments', label: 'Comments', numeric: true, className: 'num' },
-    { key: 'score', label: 'Polarization', numeric: true, render: row => formatWithSpread(row.score, row.scoreSpread), className: 'num' },
-    { key: 'consensus', label: 'Consensus', numeric: true, render: row => formatWithSpread(row.consensus, row.consensusSpread), className: 'num' },
-    { key: 'nearestText', label: 'Nearest axis', numeric: false },
+    { key: 'rank', label: 'Rank', className: 'num' },
+    { key: 'statementA', label: 'Statement 1', className: 'right' },
+    { key: 'balance', label: 'Split', cell: (row, context) => renderSplitCell(row, context.splitScale), className: 'bar' },
+    { key: 'statementB', label: 'Statement 2' },
+    { key: 'authors', label: 'Authors', className: 'num' },
+    { key: 'comments', label: 'Comments', className: 'num' },
+    { key: 'score', label: 'Polarization', render: row => formatWithSpread(row.score, row.scoreSpread), className: 'num' },
+    { key: 'consensus', label: 'Consensus', render: row => formatWithSpread(row.consensus, row.consensusSpread), className: 'num' },
 ];
 
 // A JSON store over localStorage keys sharing one prefix. get returns null when absent; set returns
@@ -1532,6 +1552,7 @@ function storedApiKey() {
 const elements = {
     storyOptions: document.getElementById('story-options'),
     suggestionsCaption: document.getElementById('suggestions-caption'),
+    cacheInfo: document.getElementById('cache-info'),
     threadId: document.getElementById('thread-id'),
     elapsed: document.getElementById('elapsed'),
     loadThread: document.getElementById('load-thread'),
@@ -1559,8 +1580,6 @@ const elements = {
 };
 
 let activeController = null;
-let displayedRows = [];
-let sortState = { key: 'rank', descending: false };
 let loadedThread = null;
 
 function setStatus(text, isError) {
@@ -1569,7 +1588,7 @@ function setStatus(text, isError) {
 }
 
 function selectedComments() {
-    return loadedThread === null ? [] : selectCommentShare(loadedThread.comments, Number(elements.share.value));
+    return loadedThread === null ? [] : selectCommentShare(loadedThread.comments, Number(elements.share.value), CONSTANTS.SAMPLE_SEED);
 }
 
 function selectedModelKeys() {
@@ -1580,11 +1599,46 @@ function keyAvailable() {
     return storedApiKey() !== null || elements.apiKey.value.trim() !== '';
 }
 
-// Refreshes the share text, the cost and time estimate, and whether Run is possible.
+// The thread as the pipeline sees it: the selected comments, with the full thread for parent snippets.
+function selectedThread(comments) {
+    return { ...loadedThread, comments, contextComments: loadedThread.comments };
+}
+
+let probeSequence = 0;
+
+// Counts the run's model calls already cached, then hands the result to onProbe unless a newer probe
+// has started since (the slider and the model selects can change faster than a probe finishes).
+async function refreshCacheInfo(comments, onProbe) {
+    probeSequence += 1;
+    const sequence = probeSequence;
+    const { volumeKey, consolidationKey } = selectedModelKeys();
+    const probe = await probeCache({ thread: selectedThread(comments), store: pageCacheStore, config: buildStageConfig(volumeKey, consolidationKey) });
+    if (sequence === probeSequence) {
+        onProbe(probe);
+    }
+}
+
+// Writes the estimate line and the cached-call line under it. Until the probe finishes, probe is null
+// and the estimate stands alone; a complete probe turns the estimate into the zero-cost statement.
+function renderEstimate(comments, estimate, seconds, probe) {
+    const header = `Estimate for ${comments.length} comments (${Math.round(estimate.tokens / 1000)}k tokens): `;
+    if (probe !== null && probe.complete) {
+        const calls = probe.stages.reduce((sum, stage) => sum + stage.total, 0);
+        elements.estimate.textContent = `${header}$0, since all ${calls} model calls for this run are cached.`;
+        elements.cacheInfo.textContent = '';
+        return;
+    }
+    elements.estimate.textContent = `${header}about $${estimate.usd.toFixed(2)} and about ${formatDuration(seconds)} if nothing were cached, from measured runs.`;
+    elements.cacheInfo.textContent = probe === null ? '' : formatCacheProbe(probe);
+}
+
+// Refreshes the share text, the cost and time estimate, the cached-call line, and whether Run is possible.
 function updateEstimate() {
+    probeSequence += 1;
     if (loadedThread === null) {
         elements.shareRow.hidden = true;
         elements.estimate.textContent = '';
+        elements.cacheInfo.textContent = '';
         elements.run.disabled = true;
         return;
     }
@@ -1594,9 +1648,14 @@ function updateEstimate() {
     const seconds = estimateRunSeconds(estimate.tokens, volumeKey, consolidationKey);
     elements.shareRow.hidden = false;
     elements.shareText.textContent = `${elements.share.value}%: ${comments.length} of ${loadedThread.comments.length} comments`;
-    elements.estimate.textContent = comments.length === 0
-        ? 'Nothing selected.'
-        : `Estimate for ${comments.length} comments (${Math.round(estimate.tokens / 1000)}k tokens): about $${estimate.usd.toFixed(2)} and about ${formatDuration(seconds)}, from measured runs.`;
+    if (comments.length === 0) {
+        elements.estimate.textContent = 'Nothing selected.';
+        elements.cacheInfo.textContent = '';
+    } else {
+        renderEstimate(comments, estimate, seconds, null);
+        refreshCacheInfo(comments, probe => renderEstimate(comments, estimate, seconds, probe))
+            .catch(error => setStatus(`Cache check failed: ${error.message}`, true));
+    }
     elements.run.disabled = activeController !== null || comments.length === 0 || !keyAvailable();
 }
 
@@ -1617,15 +1676,16 @@ function refreshStorageInfo() {
     const snapshots = snapshotStore.usage();
     const kilobytes = chars => Math.round(chars / CHARS_PER_KB);
     elements.storageInfo.textContent = `Cached in this browser: ${cache.count} model calls (about ${kilobytes(cache.chars)} KB), `
-        + `${snapshots.count} thread snapshots (about ${kilobytes(snapshots.chars)} KB).`;
+        + `${snapshots.count} threads (about ${kilobytes(snapshots.chars)} KB).`;
     elements.deleteCached.hidden = cache.count === 0 && snapshots.count === 0;
 }
 
 // Cheap enough to run on every keystroke in the thread box: existence checks only.
+// Load appears while the box denotes a thread other than the loaded one; Refresh while the loaded thread is stored.
 function refreshThreadButtons() {
     const threadId = threadIdInBox();
-    elements.refreshThread.hidden = threadId === null || !snapshotStore.has(threadId);
-    elements.loadThread.hidden = loadedThread !== null && String(loadedThread.id) === threadId;
+    elements.refreshThread.hidden = loadedThread === null || !snapshotStore.has(String(loadedThread.id));
+    elements.loadThread.hidden = threadId === null || (loadedThread !== null && String(loadedThread.id) === threadId);
 }
 
 // The stored key is never written back into the input; while one is stored the input is hidden.
@@ -1633,7 +1693,6 @@ function refreshKeyState() {
     const stored = storedApiKey() !== null;
     elements.keyEntry.hidden = stored;
     elements.keyStored.hidden = !stored;
-    elements.wipeKey.hidden = !stored;
 }
 
 function fillModelOptions(select, choices, defaultKey) {
@@ -1686,9 +1745,12 @@ function setStoryOptions(stories, caption) {
     setCaption(caption);
 }
 
+let homePageStories = null;
+
 async function populateFrontPage() {
     try {
-        setStoryOptions(await fetchStories(CONSTANTS.HN_FRONT_PAGE_URL, 'the home page'), CAPTION_HOME_PAGE);
+        homePageStories = await fetchStories(CONSTANTS.HN_FRONT_PAGE_URL, 'the home page');
+        setStoryOptions(homePageStories, CAPTION_HOME_PAGE);
     } catch (error) {
         setCaption('Home page unavailable');
         setStatus(`Home page suggestions unavailable: ${error.message}. A thread id can still be typed.`, true);
@@ -1713,37 +1775,38 @@ function scheduleStorySearch(text) {
     }, SEARCH_DEBOUNCE_MS);
 }
 
-function currentThreadId() {
+// Loads the thread named in the box. The box is emptied after a load so the suggestion list shows in full
+// on the next click; the loaded thread is named on the info line instead.
+function loadThreadFromBox() {
     const threadId = threadIdInBox();
     if (threadId === null) {
         setStatus('Enter a numeric Hacker News thread id, or pick a story from the suggestions.', true);
-    }
-    return threadId;
-}
-
-// Loads the thread from the stored snapshot or from the API, then shows its size and the estimate.
-async function loadThreadFromPage() {
-    const threadId = currentThreadId();
-    if (threadId === null) {
         return;
     }
+    loadThreadFromPage(threadId);
+}
+
+// Loads the thread from the stored copy or from the API, then shows its size and the estimate.
+async function loadThreadFromPage(threadId) {
     loadedThread = null;
     updateEstimate();
     try {
         let snapshot = snapshotStore.get(threadId);
+        let stored = true;
         if (snapshot === null) {
             setStatus(`Fetching thread ${threadId}`);
             snapshot = { fetchedAt: new Date().toISOString(), item: await fetchThreadItem(threadId) };
-            const stored = snapshotStore.set(threadId, snapshot);
-            setStatus(stored ? '' : 'Thread snapshot could not be stored (browser storage full or too large); a reload will fetch it again.', !stored);
+            stored = snapshotStore.set(threadId, snapshot);
+            setStatus(stored ? '' : 'Thread could not be stored (browser storage full or too large); a reload will fetch it again.', !stored);
         } else {
             setStatus('');
         }
         loadedThread = flattenThread(snapshot.item);
-        const label = storyLabel(loadedThread);
-        storyIdsByLabel.set(label, loadedThread.id);
-        elements.threadId.value = label;
-        elements.threadInfo.textContent = `${loadedThread.comments.length} comments, snapshot from ${snapshot.fetchedAt}`;
+        elements.threadId.value = '';
+        if (homePageStories !== null) {
+            setStoryOptions(homePageStories, CAPTION_HOME_PAGE);
+        }
+        elements.threadInfo.textContent = `${storyLabel(loadedThread)}: ${loadedThread.comments.length} comments, fetched ${new Date(snapshot.fetchedAt).toLocaleString()}${stored ? '' : ', not stored'}`;
     } catch (error) {
         elements.threadInfo.textContent = '';
         setStatus(`Error: ${error.message}`, true);
@@ -1751,6 +1814,61 @@ async function loadThreadFromPage() {
     updateEstimate();
     refreshThreadButtons();
     refreshStorageInfo();
+}
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const SPLIT_ARM_PX = 160;
+const SPLIT_COUNT_PX = 24;
+const SPLIT_MIN_GAP_PX = 16;
+const SPLIT_HEIGHT_PX = 14;
+const SPLIT_TEXT_PAD_PX = 3;
+
+function svgElement(name, attributes) {
+    const element = document.createElementNS(SVG_NS, name);
+    for (const [key, value] of Object.entries(attributes)) {
+        element.setAttribute(key, value);
+    }
+    return element;
+}
+
+// The split bar diverges from a center: statement 1 commenters extend left, statement 2 right, and the
+// middle is a grey gap holding its count. One scale serves the whole table, so the longest arm is the
+// largest side count and bar length compares axis sizes across rows; the center is at the same x in every row.
+function splitScale(rows) {
+    const maxSide = Math.max(1, ...rows.map(row => Math.max(row.countA, row.countB)));
+    const pixelsPerCommenter = SPLIT_ARM_PX / maxSide;
+    const gapWidth = row => (row.countM === 0 ? 0 : Math.max(SPLIT_MIN_GAP_PX, row.countM * pixelsPerCommenter));
+    const maxGap = Math.max(0, ...rows.map(gapWidth));
+    return {
+        pixelsPerCommenter,
+        gapWidth,
+        center: SPLIT_COUNT_PX + SPLIT_ARM_PX + maxGap / 2,
+        width: 2 * (SPLIT_COUNT_PX + SPLIT_ARM_PX) + maxGap,
+    };
+}
+
+function splitText(x, anchor, value) {
+    const element = svgElement('text', { x, y: SPLIT_HEIGHT_PX / 2, 'text-anchor': anchor });
+    element.textContent = String(value);
+    return element;
+}
+
+function renderSplitCell(row, scale) {
+    const svg = svgElement('svg', { class: 'split', width: scale.width, height: SPLIT_HEIGHT_PX });
+    const gap = scale.gapWidth(row);
+    const widthA = row.countA * scale.pixelsPerCommenter;
+    const widthB = row.countB * scale.pixelsPerCommenter;
+    const leftEdge = scale.center - gap / 2 - widthA;
+    const rightEdge = scale.center + gap / 2 + widthB;
+    svg.appendChild(svgElement('rect', { class: 'side1', x: leftEdge, y: 0, width: widthA, height: SPLIT_HEIGHT_PX }));
+    if (gap > 0) {
+        svg.appendChild(svgElement('rect', { class: 'mid', x: scale.center - gap / 2, y: 0, width: gap, height: SPLIT_HEIGHT_PX }));
+        svg.appendChild(splitText(scale.center, 'middle', row.countM));
+    }
+    svg.appendChild(svgElement('rect', { class: 'side2', x: scale.center + gap / 2, y: 0, width: widthB, height: SPLIT_HEIGHT_PX }));
+    svg.appendChild(splitText(leftEdge - SPLIT_TEXT_PAD_PX, 'end', row.countA));
+    svg.appendChild(splitText(rightEdge + SPLIT_TEXT_PAD_PX, 'start', row.countB));
+    return svg;
 }
 
 function formatCell(row, column) {
@@ -1764,43 +1882,25 @@ function formatCell(row, column) {
     return String(value);
 }
 
-function compareRows(left, right, column) {
-    const leftValue = left[column.key];
-    const rightValue = right[column.key];
-    if (leftValue === null || leftValue === undefined) return 1;
-    if (rightValue === null || rightValue === undefined) return -1;
-    if (column.numeric) return leftValue - rightValue;
-    return String(leftValue).localeCompare(String(rightValue));
-}
-
-function renderTable() {
-    const column = COLUMNS.find(candidate => candidate.key === sortState.key);
-    const sorted = displayedRows.slice().sort((left, right) => {
-        const order = compareRows(left, right, column);
-        return sortState.descending ? -order : order;
-    });
+function renderTable(rows) {
     const table = document.createElement('table');
     const headRow = document.createElement('tr');
     for (const columnDefinition of COLUMNS) {
         const header = document.createElement('th');
-        const marker = columnDefinition.key === sortState.key ? (sortState.descending ? ' v' : ' ^') : '';
-        header.textContent = columnDefinition.label + marker;
-        header.addEventListener('click', () => {
-            if (sortState.key === columnDefinition.key) {
-                sortState = { key: columnDefinition.key, descending: !sortState.descending };
-            } else {
-                sortState = { key: columnDefinition.key, descending: columnDefinition.numeric && columnDefinition.key !== 'rank' };
-            }
-            renderTable();
-        });
+        header.textContent = columnDefinition.label;
         headRow.appendChild(header);
     }
     table.appendChild(headRow);
-    for (const row of sorted) {
+    const context = { splitScale: splitScale(rows) };
+    for (const row of rows) {
         const tableRow = document.createElement('tr');
         for (const columnDefinition of COLUMNS) {
             const cell = document.createElement('td');
-            cell.textContent = formatCell(row, columnDefinition);
+            if (columnDefinition.cell) {
+                cell.appendChild(columnDefinition.cell(row, context));
+            } else {
+                cell.textContent = formatCell(row, columnDefinition);
+            }
             if (columnDefinition.className) {
                 cell.classList.add(columnDefinition.className);
             }
@@ -1812,9 +1912,6 @@ function renderTable() {
 }
 
 function renderResults(result) {
-    const rankByAxisId = new Map(result.rows.map(row => [row.axisId, row.rank]));
-    displayedRows = result.rows.map(row => ({ ...row, nearestText: formatNearest(row.nearest, rankByAxisId) }));
-    sortState = { key: 'rank', descending: false };
     elements.summary.textContent = formatRunSummary(result).join(' ');
     const warningList = elements.warnings.querySelector('ul');
     warningList.replaceChildren(...result.warnings.map(text => {
@@ -1824,7 +1921,7 @@ function renderResults(result) {
     }));
     elements.warnings.querySelector('summary').textContent = `${result.warnings.length} warnings`;
     elements.warnings.hidden = result.warnings.length === 0;
-    renderTable();
+    renderTable(result.rows);
 }
 
 // PKCE sign-in needs an http(s) page with a stable URL as the callback and a secure context for
@@ -1930,7 +2027,7 @@ async function runFromPage() {
     const pageWarnings = [];
     const startedAt = startElapsedCounter();
     try {
-        const thread = { ...loadedThread, comments };
+        const thread = selectedThread(comments);
         pageCacheStore.writeFailures = 0;
         const result = await runPipeline({
             thread,
@@ -1975,12 +2072,12 @@ elements.deleteCached.addEventListener('click', () => {
     snapshotStore.clear();
     refreshStorageInfo();
     refreshThreadButtons();
-    setStatus(`Deleted from this browser: ${removedCalls} cached model calls and ${removedSnapshots} thread snapshots. The OpenRouter key is kept.`);
+    setStatus(`Deleted from this browser: ${removedCalls} cached model calls and ${removedSnapshots} threads. The OpenRouter key is kept.`);
 });
-elements.loadThread.addEventListener('click', loadThreadFromPage);
+elements.loadThread.addEventListener('click', loadThreadFromBox);
 elements.threadId.addEventListener('keydown', event => {
     if (event.key === 'Enter') {
-        loadThreadFromPage();
+        loadThreadFromBox();
     }
 });
 elements.threadId.addEventListener('input', () => {
@@ -1994,16 +2091,13 @@ elements.threadId.addEventListener('input', () => {
 elements.threadId.addEventListener('change', () => {
     const threadId = threadIdInBox();
     if (threadId !== null && !(loadedThread !== null && String(loadedThread.id) === threadId)) {
-        loadThreadFromPage();
+        loadThreadFromPage(threadId);
     }
 });
 elements.refreshThread.addEventListener('click', () => {
-    const threadId = currentThreadId();
-    if (threadId === null) {
-        return;
-    }
+    const threadId = String(loadedThread.id);
     snapshotStore.remove(threadId);
-    loadThreadFromPage();
+    loadThreadFromPage(threadId);
 });
 elements.share.addEventListener('input', updateEstimate);
 elements.volumeModel.addEventListener('change', updateEstimate);

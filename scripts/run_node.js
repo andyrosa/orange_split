@@ -90,8 +90,8 @@ async function loadThreadItem(threadId, threadFile) {
 }
 
 // Each axis prints as three lines: statement 1, statement 2, then the split bar and metrics.
-function formatRow(row, rankByAxisId) {
-    const metrics = `mid ${row.countM}  authors ${row.authors}  comments ${row.comments}  polar ${core.formatWithSpread(row.score, row.scoreSpread)}  cons ${core.formatWithSpread(row.consensus, row.consensusSpread)}  nearest ${core.formatNearest(row.nearest, rankByAxisId)}`;
+function formatRow(row) {
+    const metrics = `mid ${row.countM}  authors ${row.authors}  comments ${row.comments}  polar ${core.formatWithSpread(row.score, row.scoreSpread)}  cons ${core.formatWithSpread(row.consensus, row.consensusSpread)}`;
     return [
         `#${String(row.rank).padStart(3)} ${row.statementA}`,
         `${STATEMENT_INDENT}${row.statementB}`,
@@ -100,9 +100,8 @@ function formatRow(row, rankByAxisId) {
 }
 
 function report(result, elapsedSeconds) {
-    const rankByAxisId = new Map(result.rows.map(row => [row.axisId, row.rank]));
     for (const row of result.rows) {
-        console.log(formatRow(row, rankByAxisId));
+        console.log(formatRow(row));
     }
     console.log('');
     for (const line of core.formatRunSummary(result)) {
