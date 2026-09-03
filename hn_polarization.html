@@ -1,0 +1,2027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HN For and Against</title>
+<style>
+body { font-family: system-ui, sans-serif; margin: 1rem; }
+label { display: inline-block; margin-right: 1rem; }
+input[type="text"], input[type="password"] { width: 22rem; }
+#thread-id { width: 32rem; }
+input[type="range"] { width: 16rem; vertical-align: middle; }
+select { max-width: 40rem; }
+button { margin-right: 0.5rem; }
+#status { margin: 0.75rem 0; white-space: pre-wrap; }
+#status.error { color: #b00020; }
+.hint { color: #666; font-size: 0.9em; }
+table { border-collapse: collapse; margin-top: 1rem; }
+th, td { border: 1px solid #999; padding: 0.25rem 0.5rem; vertical-align: top; }
+th { cursor: pointer; background: #eee; text-align: left; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.right { text-align: right; }
+td.bar { font-family: monospace; white-space: nowrap; }
+#warnings ul { margin: 0; padding-left: 1.5rem; }
+</style>
+</head>
+<body>
+<h1>HN For and Against</h1>
+<p>
+<label>Thread <input id="thread-id" type="text" list="story-options" autocomplete="off" placeholder="id, or pick from the front page, or type to search"></label>
+<datalist id="story-options"></datalist>
+<span id="suggestions-caption" class="hint">Loading the home page</span>
+<button id="load-thread" type="button">Load thread</button>
+</p>
+<p>
+<span id="thread-info"></span>
+<button id="refresh-thread" type="button" hidden>Refresh thread</button>
+</p>
+<p id="share-row" hidden>
+<label>Comments to analyze <input id="share" type="range" min="0" max="100" value="100"></label>
+<span id="share-text"></span>
+</p>
+<p>
+<label>Extraction and scoring model <select id="volume-model"></select></label>
+<label>Consolidation model <select id="consolidation-model"></select></label>
+</p>
+<p id="estimate"></p>
+<p>
+<span id="key-entry"><label>OpenRouter key <input id="api-key" type="password" autocomplete="off"></label> <button id="connect-openrouter" type="button" hidden>Sign in with OpenRouter instead</button></span>
+<span id="key-stored" hidden>OpenRouter key is stored in this browser.</span>
+<button id="run" type="button" disabled>Run</button>
+<button id="cancel" type="button" hidden>Cancel</button>
+</p>
+<p>
+<span id="storage-info"></span>
+<button id="delete-cached" type="button" hidden>Delete cached data</button>
+<button id="wipe-key" type="button" hidden>Wipe OpenRouter key</button>
+</p>
+<div id="status"></div>
+<div id="elapsed"></div>
+<div id="summary"></div>
+<details id="warnings" hidden><summary></summary><ul></ul></details>
+<div id="results"></div>
+
+<script id="core">
+// Core pipeline: no DOM access. Shared by the page script and by Node (tests, scripts/run_node.js).
+
+const CONSTANTS = Object.freeze({
+    HN_ITEM_URL: 'https://hn.algolia.com/api/v1/items/',
+    HN_FRONT_PAGE_URL: 'https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=30',
+    HN_STORY_SEARCH_URL: 'https://hn.algolia.com/api/v1/search?tags=story&hitsPerPage=20&query=',
+    OPENROUTER_URL: 'https://openrouter.ai/api/v1/chat/completions',
+    OPENROUTER_AUTH_URL: 'https://openrouter.ai/auth',
+    OPENROUTER_KEY_EXCHANGE_URL: 'https://openrouter.ai/api/v1/auth/keys',
+    PKCE_VERIFIER_STORAGE_KEY: 'openrouter_pkce_verifier',
+    STORAGE_KEY_OPENROUTER: 'openrouter_api_key',
+    CACHE_KEY_PREFIX: 'hn_polarization_cache:',
+    THREAD_KEY_PREFIX: 'hn_polarization_thread:',
+    CHARS_PER_TOKEN: 4,
+    COMMENT_FRAME_TOKENS: 12,
+    TEMPERATURE: 0,
+    MAX_ATTEMPTS: 4,
+    RETRY_BASE_MS: 2000,
+    MIN_CONSENSUS_AUTHORS: 5,
+    BAR_CELLS: 20,
+});
+
+// Models are chosen per role: one for the high-volume stages (extraction and scoring) and one for
+// consolidation. Sampling and reasoning are per stage because providers differ: Haiku 4.5 accepts
+// temperature but not seed; Sonnet 5 and Opus 5 accept neither and think adaptively; GLM 5.3 Flash
+// cannot run without reasoning and needs large output ceilings; Gemini accepts temperature and seed.
+// null omits the field from the request.
+//
+// The cost and time rates come from measured runs on a 1300-comment thread (about 104k comment
+// tokens) and a 38-comment thread; both cost and wall time scaled with comment tokens in those runs,
+// consolidation included, since its thinking grows with the number of candidates.
+const SAMPLING_SEED = 12345;
+const DEFAULT_VOLUME_KEY = 'haiku';
+const DEFAULT_CONSOLIDATION_KEY = 'sonnet5';
+
+const VOLUME_MODELS = Object.freeze({
+    haiku: Object.freeze({
+        label: 'Claude Haiku 4.5: About $0.96 and 70 seconds per 1000 comments',
+        config: {
+            modelExtract: 'anthropic/claude-haiku-4.5', modelScore: 'anthropic/claude-haiku-4.5',
+            samplingExtract: { temperature: CONSTANTS.TEMPERATURE }, samplingScore: { temperature: CONSTANTS.TEMPERATURE },
+            reasoningExtract: null, reasoningScore: null,
+            maxTokensExtract: 16000, maxTokensScore: 8000,
+        },
+        costPerThousandTokensUsd: 0.0119,
+        secondsPerThousandTokens: 0.87,
+    }),
+    glmFlash: Object.freeze({
+        label: 'GLM 5.3 Flash: About $0.19 and 23 to 42 minutes per 1000 comments',
+        config: {
+            modelExtract: 'z-ai/glm-5.3-flash', modelScore: 'z-ai/glm-5.3-flash',
+            samplingExtract: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED }, samplingScore: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED },
+            reasoningExtract: { effort: 'low' }, reasoningScore: { effort: 'low' },
+            maxTokensExtract: 64000, maxTokensScore: 32000,
+        },
+        costPerThousandTokensUsd: 0.0024,
+        secondsPerThousandTokens: 31,
+    }),
+    geminiFlash: Object.freeze({
+        label: 'Gemini 3.8 Flash: About $1.96 and 3 minutes per 1000 comments',
+        config: {
+            modelExtract: 'google/gemini-3.8-flash', modelScore: 'google/gemini-3.8-flash',
+            samplingExtract: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED }, samplingScore: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED },
+            reasoningExtract: null, reasoningScore: null,
+            maxTokensExtract: 16000, maxTokensScore: 16000,
+        },
+        costPerThousandTokensUsd: 0.0244,
+        secondsPerThousandTokens: 2.1,
+    }),
+});
+
+const CONSOLIDATION_MODELS = Object.freeze({
+    sonnet5: Object.freeze({
+        label: 'Claude Sonnet 5: About $0.23 and 3 minutes per 1000 comments',
+        config: { modelConsolidate: 'anthropic/claude-sonnet-5', samplingConsolidate: null, reasoningConsolidate: null, maxTokensConsolidate: 32000 },
+        costPerThousandTokensUsd: 0.0029,
+        secondsPerThousandTokens: 2.4,
+    }),
+    glm53: Object.freeze({
+        label: 'GLM 5.3: About $0.19 and 5 to 7 minutes per 1000 comments',
+        config: { modelConsolidate: 'z-ai/glm-5.3', samplingConsolidate: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED }, reasoningConsolidate: { effort: 'high' }, maxTokensConsolidate: 128000 },
+        costPerThousandTokensUsd: 0.0018,
+        secondsPerThousandTokens: 4.6,
+    }),
+    geminiFlash: Object.freeze({
+        label: 'Gemini 3.8 Flash: About $0.02 and 15 seconds per 1000 comments',
+        config: { modelConsolidate: 'google/gemini-3.8-flash', samplingConsolidate: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED }, reasoningConsolidate: null, maxTokensConsolidate: 32000 },
+        costPerThousandTokensUsd: 0.0003,
+        secondsPerThousandTokens: 0.2,
+    }),
+    opus5: Object.freeze({
+        label: 'Claude Opus 5: About $0.26 and 45 seconds per 1000 comments',
+        config: { modelConsolidate: 'anthropic/claude-opus-5', samplingConsolidate: null, reasoningConsolidate: null, maxTokensConsolidate: 32000 },
+        costPerThousandTokensUsd: 0.0033,
+        secondsPerThousandTokens: 0.6,
+    }),
+});
+
+function buildStageConfig(volumeKey, consolidationKey) {
+    const volume = VOLUME_MODELS[volumeKey];
+    if (!volume) {
+        throw new Error(`unknown volume model choice: ${volumeKey}`);
+    }
+    const consolidation = CONSOLIDATION_MODELS[consolidationKey];
+    if (!consolidation) {
+        throw new Error(`unknown consolidation model choice: ${consolidationKey}`);
+    }
+    return { ...volume.config, ...consolidation.config };
+}
+
+// Sums one per-thousand-token rate field over the two chosen models; the field defaults to cost.
+function combinedRate(volumeKey, consolidationKey, field) {
+    const rateField = field || 'costPerThousandTokensUsd';
+    return VOLUME_MODELS[volumeKey][rateField] + CONSOLIDATION_MODELS[consolidationKey][rateField];
+}
+
+function estimateRunSeconds(tokens, volumeKey, consolidationKey) {
+    return (combinedRate(volumeKey, consolidationKey, 'secondsPerThousandTokens') * tokens) / 1000;
+}
+
+// Applies one model, or one sampling setting, to every stage; the stage list lives here only.
+const STAGE_NAMES = Object.freeze(['Extract', 'Consolidate', 'Score']);
+function applyToAllStages(config, { model, sampling }) {
+    for (const stage of STAGE_NAMES) {
+        if (model !== undefined) config[`model${stage}`] = model;
+        if (sampling !== undefined) config[`sampling${stage}`] = sampling;
+    }
+    return config;
+}
+
+const DEFAULT_CONFIG = Object.freeze({
+    ...buildStageConfig(DEFAULT_VOLUME_KEY, DEFAULT_CONSOLIDATION_KEY),
+    extractBatchTokens: 3000,
+    scoreBatchComments: 20,
+    parentSnippetChars: 300,
+    concurrency: 30,
+    shuffleSeed: 777,
+    axesMin: 40,
+    axesMax: 60,
+    budgetUsd: 5.0,
+});
+
+const STANCE_A = 'A';
+const STANCE_B = 'B';
+const STANCE_M = 'M';
+const VALID_STANCES = new Set([STANCE_A, STANCE_B, STANCE_M]);
+
+// ---------------------------------------------------------------------------
+// Thread parsing
+// ---------------------------------------------------------------------------
+
+const ENTITY_TABLE = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+
+function decodeEntities(text) {
+    return text.replace(/&(#x[0-9a-fA-F]+|#[0-9]+|[a-zA-Z]+);/g, (whole, body) => {
+        if (body[0] === '#') {
+            const isHex = body[1] === 'x' || body[1] === 'X';
+            const codePoint = isHex ? parseInt(body.slice(2), 16) : parseInt(body.slice(1), 10);
+            return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : whole;
+        }
+        return Object.prototype.hasOwnProperty.call(ENTITY_TABLE, body) ? ENTITY_TABLE[body] : whole;
+    });
+}
+
+function stripHtml(html) {
+    const withBreaks = html.replace(/<p\b[^>]*>/gi, '\n\n').replace(/<br\s*\/?>/gi, '\n');
+    const withoutTags = withBreaks.replace(/<[^>]+>/g, '');
+    return decodeEntities(withoutTags).replace(/[ \t]+\n/g, '\n').trim();
+}
+
+function flattenThread(item) {
+    const comments = [];
+    function walk(node, depth) {
+        for (const child of node.children || []) {
+            if (child.type !== 'comment') {
+                continue;
+            }
+            if (typeof child.text === 'string' && child.text.length > 0) {
+                comments.push({
+                    id: child.id,
+                    author: child.author,
+                    parentId: child.parent_id === undefined || child.parent_id === null ? node.id : child.parent_id,
+                    depth,
+                    text: stripHtml(child.text),
+                });
+            }
+            walk(child, depth + 1);
+        }
+    }
+    walk(item, 0);
+    return { id: item.id, title: item.title || '', url: item.url || '', createdAt: item.created_at || null, comments };
+}
+
+// ---------------------------------------------------------------------------
+// Batching
+// ---------------------------------------------------------------------------
+
+function estimateTokens(text) {
+    return Math.ceil(text.length / CONSTANTS.CHARS_PER_TOKEN);
+}
+
+function commentTokens(comment) {
+    return estimateTokens(comment.text) + CONSTANTS.COMMENT_FRAME_TOKENS;
+}
+
+function splitSubtrees(comments) {
+    const subtrees = [];
+    for (const comment of comments) {
+        if (comment.depth === 0 || subtrees.length === 0) {
+            subtrees.push([]);
+        }
+        subtrees[subtrees.length - 1].push(comment);
+    }
+    return subtrees;
+}
+
+function makeExtractBatches(comments, maxTokens) {
+    const batches = [];
+    let current = [];
+    let currentTokens = 0;
+    function close() {
+        if (current.length > 0) {
+            batches.push(current);
+            current = [];
+            currentTokens = 0;
+        }
+    }
+    for (const subtree of splitSubtrees(comments)) {
+        const subtreeTokens = subtree.reduce((sum, comment) => sum + commentTokens(comment), 0);
+        if (currentTokens + subtreeTokens <= maxTokens) {
+            current.push(...subtree);
+            currentTokens += subtreeTokens;
+            continue;
+        }
+        close();
+        if (subtreeTokens <= maxTokens) {
+            current = subtree.slice();
+            currentTokens = subtreeTokens;
+            continue;
+        }
+        for (const comment of subtree) {
+            const tokens = commentTokens(comment);
+            if (current.length > 0 && currentTokens + tokens > maxTokens) {
+                close();
+            }
+            current.push(comment);
+            currentTokens += tokens;
+        }
+    }
+    close();
+    return batches;
+}
+
+// Keeps the first `percent` of comments in thread order. Ancestors precede replies in that order,
+// so every kept reply still has its parent available for context.
+function selectCommentShare(comments, percent) {
+    if (!Number.isFinite(percent) || percent < 0 || percent > 100) {
+        throw new Error(`percent must be between 0 and 100, got ${percent}`);
+    }
+    return comments.slice(0, Math.ceil((comments.length * percent) / 100));
+}
+
+function estimateRunCost(comments, ratePerThousandTokensUsd) {
+    const tokens = comments.reduce((sum, comment) => sum + commentTokens(comment), 0);
+    return { tokens, usd: (ratePerThousandTokensUsd * tokens) / 1000 };
+}
+
+function storySearchUrl(query) {
+    return CONSTANTS.HN_STORY_SEARCH_URL + encodeURIComponent(query);
+}
+
+function isThreadId(text) {
+    return /^\d+$/.test(text);
+}
+
+// Fetches JSON from the Hacker News API; `what` names the request in the error message.
+async function fetchHnJson(url, what, fetchImpl, signal) {
+    const response = await (fetchImpl || globalThis.fetch)(url, { signal });
+    if (!response.ok) {
+        throw new Error(`Hacker News API returned HTTP ${response.status} for ${what}`);
+    }
+    return response.json();
+}
+
+function fetchThreadItem(threadId, fetchImpl, signal) {
+    return fetchHnJson(CONSTANTS.HN_ITEM_URL + threadId, `thread ${threadId}`, fetchImpl, signal);
+}
+
+async function fetchStories(url, what, fetchImpl) {
+    return parseFrontPage(await fetchHnJson(url, what, fetchImpl));
+}
+
+// Parses Algolia search hits (front page or story search) into { id, title, numComments }.
+function parseFrontPage(json) {
+    if (!json || !Array.isArray(json.hits)) {
+        throw new Error('front page response has no hits array');
+    }
+    const stories = [];
+    for (const hit of json.hits) {
+        const id = Number(hit && hit.objectID);
+        if (!Number.isInteger(id)) {
+            continue;
+        }
+        stories.push({
+            id,
+            title: String(hit.title || ''),
+            numComments: Number.isFinite(hit.num_comments) ? hit.num_comments : 0,
+            createdAt: typeof hit.created_at === 'string' ? hit.created_at : null,
+        });
+    }
+    return stories;
+}
+
+const DATE_ONLY_LENGTH = 'YYYY-MM-DD'.length;
+
+// Suggestion text for a story: title, posting date, id. The id makes the text unique.
+function storyLabel(story) {
+    const date = story.createdAt ? story.createdAt.slice(0, DATE_ONLY_LENGTH) : 'unknown date';
+    return `${story.title} (${date}, ${story.id})`;
+}
+
+// Newest first; undated stories last.
+function sortStoriesNewestFirst(stories) {
+    return stories.slice().sort((left, right) => (right.createdAt || '').localeCompare(left.createdAt || ''));
+}
+
+function makeScoreBatches(comments, batchSize) {
+    const batches = [];
+    for (let start = 0; start < comments.length; start += batchSize) {
+        batches.push(comments.slice(start, start + batchSize));
+    }
+    return batches;
+}
+
+function mulberry32(seed) {
+    let state = seed >>> 0;
+    return function next() {
+        state = (state + 0x6D2B79F5) >>> 0;
+        let mixed = Math.imul(state ^ (state >>> 15), 1 | state);
+        mixed = (mixed + Math.imul(mixed ^ (mixed >>> 7), 61 | mixed)) ^ mixed;
+        return ((mixed ^ (mixed >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
+function seededShuffle(items, seed) {
+    const copy = items.slice();
+    const random = mulberry32(seed);
+    for (let position = copy.length - 1; position > 0; position -= 1) {
+        const swapIndex = Math.floor(random() * (position + 1));
+        const held = copy[position];
+        copy[position] = copy[swapIndex];
+        copy[swapIndex] = held;
+    }
+    return copy;
+}
+
+// ---------------------------------------------------------------------------
+// Prompts and schemas
+// ---------------------------------------------------------------------------
+
+const EXTRACT_SYSTEM_PROMPT = `You analyze a Hacker News comment thread. The submission title is: "{title}".
+
+Task: from the batch of comments below, list the bipolar axes of disagreement that appear in it.
+
+An axis is a pair of incompatible statements about the same specific thing, such that one commenter could hold the first and another the second. Examples of statements that anchor an axis: "the safeguard fallback fires on ordinary coding work", "Codex subscription quota lasts longer than Claude's", "text watermarking degrades output quality". An overall verdict on the subject also counts when phrased as a statement ("the release is a worthwhile upgrade"). Examples that do not count: topics ("pricing"), mood statements without a claim about the subject ("I'm disappointed"), traits of the commenter ("uses the API rather than a subscription").
+
+For each axis output:
+- statementA: one full sentence stating one side's claim.
+- statementB: one full sentence stating the rival or opposite claim about the same thing. The two statements must be incompatible, so a commenter can hold at most one of them, and each must be understandable on its own.
+- commentsA: ids of comments in this batch that clearly hold statement A.
+- commentsB: ids of comments in this batch that clearly hold statement B.
+
+Rules:
+- Include an axis when at least one comment clearly takes a side and a reasonable commenter could take the other side.
+- Prefer specific, concrete propositions over broad ones. Split distinct claims into separate axes.
+- Use only comment ids that appear in the batch. A comment may appear under several axes.
+- Do not list a comment under both poles of the same axis.
+- Return JSON matching the schema and nothing else.`;
+
+const CONSOLIDATE_SYSTEM_PROMPT = `You are consolidating candidate axes of disagreement extracted from a Hacker News thread. The submission title is: "{title}". Candidates were extracted from separate batches of comments and overlap heavily. Each candidate shows how many comments held each pole (nA, nB).
+
+Produce between {min} and {max} canonical axes. Produce fewer only if the candidates cannot support that many distinct, genuine axes.
+
+Rules:
+- Merge candidates that express the same pair of rival statements, including pairs listed in the opposite order.
+- Keep distinct disagreements distinct. Do not merge into vague umbrella claims.
+- Each axis: statementA and statementB, each one full sentence about the same specific thing, the two incompatible with each other so a commenter can hold at most one, and each understandable on its own.
+- Exclude topics, mood statements without a claim about the subject, and traits of commenters. Keep whole-subject verdict axes when phrased as statements ("the release is a worthwhile upgrade" versus "the release is not a meaningful upgrade").
+- Prefer candidates with evidence on both poles, then candidates with the most comments overall.
+- Order the axes from most contested to least contested.
+- Return JSON matching the schema and nothing else.`;
+
+const SCORE_SYSTEM_PROMPT = `You classify Hacker News comments against a fixed list of axes. The submission title is: "{title}".
+
+Each axis is a pair of rival statements labeled A and B. For each comment, and for each axis that the comment clearly takes a position on, output one stance:
+- "A" if the comment holds statement A,
+- "B" if the comment holds statement B,
+- "M" if the comment explicitly addresses the question the two statements answer but takes a middle, mixed, or it-depends position.
+
+Rules:
+- Skip axes the comment does not address. Most comments address zero, one, or two axes.
+- A comment addresses an axis only when its position is clear from its own text, read together with the parent snippet when one is given. Do not infer a stance from tone, from the author, or from what the parent says.
+- Use only the comment ids given in the batch and the axis numbers given below.
+- Return JSON matching the schema and nothing else.
+
+Axes:
+{axes}`;
+
+const EXTRACT_SCHEMA = {
+    name: 'extract_axes',
+    schema: {
+        type: 'object',
+        properties: {
+            candidates: {
+                type: 'array',
+                items: {
+                    type: 'object',
+                    properties: {
+                        statementA: { type: 'string' },
+                        statementB: { type: 'string' },
+                        commentsA: { type: 'array', items: { type: 'integer' } },
+                        commentsB: { type: 'array', items: { type: 'integer' } },
+                    },
+                    required: ['statementA', 'statementB', 'commentsA', 'commentsB'],
+                    additionalProperties: false,
+                },
+            },
+        },
+        required: ['candidates'],
+        additionalProperties: false,
+    },
+};
+
+const CONSOLIDATE_SCHEMA = {
+    name: 'consolidate_axes',
+    schema: {
+        type: 'object',
+        properties: {
+            axes: {
+                type: 'array',
+                items: {
+                    type: 'object',
+                    properties: {
+                        statementA: { type: 'string' },
+                        statementB: { type: 'string' },
+                    },
+                    required: ['statementA', 'statementB'],
+                    additionalProperties: false,
+                },
+            },
+        },
+        required: ['axes'],
+        additionalProperties: false,
+    },
+};
+
+const SCORE_SCHEMA = {
+    name: 'score_stances',
+    schema: {
+        type: 'object',
+        properties: {
+            stances: {
+                type: 'array',
+                items: {
+                    type: 'object',
+                    properties: {
+                        comment: { type: 'integer' },
+                        axis: { type: 'integer' },
+                        stance: { type: 'string', enum: [STANCE_A, STANCE_B, STANCE_M] },
+                    },
+                    required: ['comment', 'axis', 'stance'],
+                    additionalProperties: false,
+                },
+            },
+        },
+        required: ['stances'],
+        additionalProperties: false,
+    },
+};
+
+function fillTemplate(template, values) {
+    return template.replace(/\{(\w+)\}/g, (whole, name) => (Object.prototype.hasOwnProperty.call(values, name) ? values[name] : whole));
+}
+
+function formatCommentForExtract(comment) {
+    const replyPart = comment.depth > 0 ? `, re ${comment.parentId}` : '';
+    return `[id ${comment.id}${replyPart}]\n${comment.text}`;
+}
+
+function buildExtractMessages(title, batch) {
+    return [
+        { role: 'system', content: fillTemplate(EXTRACT_SYSTEM_PROMPT, { title }) },
+        { role: 'user', content: 'Comments:\n\n' + batch.map(formatCommentForExtract).join('\n\n') },
+    ];
+}
+
+function buildConsolidateMessages(title, candidates, axesMin, axesMax) {
+    const lines = candidates.map((candidate, index) =>
+        `#${index + 1} [nA=${candidate.commentsA.length}, nB=${candidate.commentsB.length}] A: ${candidate.statementA} | B: ${candidate.statementB}`);
+    return [
+        { role: 'system', content: fillTemplate(CONSOLIDATE_SYSTEM_PROMPT, { title, min: String(axesMin), max: String(axesMax) }) },
+        { role: 'user', content: 'Candidates:\n\n' + lines.join('\n') },
+    ];
+}
+
+function truncateText(text, maxChars) {
+    return text.length > maxChars ? text.slice(0, maxChars) + '...' : text;
+}
+
+function formatCommentForScore(comment, commentsById, snippetChars) {
+    const parent = commentsById.get(comment.parentId);
+    const parentPart = parent
+        ? `, replying to ${parent.id}: "${truncateText(parent.text.slice(0, snippetChars * 2).replace(/\s+/g, ' '), snippetChars)}"`
+        : '';
+    return `[id ${comment.id}${parentPart}]\n${comment.text}`;
+}
+
+// The scoring system message depends only on the pass, so the pipeline builds it once per pass.
+function buildScoreSystemMessage(title, presentedAxes, swapPoles) {
+    const axisLines = presentedAxes.map((axis, index) => {
+        const shownA = swapPoles ? axis.statementB : axis.statementA;
+        const shownB = swapPoles ? axis.statementA : axis.statementB;
+        return `${index + 1}. A: ${shownA} | B: ${shownB}`;
+    });
+    return { role: 'system', content: fillTemplate(SCORE_SYSTEM_PROMPT, { title, axes: axisLines.join('\n') }) };
+}
+
+function buildScoreUserMessage(batch, commentsById, snippetChars) {
+    return { role: 'user', content: 'Comments:\n\n' + batch.map(comment => formatCommentForScore(comment, commentsById, snippetChars)).join('\n\n') };
+}
+
+function buildScoreMessages(title, presentedAxes, batch, commentsById, swapPoles, snippetChars) {
+    return [buildScoreSystemMessage(title, presentedAxes, swapPoles), buildScoreUserMessage(batch, commentsById, snippetChars)];
+}
+
+// ---------------------------------------------------------------------------
+// Response parsing
+// ---------------------------------------------------------------------------
+
+function toCommentId(value) {
+    const number = Number(value);
+    return Number.isInteger(number) ? number : null;
+}
+
+function filterCommentIds(list, validIds, warnings, label) {
+    const kept = [];
+    for (const raw of Array.isArray(list) ? list : []) {
+        const commentId = toCommentId(raw);
+        if (commentId === null || !validIds.has(commentId)) {
+            warnings.push(`${label}: unknown comment id ${JSON.stringify(raw)}`);
+            continue;
+        }
+        kept.push(commentId);
+    }
+    return kept;
+}
+
+const ERROR_EXCERPT_CHARS = 300;
+
+// Short quote of a model response for error messages, so a malformed shape is visible without logging.
+function describeJson(json) {
+    return truncateText(JSON.stringify(json), ERROR_EXCERPT_CHARS);
+}
+
+// A model response that parsed as JSON but does not match any accepted shape.
+class InvalidResponseError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'InvalidResponseError';
+    }
+}
+
+// Returns the list a stage expects from the model. The first key is the schema's; the others are
+// aliases some providers have used. A bare array is also accepted. Deviations are recorded as warnings
+// so they stay visible; anything else is an InvalidResponseError.
+function readPayloadList(json, keys, stageLabel, warnings) {
+    const [schemaKey, ...aliases] = keys;
+    if (Array.isArray(json)) {
+        warnings.push(`${stageLabel}: model returned a bare array instead of {"${schemaKey}": [...]}; accepted`);
+        return json;
+    }
+    if (json && Array.isArray(json[schemaKey])) {
+        return json[schemaKey];
+    }
+    const alias = aliases.find(key => json && Array.isArray(json[key]));
+    if (alias !== undefined) {
+        warnings.push(`${stageLabel}: model returned "${alias}" instead of "${schemaKey}"; accepted`);
+        return json[alias];
+    }
+    throw new InvalidResponseError(`${stageLabel} response has no ${schemaKey} array: ${describeJson(json)}`);
+}
+
+// Some models answer the scoring request as one object per comment holding an axis-to-stance map.
+// The map has been seen under "stances" and under "axes"; the comment id under "id" or "comment".
+const PER_COMMENT_MAP_KEYS = ['stances', 'axes'];
+
+function perCommentMap(item) {
+    if (!item || typeof item !== 'object') {
+        return null;
+    }
+    const key = PER_COMMENT_MAP_KEYS.find(candidate => item[candidate] && typeof item[candidate] === 'object' && !Array.isArray(item[candidate]));
+    return key === undefined ? null : item[key];
+}
+
+function flattenPerCommentList(list, warnings) {
+    const flat = [];
+    let flattened = false;
+    for (const item of list) {
+        const map = perCommentMap(item);
+        if (map === null) {
+            flat.push(item);
+            continue;
+        }
+        flattened = true;
+        const commentId = item.id === undefined ? item.comment : item.id;
+        for (const [axisNumber, stance] of Object.entries(map)) {
+            flat.push({ comment: commentId, axis: Number(axisNumber), stance });
+        }
+    }
+    if (flattened) {
+        warnings.push('score: model returned per-comment objects with axis-to-stance maps instead of a stances list; flattened');
+    }
+    return flat;
+}
+
+// Shared by extraction and consolidation: a list of statement pairs, each turned into an item.
+function parseStatementList(json, key, stageLabel, itemNoun, buildItem) {
+    const items = [];
+    const warnings = [];
+    readPayloadList(json, [key], stageLabel, warnings).forEach((raw, index) => {
+        const statements = readStatementPair(raw);
+        if (statements === null) {
+            warnings.push(`${stageLabel}: ${itemNoun} ${index + 1} is missing a statement`);
+            return;
+        }
+        items.push(buildItem(raw, statements, items.length, warnings));
+    });
+    return { items, warnings };
+}
+
+// Returns { statementA, statementB } with trimmed text, or null when either statement is missing.
+function readStatementPair(raw) {
+    const statementA = typeof raw.statementA === 'string' ? raw.statementA.trim() : '';
+    const statementB = typeof raw.statementB === 'string' ? raw.statementB.trim() : '';
+    if (statementA === '' || statementB === '') {
+        return null;
+    }
+    return { statementA, statementB };
+}
+
+const CANDIDATE_LABEL_CHARS = 60;
+
+function parseExtractResponse(json, validIds) {
+    const { items, warnings } = parseStatementList(json, 'candidates', 'extract', 'candidate', (raw, statements, index, itemWarnings) => {
+        const label = `extract: candidate "${truncateText(statements.statementA, CANDIDATE_LABEL_CHARS)}"`;
+        return {
+            ...statements,
+            commentsA: filterCommentIds(raw.commentsA, validIds, itemWarnings, label),
+            commentsB: filterCommentIds(raw.commentsB, validIds, itemWarnings, label),
+        };
+    });
+    return { candidates: items, warnings };
+}
+
+function parseConsolidateResponse(json) {
+    const { items, warnings } = parseStatementList(json, 'axes', 'consolidate', 'axis', (raw, statements, index) => ({ id: index + 1, ...statements }));
+    return { axes: items, warnings };
+}
+
+function flipStance(stance) {
+    if (stance === STANCE_A) return STANCE_B;
+    if (stance === STANCE_B) return STANCE_A;
+    return stance;
+}
+
+function stanceKey(commentId, axisId) {
+    return `${commentId}|${axisId}`;
+}
+
+function parseStanceKey(key) {
+    const parts = key.split('|');
+    return { commentId: Number(parts[0]), axisId: Number(parts[1]) };
+}
+
+function parseScoreResponse(json, validIds, presentedAxes, swapPoles) {
+    const stances = new Map();
+    const warnings = [];
+    const list = flattenPerCommentList(readPayloadList(json, ['stances', 'classifications'], 'score', warnings), warnings);
+    for (const raw of list) {
+        const commentId = toCommentId(raw.comment);
+        if (commentId === null || !validIds.has(commentId)) {
+            warnings.push(`score: unknown comment id ${JSON.stringify(raw.comment)}`);
+            continue;
+        }
+        const axisNumber = Number(raw.axis);
+        if (!Number.isInteger(axisNumber) || axisNumber < 1 || axisNumber > presentedAxes.length) {
+            warnings.push(`score: comment ${commentId} names unknown axis ${JSON.stringify(raw.axis)}`);
+            continue;
+        }
+        if (!VALID_STANCES.has(raw.stance)) {
+            warnings.push(`score: comment ${commentId} has invalid stance ${JSON.stringify(raw.stance)}`);
+            continue;
+        }
+        const axis = presentedAxes[axisNumber - 1];
+        const key = stanceKey(commentId, axis.id);
+        if (stances.has(key)) {
+            warnings.push(`score: duplicate stance for comment ${commentId} on axis ${axis.id}`);
+            continue;
+        }
+        stances.set(key, swapPoles ? flipStance(raw.stance) : raw.stance);
+    }
+    return { stances, warnings };
+}
+
+// ---------------------------------------------------------------------------
+// Aggregation
+// ---------------------------------------------------------------------------
+
+function mergePasses(pass1, pass2) {
+    const agreed = new Map();
+    const reliability = new Map();
+    const keys = new Set([...pass1.keys(), ...pass2.keys()]);
+    for (const key of keys) {
+        const { axisId } = parseStanceKey(key);
+        const first = pass1.get(key);
+        const second = pass2.get(key);
+        const entry = reliability.get(axisId) || { agreed: 0, total: 0 };
+        entry.total += 1;
+        if (first !== undefined && first === second) {
+            agreed.set(key, first);
+            entry.agreed += 1;
+        }
+        reliability.set(axisId, entry);
+    }
+    return { agreed, reliability };
+}
+
+function majorityStance(tally) {
+    const best = Math.max(tally[STANCE_A], tally[STANCE_B], tally[STANCE_M]);
+    const winners = [STANCE_A, STANCE_B, STANCE_M].filter(stance => tally[stance] === best);
+    return winners.length === 1 ? winners[0] : STANCE_M;
+}
+
+function aggregateByAuthor(agreed, commentsById) {
+    const tallies = new Map();
+    for (const [key, stance] of agreed) {
+        const { commentId, axisId } = parseStanceKey(key);
+        const comment = commentsById.get(commentId);
+        if (!comment) {
+            throw new Error(`stance refers to unknown comment ${commentId}`);
+        }
+        if (!tallies.has(axisId)) {
+            tallies.set(axisId, new Map());
+        }
+        const authorTallies = tallies.get(axisId);
+        if (!authorTallies.has(comment.author)) {
+            authorTallies.set(comment.author, { [STANCE_A]: 0, [STANCE_B]: 0, [STANCE_M]: 0 });
+        }
+        authorTallies.get(comment.author)[stance] += 1;
+    }
+    const byAuthor = new Map();
+    for (const [axisId, authorTallies] of tallies) {
+        const stancesForAxis = new Map();
+        for (const [author, tally] of authorTallies) {
+            stancesForAxis.set(author, majorityStance(tally));
+        }
+        byAuthor.set(axisId, stancesForAxis);
+    }
+    return byAuthor;
+}
+
+function stanceVector(authorStances) {
+    const vector = new Map();
+    for (const [author, stance] of authorStances) {
+        if (stance === STANCE_A) vector.set(author, 1);
+        if (stance === STANCE_B) vector.set(author, -1);
+    }
+    return vector;
+}
+
+function nearestAxis(axisId, vectors) {
+    const own = vectors.get(axisId);
+    let best = null;
+    for (const [otherId, other] of vectors) {
+        if (otherId === axisId || own.size === 0 || other.size === 0) {
+            continue;
+        }
+        let dot = 0;
+        let shared = 0;
+        for (const [author, value] of own) {
+            if (other.has(author)) {
+                dot += value * other.get(author);
+                shared += 1;
+            }
+        }
+        if (shared === 0 || dot === 0) {
+            continue;
+        }
+        const cosine = Math.abs(dot) / Math.sqrt(own.size * other.size);
+        if (best === null || cosine > best.cosine || (cosine === best.cosine && shared > best.shared)) {
+            best = { axisId: otherId, cosine, shared };
+        }
+    }
+    return best;
+}
+
+// options.withNearest (default true) controls the pairwise nearest-axis search, which callers that
+// only need scores can skip.
+function computeRows(axes, byAuthor, agreed, reliability, options) {
+    const withNearest = !options || options.withNearest !== false;
+    const commentCounts = new Map();
+    for (const key of agreed.keys()) {
+        const { axisId } = parseStanceKey(key);
+        commentCounts.set(axisId, (commentCounts.get(axisId) || 0) + 1);
+    }
+    const vectors = new Map();
+    const rows = axes.map(axis => {
+        const authorStances = byAuthor.get(axis.id) || new Map();
+        vectors.set(axis.id, stanceVector(authorStances));
+        let countA = 0;
+        let countB = 0;
+        let countM = 0;
+        for (const stance of authorStances.values()) {
+            if (stance === STANCE_A) countA += 1;
+            else if (stance === STANCE_B) countB += 1;
+            else countM += 1;
+        }
+        const sided = countA + countB;
+        const total = sided + countM;
+        const minoritySpan = 2 * Math.min(countA, countB);
+        const reliabilityEntry = reliability.get(axis.id);
+        const coverageWeight = Math.log(1 + total);
+        const hasConsensusSignal = total >= CONSTANTS.MIN_CONSENSUS_AUTHORS;
+        return {
+            axisId: axis.id,
+            statementA: axis.statementA,
+            statementB: axis.statementB,
+            countA,
+            countB,
+            countM,
+            authors: total,
+            comments: commentCounts.get(axis.id) || 0,
+            balance: sided > 0 ? minoritySpan / sided : 0,
+            reliability: reliabilityEntry && reliabilityEntry.total > 0 ? reliabilityEntry.agreed / reliabilityEntry.total : null,
+            score: total > 0 ? (minoritySpan / total) * coverageWeight : 0,
+            consensus: hasConsensusSignal ? (Math.abs(countA - countB) / total) * coverageWeight : 0,
+            nearest: null,
+        };
+    });
+    if (withNearest) {
+        for (const row of rows) {
+            row.nearest = nearestAxis(row.axisId, vectors);
+        }
+    }
+    return rows;
+}
+
+// Splits `cells` among the three counts by largest remainder, so the parts always sum to `cells`.
+function barCells(countA, countM, countB, cells) {
+    const counts = [countA, countM, countB];
+    const total = countA + countM + countB;
+    if (total === 0) {
+        return [0, 0, 0];
+    }
+    const quotas = counts.map(count => (cells * count) / total);
+    const parts = quotas.map(quota => Math.floor(quota));
+    let remaining = cells - parts.reduce((sum, part) => sum + part, 0);
+    const order = [0, 1, 2].sort((left, right) => (quotas[right] - parts[right]) - (quotas[left] - parts[left]) || left - right);
+    for (const index of order) {
+        if (remaining === 0) break;
+        parts[index] += 1;
+        remaining -= 1;
+    }
+    return parts;
+}
+
+function splitBar(row, cells) {
+    const [cellsA, cellsM, cellsB] = barCells(row.countA, row.countM, row.countB, cells);
+    if (cellsA + cellsM + cellsB === 0) {
+        return ' '.repeat(cells);
+    }
+    return '<'.repeat(cellsA) + '-'.repeat(cellsM) + '>'.repeat(cellsB);
+}
+
+// Display helpers shared by the page and the headless runner. All return plain strings.
+const DISPLAY_DIGITS = 2;
+const COST_DIGITS = 4;
+const SECONDS_SHOWN_AS_SECONDS_LIMIT = 90;
+
+function formatSplit(row) {
+    return `${row.countA} ${splitBar(row, CONSTANTS.BAR_CELLS)} ${row.countB}`;
+}
+
+function formatWithSpread(value, spread) {
+    return `${value.toFixed(DISPLAY_DIGITS)} ±${spread.toFixed(DISPLAY_DIGITS)}`;
+}
+
+function formatNearest(nearest, rankByAxisId) {
+    return nearest ? `#${rankByAxisId.get(nearest.axisId)} (cos ${nearest.cosine.toFixed(DISPLAY_DIGITS)}, ${nearest.shared} shared)` : '-';
+}
+
+function formatDuration(seconds) {
+    return seconds < SECONDS_SHOWN_AS_SECONDS_LIMIT ? `${Math.round(seconds)} seconds` : `${Math.round(seconds / 60)} minutes`;
+}
+
+function formatProgress(update) {
+    return `${update.stage}: ${update.done}/${update.total}, ${update.calls} calls (${update.cachedCalls} from cache), $${update.cost.toFixed(COST_DIGITS)} spent`;
+}
+
+function formatRunSummary(result) {
+    const stats = result.stats;
+    return [
+        `${result.rows.length} axes from ${stats.comments} comments by ${stats.authors} authors, ${result.candidates.length} candidates.`,
+        `${result.calls} model calls (${stats.cachedCalls} from cache), $${result.cost.toFixed(COST_DIGITS)}.`,
+        `Stances: pass 1 ${stats.pass1Stances}, pass 2 ${stats.pass2Stances}, agreed ${stats.agreedStances}.`,
+    ];
+}
+
+// Adds scoreSpread and consensusSpread: half the gap between the scores computed from each scoring pass alone.
+function attachSpreads(rows, pass1Rows, pass2Rows) {
+    const byId = passRows => new Map(passRows.map(row => [row.axisId, row]));
+    const first = byId(pass1Rows);
+    const second = byId(pass2Rows);
+    return rows.map(row => {
+        const rowPass1 = first.get(row.axisId);
+        const rowPass2 = second.get(row.axisId);
+        if (!rowPass1 || !rowPass2) {
+            throw new Error(`missing single-pass rows for axis ${row.axisId}`);
+        }
+        return {
+            ...row,
+            scoreSpread: Math.abs(rowPass1.score - rowPass2.score) / 2,
+            consensusSpread: Math.abs(rowPass1.consensus - rowPass2.consensus) / 2,
+        };
+    });
+}
+
+function rankRows(rows) {
+    const reliabilityOrNegative = row => (row.reliability === null ? -1 : row.reliability);
+    const sorted = rows.slice().sort((left, right) =>
+        right.score - left.score
+        || reliabilityOrNegative(right) - reliabilityOrNegative(left)
+        || right.authors - left.authors
+        || left.axisId - right.axisId);
+    return sorted.map((row, index) => ({ ...row, rank: index + 1 }));
+}
+
+// ---------------------------------------------------------------------------
+// Concurrency and OpenRouter client
+// ---------------------------------------------------------------------------
+
+async function runPool(tasks, concurrency) {
+    const results = new Array(tasks.length);
+    let nextIndex = 0;
+    let failed = false;
+    async function worker() {
+        while (!failed) {
+            const index = nextIndex;
+            nextIndex += 1;
+            if (index >= tasks.length) {
+                return;
+            }
+            try {
+                results[index] = await tasks[index]();
+            } catch (error) {
+                failed = true;
+                throw error;
+            }
+        }
+    }
+    const workerCount = Math.max(1, Math.min(concurrency, tasks.length));
+    await Promise.all(Array.from({ length: workerCount }, worker));
+    return results;
+}
+
+function defaultSleep(milliseconds) {
+    return new Promise(resolve => setTimeout(resolve, milliseconds));
+}
+
+async function readErrorMessage(response) {
+    try {
+        const data = await response.json();
+        if (data && data.error && data.error.message) {
+            return data.error.message;
+        }
+        return JSON.stringify(data);
+    } catch (parseError) {
+        return `(unreadable error body: ${parseError.message})`;
+    }
+}
+
+class TruncationError extends Error {
+    constructor(message, usage) {
+        super(message);
+        this.name = 'TruncationError';
+        this.usage = usage;
+    }
+}
+
+function readUsage(data, model) {
+    const usage = data.usage || {};
+    if (typeof usage.cost !== 'number') {
+        throw new Error(`OpenRouter response lacks usage.cost (${model}); cannot track spend`);
+    }
+    return { promptTokens: usage.prompt_tokens || 0, completionTokens: usage.completion_tokens || 0, cost: usage.cost };
+}
+
+function parseJsonContent(content) {
+    if (typeof content !== 'string') {
+        throw new Error('completion content is not a string');
+    }
+    const trimmed = content.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+    return JSON.parse(trimmed);
+}
+
+// The system prompt is the stable prefix of every call in a stage; marking it cacheable lets
+// providers with prompt caching (Anthropic) bill repeated reads at the cached rate.
+function markSystemMessageCacheable(message) {
+    if (message.role !== 'system' || typeof message.content !== 'string') {
+        return message;
+    }
+    return { role: 'system', content: [{ type: 'text', text: message.content, cache_control: { type: 'ephemeral' } }] };
+}
+
+async function callOpenRouter({ apiKey, request, signal, fetchImpl, sleepImpl }) {
+    const fetchFunction = fetchImpl || globalThis.fetch;
+    const sleepFunction = sleepImpl || defaultSleep;
+    const body = {
+        model: request.model,
+        messages: request.messages.map(markSystemMessageCacheable),
+        ...(request.sampling || {}),
+        max_tokens: request.maxTokens,
+        response_format: { type: 'json_schema', json_schema: { name: request.schema.name, strict: true, schema: request.schema.schema } },
+        ...(request.reasoning ? { reasoning: request.reasoning } : {}),
+        usage: { include: true },
+        provider: { require_parameters: true },
+    };
+    let lastError = null;
+    for (let attempt = 1; attempt <= CONSTANTS.MAX_ATTEMPTS; attempt += 1) {
+        if (attempt > 1) {
+            await sleepFunction(CONSTANTS.RETRY_BASE_MS * Math.pow(2, attempt - 2));
+        }
+        let response;
+        try {
+            response = await fetchFunction(CONSTANTS.OPENROUTER_URL, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+                signal,
+            });
+        } catch (networkError) {
+            if (signal && signal.aborted) {
+                throw networkError;
+            }
+            lastError = new Error(`OpenRouter request failed (${request.model}): ${networkError.message}`);
+            continue;
+        }
+        if (response.status === 429 || response.status >= 500) {
+            lastError = new Error(`OpenRouter HTTP ${response.status} (${request.model}): ${await readErrorMessage(response)}`);
+            continue;
+        }
+        if (!response.ok) {
+            throw new Error(`OpenRouter HTTP ${response.status} (${request.model}): ${await readErrorMessage(response)}`);
+        }
+        const data = await response.json();
+        if (data.error) {
+            lastError = new Error(`OpenRouter error (${request.model}): ${data.error.message || JSON.stringify(data.error)}`);
+            continue;
+        }
+        const choice = data.choices && data.choices[0];
+        if (!choice || !choice.message) {
+            lastError = new Error(`OpenRouter response has no choices (${request.model})`);
+            continue;
+        }
+        const usage = readUsage(data, request.model);
+        if (choice.finish_reason === 'length') {
+            throw new TruncationError(`OpenRouter completion truncated at max_tokens=${request.maxTokens} (${request.model}, ${usage.completionTokens} completion tokens)`, usage);
+        }
+        let json;
+        try {
+            json = parseJsonContent(choice.message.content);
+        } catch (parseError) {
+            lastError = new Error(`OpenRouter content is not valid JSON (${request.model}): ${parseError.message}`);
+            continue;
+        }
+        return { json, usage };
+    }
+    throw new Error(`${lastError.message} (gave up after ${CONSTANTS.MAX_ATTEMPTS} attempts)`);
+}
+
+// ---------------------------------------------------------------------------
+// OpenRouter PKCE sign-in: the page sends the user to OpenRouter with a code challenge, gets a
+// code back on its callback URL, and exchanges code plus verifier for an API key. No secret, no server.
+// ---------------------------------------------------------------------------
+
+const PKCE_VERIFIER_BYTES = 32;
+
+function base64UrlEncode(bytes) {
+    let binary = '';
+    for (const byte of bytes) {
+        binary += String.fromCharCode(byte);
+    }
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function makePkceVerifier() {
+    const bytes = new Uint8Array(PKCE_VERIFIER_BYTES);
+    globalThis.crypto.getRandomValues(bytes);
+    return base64UrlEncode(bytes);
+}
+
+async function pkceChallenge(verifier) {
+    const digest = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+    return base64UrlEncode(new Uint8Array(digest));
+}
+
+function openRouterAuthUrl(callbackUrl, challenge) {
+    const url = new URL(CONSTANTS.OPENROUTER_AUTH_URL);
+    url.searchParams.set('callback_url', callbackUrl);
+    url.searchParams.set('code_challenge', challenge);
+    url.searchParams.set('code_challenge_method', 'S256');
+    return url.toString();
+}
+
+async function exchangeOpenRouterCode({ code, verifier, fetchImpl }) {
+    const response = await (fetchImpl || globalThis.fetch)(CONSTANTS.OPENROUTER_KEY_EXCHANGE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, code_verifier: verifier, code_challenge_method: 'S256' }),
+    });
+    if (!response.ok) {
+        throw new Error(`OpenRouter key exchange returned HTTP ${response.status}: ${await readErrorMessage(response)}`);
+    }
+    const data = await response.json();
+    if (typeof data.key !== 'string' || data.key === '') {
+        throw new Error(`OpenRouter key exchange returned no key: ${describeJson(data)}`);
+    }
+    return data.key;
+}
+
+// ---------------------------------------------------------------------------
+// Result cache: reuse finished model calls across runs of the same request.
+// ---------------------------------------------------------------------------
+
+const FNV_OFFSET_BASIS = 0x811c9dc5;
+const FNV_PRIME = 0x01000193;
+
+// FNV-1a over the text, forwards or backwards; the two directions give two independent 32-bit hashes.
+function fnv1a32(text, backwards) {
+    let hash = FNV_OFFSET_BASIS;
+    for (let step = 0; step < text.length; step += 1) {
+        const index = backwards ? text.length - 1 - step : step;
+        hash ^= text.charCodeAt(index);
+        hash = Math.imul(hash, FNV_PRIME) >>> 0;
+    }
+    return hash.toString(16).padStart(8, '0');
+}
+
+// Key covers everything that determines the model's answer; meta and signal are excluded.
+function requestCacheKey(call) {
+    const material = JSON.stringify({
+        model: call.model,
+        messages: call.messages,
+        schema: call.schema,
+        sampling: call.sampling || null,
+        reasoning: call.reasoning || null,
+        maxTokens: call.maxTokens,
+    });
+    return `${fnv1a32(material, false)}${fnv1a32(material, true)}-${material.length.toString(16)}`;
+}
+
+// store: { get(key) -> value | undefined, set(key, value) }; either may be synchronous or return a promise.
+function makeCachedCallChat(callChat, store) {
+    return async function cachedCallChat(call) {
+        const key = requestCacheKey(call);
+        const hit = await store.get(key);
+        if (hit) {
+            return { json: hit.json, usage: { ...hit.usage, cost: 0, cached: true } };
+        }
+        const response = await callChat(call);
+        await store.set(key, { json: response.json, usage: response.usage });
+        return response;
+    };
+}
+
+// ---------------------------------------------------------------------------
+// Pipeline
+// ---------------------------------------------------------------------------
+
+async function runPipeline({ thread, callChat, onProgress, signal, config }) {
+    const cfg = { ...DEFAULT_CONFIG, ...(config || {}) };
+    const comments = thread.comments;
+    if (comments.length === 0) {
+        throw new Error('thread has no comments');
+    }
+    const commentsById = new Map(comments.map(comment => [comment.id, comment]));
+    const validIds = new Set(commentsById.keys());
+    const warnings = [];
+    let cost = 0;
+    let callCount = 0;
+    let cachedCalls = 0;
+
+    function report(stage, done, total) {
+        onProgress({ stage, done, total, cost, calls: callCount, cachedCalls });
+    }
+
+    function addSpend(usage) {
+        callCount += 1;
+        if (usage.cached) {
+            cachedCalls += 1;
+        }
+        cost += usage.cost;
+        if (cost > cfg.budgetUsd) {
+            throw new Error(`Budget of $${cfg.budgetUsd.toFixed(2)} exceeded: spent $${cost.toFixed(4)} after ${callCount} calls`);
+        }
+    }
+
+    async function callModel(call) {
+        let response;
+        try {
+            response = await callChat({ ...call, signal });
+        } catch (error) {
+            if (error instanceof TruncationError && error.usage) {
+                addSpend(error.usage);
+            }
+            throw error;
+        }
+        addSpend(response.usage);
+        return response;
+    }
+
+    // Runs one batch; when the model truncates or answers in an unknown shape, splits the batch in half and retries the halves.
+    async function runSplittable(batch, runBatch, mergeResults, stageLabel) {
+        try {
+            return await runBatch(batch);
+        } catch (error) {
+            const splittable = error instanceof TruncationError || error instanceof InvalidResponseError;
+            if (!splittable || batch.length < 2) {
+                throw error;
+            }
+            const reason = error instanceof TruncationError ? 'truncated at max_tokens' : 'response of unknown shape';
+            warnings.push(`${stageLabel}: batch of ${batch.length} comments (ids ${batch[0].id} to ${batch[batch.length - 1].id}) ${reason}; split in half`);
+            const middle = Math.ceil(batch.length / 2);
+            const [first, second] = await Promise.all([
+                runSplittable(batch.slice(0, middle), runBatch, mergeResults, stageLabel),
+                runSplittable(batch.slice(middle), runBatch, mergeResults, stageLabel),
+            ]);
+            return mergeResults(first, second);
+        }
+    }
+
+    // Runs one stage's units through the pool with progress reporting and splitting. Each unit is
+    // { batch, ...context }; runPart(part, unit) handles one (possibly split) part of the batch.
+    async function runStage(label, units, runPart, mergeResults) {
+        let done = 0;
+        report(label, done, units.length);
+        return runPool(units.map(unit => async () => {
+            const result = await runSplittable(unit.batch, part => runPart(part, unit), mergeResults, label);
+            done += 1;
+            report(label, done, units.length);
+            return result;
+        }), cfg.concurrency);
+    }
+
+    // Stage 1: extract candidate axes per batch.
+    const extractUnits = makeExtractBatches(comments, cfg.extractBatchTokens).map((batch, batchIndex) => ({ batch, batchIndex }));
+    const mergeExtract = (first, second) => ({ candidates: [...first.candidates, ...second.candidates], warnings: [...first.warnings, ...second.warnings] });
+    const extractResults = await runStage('extract', extractUnits, async (part, unit) => {
+        const response = await callModel({
+            stage: 'extract',
+            model: cfg.modelExtract,
+            messages: buildExtractMessages(thread.title, part),
+            schema: EXTRACT_SCHEMA,
+            sampling: cfg.samplingExtract,
+            reasoning: cfg.reasoningExtract,
+            maxTokens: cfg.maxTokensExtract,
+            meta: { batchIndex: unit.batchIndex, commentIds: part.map(comment => comment.id) },
+        });
+        return parseExtractResponse(response.json, validIds);
+    }, mergeExtract);
+    const candidates = [];
+    for (const result of extractResults) {
+        candidates.push(...result.candidates);
+        warnings.push(...result.warnings);
+    }
+    if (candidates.length === 0) {
+        throw new Error('extraction produced no candidate axes');
+    }
+
+    // Stage 2: consolidate candidates into canonical axes.
+    report('consolidate', 0, 1);
+    const consolidateResponse = await callModel({
+        stage: 'consolidate',
+        model: cfg.modelConsolidate,
+        messages: buildConsolidateMessages(thread.title, candidates, cfg.axesMin, cfg.axesMax),
+        schema: CONSOLIDATE_SCHEMA,
+        sampling: cfg.samplingConsolidate,
+        reasoning: cfg.reasoningConsolidate,
+        maxTokens: cfg.maxTokensConsolidate,
+        meta: { candidateCount: candidates.length },
+    });
+    const consolidated = parseConsolidateResponse(consolidateResponse.json);
+    warnings.push(...consolidated.warnings);
+    const axes = consolidated.axes;
+    if (axes.length === 0) {
+        throw new Error('consolidation produced no axes');
+    }
+    report('consolidate', 1, 1);
+
+    // Stage 3: score every comment against every axis, twice. The passes are independent, so both
+    // run through one pool; pass 2 shuffles the axes and swaps the statements.
+    const scoreBatches = makeScoreBatches(comments, cfg.scoreBatchComments);
+    const passes = [
+        { presentedAxes: axes, swapPoles: false },
+        { presentedAxes: seededShuffle(axes, cfg.shuffleSeed), swapPoles: true },
+    ].map(pass => ({ ...pass, systemMessage: buildScoreSystemMessage(thread.title, pass.presentedAxes, pass.swapPoles) }));
+    const scoreUnits = passes.flatMap((pass, passIndex) => scoreBatches.map((batch, batchIndex) => ({ batch, batchIndex, passIndex, pass })));
+    const mergeScore = (first, second) => ({ stances: new Map([...first.stances, ...second.stances]), warnings: [...first.warnings, ...second.warnings] });
+    const scoreResults = await runStage('score', scoreUnits, async (part, unit) => {
+        const partIds = part.map(comment => comment.id);
+        const { pass } = unit;
+        const response = await callModel({
+            stage: 'score',
+            model: cfg.modelScore,
+            messages: [pass.systemMessage, buildScoreUserMessage(part, commentsById, cfg.parentSnippetChars)],
+            schema: SCORE_SCHEMA,
+            sampling: cfg.samplingScore,
+            reasoning: cfg.reasoningScore,
+            maxTokens: cfg.maxTokensScore,
+            meta: { passIndex: unit.passIndex, batchIndex: unit.batchIndex, commentIds: partIds, presentedAxes: pass.presentedAxes, swapPoles: pass.swapPoles },
+        });
+        return parseScoreResponse(response.json, new Set(partIds), pass.presentedAxes, pass.swapPoles);
+    }, mergeScore);
+    const passMaps = passes.map(() => new Map());
+    scoreResults.forEach((result, index) => {
+        const target = passMaps[scoreUnits[index].passIndex];
+        for (const [key, stance] of result.stances) {
+            target.set(key, stance);
+        }
+        warnings.push(...result.warnings);
+    });
+
+    // Stage 4: aggregate.
+    const { agreed, reliability } = mergePasses(passMaps[0], passMaps[1]);
+    const byAuthor = aggregateByAuthor(agreed, commentsById);
+    const rowsForPass = stanceMap => computeRows(axes, aggregateByAuthor(stanceMap, commentsById), stanceMap, new Map(), { withNearest: false });
+    const agreedRows = computeRows(axes, byAuthor, agreed, reliability);
+    const rows = rankRows(attachSpreads(agreedRows, rowsForPass(passMaps[0]), rowsForPass(passMaps[1])));
+    report('done', 1, 1);
+    return {
+        rows,
+        axes,
+        candidates,
+        cost,
+        calls: callCount,
+        warnings,
+        stats: {
+            comments: comments.length,
+            authors: new Set(comments.map(comment => comment.author)).size,
+            cachedCalls,
+            extractBatches: extractUnits.length,
+            scoreBatches: scoreBatches.length,
+            pass1Stances: passMaps[0].size,
+            pass2Stances: passMaps[1].size,
+            agreedStances: agreed.size,
+        },
+    };
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        CONSTANTS, DEFAULT_CONFIG, VOLUME_MODELS, CONSOLIDATION_MODELS, DEFAULT_VOLUME_KEY, DEFAULT_CONSOLIDATION_KEY,
+        buildStageConfig, combinedRate, estimateRunSeconds, applyToAllStages,
+        stripHtml, flattenThread, estimateTokens, makeExtractBatches, makeScoreBatches, seededShuffle,
+        selectCommentShare, estimateRunCost, parseFrontPage, storyLabel, sortStoriesNewestFirst, storySearchUrl, isThreadId, fetchThreadItem, fetchStories,
+        buildExtractMessages, buildConsolidateMessages, buildScoreMessages,
+        parseExtractResponse, parseConsolidateResponse, parseScoreResponse,
+        stanceKey, parseStanceKey, flipStance,
+        mergePasses, aggregateByAuthor, computeRows, rankRows, barCells, splitBar, attachSpreads,
+        formatSplit, formatWithSpread, formatNearest, formatDuration, formatProgress, formatRunSummary,
+        runPool, callOpenRouter, runPipeline, TruncationError, InvalidResponseError,
+        requestCacheKey, makeCachedCallChat,
+        makePkceVerifier, pkceChallenge, openRouterAuthUrl, exchangeOpenRouterCode,
+    };
+}
+</script>
+
+<script id="page">
+// Page glue: DOM only. All computation lives in the core script above.
+
+// A column with a render function shows that text but sorts by its key. The split bar sorts by balance.
+const COLUMNS = [
+    { key: 'rank', label: 'Rank', numeric: true, className: 'num' },
+    { key: 'countA', label: 'Statement 1', numeric: true, render: row => row.statementA, className: 'right' },
+    { key: 'balance', label: 'Split', numeric: true, render: formatSplit, className: 'bar' },
+    { key: 'countB', label: 'Statement 2', numeric: true, render: row => row.statementB },
+    { key: 'countM', label: 'Mid', numeric: true, className: 'num' },
+    { key: 'authors', label: 'Authors', numeric: true, className: 'num' },
+    { key: 'comments', label: 'Comments', numeric: true, className: 'num' },
+    { key: 'score', label: 'Polarization', numeric: true, render: row => formatWithSpread(row.score, row.scoreSpread), className: 'num' },
+    { key: 'consensus', label: 'Consensus', numeric: true, render: row => formatWithSpread(row.consensus, row.consensusSpread), className: 'num' },
+    { key: 'nearestText', label: 'Nearest axis', numeric: false },
+];
+
+// A JSON store over localStorage keys sharing one prefix. get returns null when absent; set returns
+// false when the browser refuses the write (storage full or value too large) instead of throwing.
+function makePrefixedStore(prefix) {
+    return {
+        get(key) {
+            const raw = localStorage.getItem(prefix + key);
+            return raw === null ? null : JSON.parse(raw);
+        },
+        has(key) {
+            return localStorage.getItem(prefix + key) !== null;
+        },
+        set(key, value) {
+            try {
+                localStorage.setItem(prefix + key, JSON.stringify(value));
+                return true;
+            } catch (storageError) {
+                return false;
+            }
+        },
+        remove(key) {
+            localStorage.removeItem(prefix + key);
+        },
+        // Full localStorage keys under the prefix.
+        keys() {
+            const found = [];
+            for (let index = 0; index < localStorage.length; index += 1) {
+                const key = localStorage.key(index);
+                if (key.startsWith(prefix)) found.push(key);
+            }
+            return found;
+        },
+        usage() {
+            const keys = this.keys();
+            const chars = keys.reduce((sum, key) => sum + key.length + (localStorage.getItem(key) || '').length, 0);
+            return { count: keys.length, chars };
+        },
+        clear() {
+            for (const key of this.keys()) localStorage.removeItem(key);
+        },
+    };
+}
+
+// Model call results, so reruns of the same request cost nothing. Failed writes are counted, not hidden.
+const cacheStore = makePrefixedStore(CONSTANTS.CACHE_KEY_PREFIX);
+const pageCacheStore = {
+    writeFailures: 0,
+    get: key => cacheStore.get(key),
+    set(key, value) {
+        if (!cacheStore.set(key, value)) {
+            this.writeFailures += 1;
+        }
+    },
+};
+
+// Fetched threads by id, so reruns score the same comments; a live thread gains comments, which would
+// change every prompt and miss the result cache.
+const snapshotStore = makePrefixedStore(CONSTANTS.THREAD_KEY_PREFIX);
+
+function storedApiKey() {
+    return localStorage.getItem(CONSTANTS.STORAGE_KEY_OPENROUTER);
+}
+
+const elements = {
+    storyOptions: document.getElementById('story-options'),
+    suggestionsCaption: document.getElementById('suggestions-caption'),
+    threadId: document.getElementById('thread-id'),
+    elapsed: document.getElementById('elapsed'),
+    loadThread: document.getElementById('load-thread'),
+    refreshThread: document.getElementById('refresh-thread'),
+    shareRow: document.getElementById('share-row'),
+    share: document.getElementById('share'),
+    shareText: document.getElementById('share-text'),
+    volumeModel: document.getElementById('volume-model'),
+    consolidationModel: document.getElementById('consolidation-model'),
+    estimate: document.getElementById('estimate'),
+    keyEntry: document.getElementById('key-entry'),
+    connectOpenRouter: document.getElementById('connect-openrouter'),
+    keyStored: document.getElementById('key-stored'),
+    apiKey: document.getElementById('api-key'),
+    wipeKey: document.getElementById('wipe-key'),
+    run: document.getElementById('run'),
+    cancel: document.getElementById('cancel'),
+    storageInfo: document.getElementById('storage-info'),
+    deleteCached: document.getElementById('delete-cached'),
+    threadInfo: document.getElementById('thread-info'),
+    status: document.getElementById('status'),
+    summary: document.getElementById('summary'),
+    warnings: document.getElementById('warnings'),
+    results: document.getElementById('results'),
+};
+
+let activeController = null;
+let displayedRows = [];
+let sortState = { key: 'rank', descending: false };
+let loadedThread = null;
+
+function setStatus(text, isError) {
+    elements.status.textContent = text;
+    elements.status.classList.toggle('error', Boolean(isError));
+}
+
+function selectedComments() {
+    return loadedThread === null ? [] : selectCommentShare(loadedThread.comments, Number(elements.share.value));
+}
+
+function selectedModelKeys() {
+    return { volumeKey: elements.volumeModel.value, consolidationKey: elements.consolidationModel.value };
+}
+
+function keyAvailable() {
+    return storedApiKey() !== null || elements.apiKey.value.trim() !== '';
+}
+
+// Refreshes the share text, the cost and time estimate, and whether Run is possible.
+function updateEstimate() {
+    if (loadedThread === null) {
+        elements.shareRow.hidden = true;
+        elements.estimate.textContent = '';
+        elements.run.disabled = true;
+        return;
+    }
+    const comments = selectedComments();
+    const { volumeKey, consolidationKey } = selectedModelKeys();
+    const estimate = estimateRunCost(comments, combinedRate(volumeKey, consolidationKey));
+    const seconds = estimateRunSeconds(estimate.tokens, volumeKey, consolidationKey);
+    elements.shareRow.hidden = false;
+    elements.shareText.textContent = `${elements.share.value}%: ${comments.length} of ${loadedThread.comments.length} comments`;
+    elements.estimate.textContent = comments.length === 0
+        ? 'Nothing selected.'
+        : `Estimate for ${comments.length} comments (${Math.round(estimate.tokens / 1000)}k tokens): about $${estimate.usd.toFixed(2)} and about ${formatDuration(seconds)}, from measured runs.`;
+    elements.run.disabled = activeController !== null || comments.length === 0 || !keyAvailable();
+}
+
+function setRunning() {
+    const isRunning = activeController !== null;
+    elements.run.hidden = isRunning;
+    elements.cancel.hidden = !isRunning;
+    elements.loadThread.disabled = isRunning;
+    elements.refreshThread.disabled = isRunning;
+    updateEstimate();
+}
+
+const CHARS_PER_KB = 1024;
+
+// The storage line reads every stored value to size it, so it runs only when the contents change.
+function refreshStorageInfo() {
+    const cache = cacheStore.usage();
+    const snapshots = snapshotStore.usage();
+    const kilobytes = chars => Math.round(chars / CHARS_PER_KB);
+    elements.storageInfo.textContent = `Cached in this browser: ${cache.count} model calls (about ${kilobytes(cache.chars)} KB), `
+        + `${snapshots.count} thread snapshots (about ${kilobytes(snapshots.chars)} KB).`;
+    elements.deleteCached.hidden = cache.count === 0 && snapshots.count === 0;
+}
+
+// Cheap enough to run on every keystroke in the thread box: existence checks only.
+function refreshThreadButtons() {
+    const threadId = threadIdInBox();
+    elements.refreshThread.hidden = threadId === null || !snapshotStore.has(threadId);
+    elements.loadThread.hidden = loadedThread !== null && String(loadedThread.id) === threadId;
+}
+
+// The stored key is never written back into the input; while one is stored the input is hidden.
+function refreshKeyState() {
+    const stored = storedApiKey() !== null;
+    elements.keyEntry.hidden = stored;
+    elements.keyStored.hidden = !stored;
+    elements.wipeKey.hidden = !stored;
+}
+
+function fillModelOptions(select, choices, defaultKey) {
+    for (const [key, choice] of Object.entries(choices)) {
+        const option = document.createElement('option');
+        option.value = key;
+        option.textContent = choice.label;
+        select.appendChild(option);
+    }
+    select.value = defaultKey;
+}
+
+// The thread box accepts a numeric id or a story title picked from the suggestions. Suggestions start
+// with the front page and are replaced by Algolia story search results while text is typed; each
+// suggestion's text maps back to its story id. After a load the box shows the loaded thread's title.
+const SEARCH_MIN_CHARS = 3;
+const SEARCH_DEBOUNCE_MS = 300;
+let searchTimer = null;
+let searchSequence = 0;
+const storyIdsByLabel = new Map();
+
+// The thread id the box currently denotes: a typed id, or the id behind a picked or loaded title.
+function threadIdInBox() {
+    const text = elements.threadId.value.trim();
+    if (isThreadId(text)) {
+        return text;
+    }
+    const storyId = storyIdsByLabel.get(text);
+    return storyId === undefined ? null : String(storyId);
+}
+
+// The caption beside the box says what the suggestion list holds, since a datalist has no header.
+const CAPTION_HOME_PAGE = 'Home page';
+const CAPTION_SEARCHING = 'Searching sorted by date';
+const CAPTION_MATCHES = 'Matches sorted by date';
+const CAPTION_NO_MATCHES = 'No matches';
+
+function setCaption(text) {
+    elements.suggestionsCaption.textContent = text;
+}
+
+function setStoryOptions(stories, caption) {
+    elements.storyOptions.replaceChildren(...sortStoriesNewestFirst(stories).map(story => {
+        const label = storyLabel(story);
+        storyIdsByLabel.set(label, story.id);
+        const option = document.createElement('option');
+        option.value = label;
+        return option;
+    }));
+    setCaption(caption);
+}
+
+async function populateFrontPage() {
+    try {
+        setStoryOptions(await fetchStories(CONSTANTS.HN_FRONT_PAGE_URL, 'the home page'), CAPTION_HOME_PAGE);
+    } catch (error) {
+        setCaption('Home page unavailable');
+        setStatus(`Home page suggestions unavailable: ${error.message}. A thread id can still be typed.`, true);
+    }
+}
+
+function scheduleStorySearch(text) {
+    setCaption(CAPTION_SEARCHING);
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(async () => {
+        searchSequence += 1;
+        const sequence = searchSequence;
+        try {
+            const stories = await fetchStories(storySearchUrl(text), `the search "${text}"`);
+            if (sequence === searchSequence) {
+                setStoryOptions(stories, stories.length === 0 ? CAPTION_NO_MATCHES : CAPTION_MATCHES);
+            }
+        } catch (error) {
+            setCaption('Search failed');
+            setStatus(`Story search failed: ${error.message}`, true);
+        }
+    }, SEARCH_DEBOUNCE_MS);
+}
+
+function currentThreadId() {
+    const threadId = threadIdInBox();
+    if (threadId === null) {
+        setStatus('Enter a numeric Hacker News thread id, or pick a story from the suggestions.', true);
+    }
+    return threadId;
+}
+
+// Loads the thread from the stored snapshot or from the API, then shows its size and the estimate.
+async function loadThreadFromPage() {
+    const threadId = currentThreadId();
+    if (threadId === null) {
+        return;
+    }
+    loadedThread = null;
+    updateEstimate();
+    try {
+        let snapshot = snapshotStore.get(threadId);
+        if (snapshot === null) {
+            setStatus(`Fetching thread ${threadId}`);
+            snapshot = { fetchedAt: new Date().toISOString(), item: await fetchThreadItem(threadId) };
+            const stored = snapshotStore.set(threadId, snapshot);
+            setStatus(stored ? '' : 'Thread snapshot could not be stored (browser storage full or too large); a reload will fetch it again.', !stored);
+        } else {
+            setStatus('');
+        }
+        loadedThread = flattenThread(snapshot.item);
+        const label = storyLabel(loadedThread);
+        storyIdsByLabel.set(label, loadedThread.id);
+        elements.threadId.value = label;
+        elements.threadInfo.textContent = `${loadedThread.comments.length} comments, snapshot from ${snapshot.fetchedAt}`;
+    } catch (error) {
+        elements.threadInfo.textContent = '';
+        setStatus(`Error: ${error.message}`, true);
+    }
+    updateEstimate();
+    refreshThreadButtons();
+    refreshStorageInfo();
+}
+
+function formatCell(row, column) {
+    if (column.render) {
+        return column.render(row);
+    }
+    const value = row[column.key];
+    if (value === null || value === undefined) {
+        return '-';
+    }
+    return String(value);
+}
+
+function compareRows(left, right, column) {
+    const leftValue = left[column.key];
+    const rightValue = right[column.key];
+    if (leftValue === null || leftValue === undefined) return 1;
+    if (rightValue === null || rightValue === undefined) return -1;
+    if (column.numeric) return leftValue - rightValue;
+    return String(leftValue).localeCompare(String(rightValue));
+}
+
+function renderTable() {
+    const column = COLUMNS.find(candidate => candidate.key === sortState.key);
+    const sorted = displayedRows.slice().sort((left, right) => {
+        const order = compareRows(left, right, column);
+        return sortState.descending ? -order : order;
+    });
+    const table = document.createElement('table');
+    const headRow = document.createElement('tr');
+    for (const columnDefinition of COLUMNS) {
+        const header = document.createElement('th');
+        const marker = columnDefinition.key === sortState.key ? (sortState.descending ? ' v' : ' ^') : '';
+        header.textContent = columnDefinition.label + marker;
+        header.addEventListener('click', () => {
+            if (sortState.key === columnDefinition.key) {
+                sortState = { key: columnDefinition.key, descending: !sortState.descending };
+            } else {
+                sortState = { key: columnDefinition.key, descending: columnDefinition.numeric && columnDefinition.key !== 'rank' };
+            }
+            renderTable();
+        });
+        headRow.appendChild(header);
+    }
+    table.appendChild(headRow);
+    for (const row of sorted) {
+        const tableRow = document.createElement('tr');
+        for (const columnDefinition of COLUMNS) {
+            const cell = document.createElement('td');
+            cell.textContent = formatCell(row, columnDefinition);
+            if (columnDefinition.className) {
+                cell.classList.add(columnDefinition.className);
+            }
+            tableRow.appendChild(cell);
+        }
+        table.appendChild(tableRow);
+    }
+    elements.results.replaceChildren(table);
+}
+
+function renderResults(result) {
+    const rankByAxisId = new Map(result.rows.map(row => [row.axisId, row.rank]));
+    displayedRows = result.rows.map(row => ({ ...row, nearestText: formatNearest(row.nearest, rankByAxisId) }));
+    sortState = { key: 'rank', descending: false };
+    elements.summary.textContent = formatRunSummary(result).join(' ');
+    const warningList = elements.warnings.querySelector('ul');
+    warningList.replaceChildren(...result.warnings.map(text => {
+        const item = document.createElement('li');
+        item.textContent = text;
+        return item;
+    }));
+    elements.warnings.querySelector('summary').textContent = `${result.warnings.length} warnings`;
+    elements.warnings.hidden = result.warnings.length === 0;
+    renderTable();
+}
+
+// PKCE sign-in needs an http(s) page with a stable URL as the callback and a secure context for
+// SHA-256; a page opened from a file cannot use it, so the button is shown only when it can work.
+function pkceAvailable() {
+    return window.isSecureContext && /^https?:$/.test(location.protocol) && Boolean(globalThis.crypto && globalThis.crypto.subtle);
+}
+
+function pageCallbackUrl() {
+    return location.origin + location.pathname;
+}
+
+async function startOpenRouterSignIn() {
+    const verifier = makePkceVerifier();
+    sessionStorage.setItem(CONSTANTS.PKCE_VERIFIER_STORAGE_KEY, verifier);
+    location.assign(openRouterAuthUrl(pageCallbackUrl(), await pkceChallenge(verifier)));
+}
+
+// On return from OpenRouter the URL carries ?code=; exchange it for a key, store the key, and remove
+// the code from the URL so a reload does not repeat the exchange.
+async function finishOpenRouterSignIn() {
+    const params = new URLSearchParams(location.search);
+    const code = params.get('code');
+    if (code === null) {
+        return;
+    }
+    const verifier = sessionStorage.getItem(CONSTANTS.PKCE_VERIFIER_STORAGE_KEY);
+    sessionStorage.removeItem(CONSTANTS.PKCE_VERIFIER_STORAGE_KEY);
+    history.replaceState(null, '', pageCallbackUrl());
+    if (verifier === null) {
+        setStatus('OpenRouter sign-in returned a code, but this browser has no matching sign-in in progress. Start the sign-in again from this page.', true);
+        return;
+    }
+    try {
+        localStorage.setItem(CONSTANTS.STORAGE_KEY_OPENROUTER, await exchangeOpenRouterCode({ code, verifier }));
+        refreshKeyState();
+        updateEstimate();
+        setStatus('Signed in with OpenRouter; the key is stored in this browser.');
+    } catch (error) {
+        setStatus(`OpenRouter sign-in failed: ${error.message}`, true);
+    }
+}
+
+// Uses the stored key, or stores the typed one on first use. Returns null when there is neither.
+function resolveApiKey() {
+    const stored = storedApiKey();
+    if (stored !== null) {
+        return stored;
+    }
+    const typed = elements.apiKey.value.trim();
+    if (typed === '') {
+        setStatus('Enter an OpenRouter key.', true);
+        return null;
+    }
+    localStorage.setItem(CONSTANTS.STORAGE_KEY_OPENROUTER, typed);
+    elements.apiKey.value = '';
+    refreshKeyState();
+    return typed;
+}
+
+// Elapsed-time counter shown while a run is in progress and frozen at its final value afterwards.
+const ELAPSED_TICK_MS = 1000;
+let elapsedTimer = null;
+
+function startElapsedCounter() {
+    const startedAt = Date.now();
+    const tick = () => {
+        elements.elapsed.textContent = `Elapsed ${formatDuration((Date.now() - startedAt) / 1000)}`;
+    };
+    tick();
+    elapsedTimer = setInterval(tick, ELAPSED_TICK_MS);
+    return startedAt;
+}
+
+function stopElapsedCounter(startedAt) {
+    clearInterval(elapsedTimer);
+    elapsedTimer = null;
+    elements.elapsed.textContent = `Elapsed ${formatDuration((Date.now() - startedAt) / 1000)}`;
+}
+
+async function runFromPage() {
+    if (loadedThread === null) {
+        setStatus('Load a thread first.', true);
+        return;
+    }
+    const comments = selectedComments();
+    if (comments.length === 0) {
+        setStatus('Nothing selected: move the slider above 0%.', true);
+        return;
+    }
+    const apiKey = resolveApiKey();
+    if (apiKey === null) {
+        return;
+    }
+    const { volumeKey, consolidationKey } = selectedModelKeys();
+    const stageConfig = buildStageConfig(volumeKey, consolidationKey);
+    activeController = new AbortController();
+    const signal = activeController.signal;
+    setRunning();
+    elements.results.replaceChildren();
+    elements.summary.textContent = '';
+    elements.warnings.hidden = true;
+    const pageWarnings = [];
+    const startedAt = startElapsedCounter();
+    try {
+        const thread = { ...loadedThread, comments };
+        pageCacheStore.writeFailures = 0;
+        const result = await runPipeline({
+            thread,
+            signal,
+            config: stageConfig,
+            onProgress: update => setStatus(formatProgress(update)),
+            callChat: makeCachedCallChat(call => callOpenRouter({ apiKey, request: call, signal }), pageCacheStore),
+        });
+        if (pageCacheStore.writeFailures > 0) {
+            pageWarnings.push(`${pageCacheStore.writeFailures} cache writes failed (browser storage full); those calls will be repeated on a rerun`);
+        }
+        result.warnings.push(...pageWarnings);
+        renderResults(result);
+        setStatus('Done.');
+    } catch (error) {
+        setStatus(signal.aborted ? 'Cancelled.' : `Error: ${error.message}`, !signal.aborted);
+        console.error(error);
+    } finally {
+        activeController = null;
+        stopElapsedCounter(startedAt);
+        setRunning();
+        refreshStorageInfo();
+    }
+}
+
+elements.run.addEventListener('click', runFromPage);
+elements.cancel.addEventListener('click', () => {
+    if (activeController) {
+        activeController.abort();
+    }
+});
+elements.wipeKey.addEventListener('click', () => {
+    localStorage.removeItem(CONSTANTS.STORAGE_KEY_OPENROUTER);
+    refreshKeyState();
+    updateEstimate();
+    setStatus('OpenRouter key wiped from this browser.');
+});
+elements.deleteCached.addEventListener('click', () => {
+    const removedCalls = cacheStore.usage().count;
+    const removedSnapshots = snapshotStore.usage().count;
+    cacheStore.clear();
+    snapshotStore.clear();
+    refreshStorageInfo();
+    refreshThreadButtons();
+    setStatus(`Deleted from this browser: ${removedCalls} cached model calls and ${removedSnapshots} thread snapshots. The OpenRouter key is kept.`);
+});
+elements.loadThread.addEventListener('click', loadThreadFromPage);
+elements.threadId.addEventListener('keydown', event => {
+    if (event.key === 'Enter') {
+        loadThreadFromPage();
+    }
+});
+elements.threadId.addEventListener('input', () => {
+    refreshThreadButtons();
+    const text = elements.threadId.value.trim();
+    if (threadIdInBox() === null && text.length >= SEARCH_MIN_CHARS) {
+        scheduleStorySearch(text);
+    }
+});
+// A suggestion pick, or a typed id followed by leaving the box, loads the thread unless it is already loaded.
+elements.threadId.addEventListener('change', () => {
+    const threadId = threadIdInBox();
+    if (threadId !== null && !(loadedThread !== null && String(loadedThread.id) === threadId)) {
+        loadThreadFromPage();
+    }
+});
+elements.refreshThread.addEventListener('click', () => {
+    const threadId = currentThreadId();
+    if (threadId === null) {
+        return;
+    }
+    snapshotStore.remove(threadId);
+    loadThreadFromPage();
+});
+elements.share.addEventListener('input', updateEstimate);
+elements.volumeModel.addEventListener('change', updateEstimate);
+elements.consolidationModel.addEventListener('change', updateEstimate);
+elements.apiKey.addEventListener('input', updateEstimate);
+elements.connectOpenRouter.hidden = !pkceAvailable();
+elements.connectOpenRouter.addEventListener('click', () => {
+    startOpenRouterSignIn().catch(error => setStatus(`OpenRouter sign-in could not start: ${error.message}`, true));
+});
+finishOpenRouterSignIn();
+
+fillModelOptions(elements.volumeModel, VOLUME_MODELS, DEFAULT_VOLUME_KEY);
+fillModelOptions(elements.consolidationModel, CONSOLIDATION_MODELS, DEFAULT_CONSOLIDATION_KEY);
+refreshKeyState();
+updateEstimate();
+refreshThreadButtons();
+refreshStorageInfo();
+populateFrontPage();
+</script>
+</body>
+</html>
