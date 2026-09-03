@@ -1,6 +1,9 @@
 // Headless runner: executes the same core pipeline as hn_polarization.html from Node.
 // Usage: node scripts/run_node.js --thread=49525378 [--key=sk-or-...] [--out=result.json] [--thread-file=path] [--cache-dir=path]
 //        [--config-file=path] [--volume=<key>] [--consolidation=<key>] [--model=id] [--temperature=0] [--seed=12345] [--concurrency=30]
+//        [--share=<percent>] [--budget=<usd>]
+// --share analyzes only the top N percent of comments, the same selection as the page's slider; default 100.
+// --budget stops the run once the spend passes this many dollars; default DEFAULT_CONFIG.budgetUsd.
 // The OpenRouter key comes from --key, else from the OPENROUTER_API_KEY environment variable.
 // --thread-file reads the thread from that file when it exists; otherwise the thread is fetched and saved there.
 //   A live thread gains comments over time, which changes every prompt, so reruns need the same snapshot to hit the cache.
@@ -12,6 +15,7 @@ const { loadCore } = require('./load_core');
 
 const core = loadCore();
 const KEY_ENV_NAME = 'OPENROUTER_API_KEY';
+const DEFAULT_SHARE_PERCENT = 100;
 const STATEMENT_INDENT = '     ';
 
 function readArgument(name) {
@@ -48,6 +52,10 @@ function buildConfig() {
     const concurrency = readArgument('concurrency');
     if (concurrency !== null) {
         config.concurrency = Number(concurrency);
+    }
+    const budget = readArgument('budget');
+    if (budget !== null) {
+        config.budgetUsd = Number(budget);
     }
     return config;
 }
@@ -107,7 +115,7 @@ function report(result, elapsedSeconds) {
     for (const line of core.formatRunSummary(result)) {
         console.log(line);
     }
-    console.log(`${core.formatRunCost(result)}, ${result.warnings.length} warnings, ${core.formatDuration(elapsedSeconds)}`);
+    console.log(`${core.formatRunCost(result)}, ${result.warnings.length} warnings, ${core.formatElapsed(elapsedSeconds)}`);
 }
 
 async function main() {
@@ -120,11 +128,13 @@ async function main() {
         throw new Error(`pass --key=... or set ${KEY_ENV_NAME}`);
     }
     const config = buildConfig();
-    const thread = core.flattenThread(await loadThreadItem(threadId, readArgument('thread-file')));
-    process.stderr.write(`${thread.title} (${thread.comments.length} comments)\n`);
+    const fullThread = core.flattenThread(await loadThreadItem(threadId, readArgument('thread-file')));
+    const share = readArgument('share');
+    const thread = core.threadShare(fullThread, share === null ? DEFAULT_SHARE_PERCENT : Number(share));
+    process.stderr.write(`${thread.title} (${thread.comments.length} of ${fullThread.comments.length} comments)\n`);
 
     const cacheDirectory = readArgument('cache-dir');
-    const directCallChat = call => core.callOpenRouter({ apiKey, request: call });
+    const directCallChat = core.makeOpenRouterCallChat({ apiKey });
     const callChat = cacheDirectory ? core.makeCachedCallChat(directCallChat, makeFileStore(cacheDirectory)) : directCallChat;
 
     const startedAt = Date.now();

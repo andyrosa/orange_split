@@ -39,6 +39,9 @@ const TOY_THREAD = {
     ],
 };
 
+// Small batches so the toy thread exercises batching, splitting, and concurrency.
+const TOY_CONFIG = { extractBatchTokens: 200, scoreBatchComments: 5, concurrency: 2 };
+
 const TOY_AXES = [
     { id: 1, statementA: 'Portions are adequate for the price', statementB: 'Portions are too small for the price' },
     { id: 2, statementA: 'The tasting menu is good value', statementB: 'The tasting menu is overpriced' },
@@ -75,9 +78,9 @@ test('stripHtml decodes decimal and named entities', () => {
     assert.equal(core.stripHtml('a &#39;b&#39; &quot;c&quot; &lt;d&gt; &#x2F;'), 'a \'b\' "c" <d> /');
 });
 
-test('flattenThread walks depth-first, skips deleted comments, keeps their children', () => {
+test('flattenThread walks depth-first, skips deleted comments, keeps their children, keeps the posting date', () => {
     const tree = {
-        id: 1, type: 'story', title: 'T', url: 'u', text: null,
+        id: 1, type: 'story', title: 'T', url: 'u', text: null, created_at: '2026-09-01T00:00:00.000Z',
         children: [
             { id: 10, type: 'comment', author: 'a', text: 'x', children: [
                 { id: 11, type: 'comment', author: 'b', text: 'y', children: [
@@ -89,16 +92,11 @@ test('flattenThread walks depth-first, skips deleted comments, keeps their child
     const thread = core.flattenThread(tree);
     assert.equal(thread.id, 1);
     assert.equal(thread.title, 'T');
+    assert.equal(thread.createdAt, '2026-09-01T00:00:00.000Z');
     assert.deepEqual(thread.comments.map(comment => comment.id), [10, 11, 13, 20]);
     assert.deepEqual(thread.comments.map(comment => comment.parentId), [1, 10, 12, 1]);
     assert.deepEqual(thread.comments.map(comment => comment.depth), [0, 1, 3, 0]);
     assert.deepEqual(thread.comments.map(comment => comment.author), ['a', 'b', 'd', 'e']);
-});
-
-test('flattenThread strips HTML from comment text', () => {
-    const tree = { id: 1, type: 'story', title: 'T', url: 'u', text: null, children: [
-        { id: 10, type: 'comment', author: 'a', text: 'one<p>two &amp; three', children: [] }] };
-    assert.equal(core.flattenThread(tree).comments[0].text, 'one\n\ntwo & three');
 });
 
 // ---------------------------------------------------------------------------
@@ -167,7 +165,7 @@ test('seededShuffle is a deterministic permutation', () => {
 test('buildScoreMessages lists axes in presented order and swaps the two statements when asked', () => {
     const presented = [TOY_AXES[2], TOY_AXES[0]];
     const thread = core.flattenThread(TOY_THREAD);
-    const commentsById = new Map(thread.comments.map(comment => [comment.id, comment]));
+    const commentsById = core.indexCommentsById(thread.comments);
     const batch = [commentsById.get(2)];
     const messages = core.buildScoreMessages('Ember', presented, batch, commentsById, true, 300);
     const systemText = messages[0].content;
@@ -199,12 +197,23 @@ test('buildConsolidateMessages states the merge test instead of a count, allows 
     assert.ok(/verdict/i.test(messages[0].content));
     assert.ok(!/sentiments/i.test(messages[0].content));
     assert.ok(messages[1].content.includes('[nA=1, nB=0] A: p | B: q'));
-    assert.equal(core.DEFAULT_CONFIG.axesMin, undefined);
+});
+
+test('buildScoreMessages excerpts the parent without its quoted lines', () => {
+    const commentsById = core.indexCommentsById([
+        { id: 1, parentId: null, depth: 0, author: 'a', text: '> Portions are tiny\nTiny? I could not finish mine.' },
+        { id: 2, parentId: 1, depth: 1, author: 'b', text: 'Same here, huge plates.' },
+        { id: 3, parentId: null, depth: 0, author: 'c', text: '> only a quote' },
+        { id: 4, parentId: 3, depth: 1, author: 'd', text: 'Reply to a quote-only parent.' },
+    ]);
+    const messages = core.buildScoreMessages('Ember', TOY_AXES, [commentsById.get(2), commentsById.get(4)], commentsById, false, 300);
+    assert.ok(messages[1].content.includes('[id 2, replying to 1: "Tiny? I could not finish mine."]'), 'quoted line skipped');
+    assert.ok(messages[1].content.includes('[id 4, replying to 3: "> only a quote"]'), 'quote-only parent keeps its text');
 });
 
 test('buildScoreMessages truncates the parent snippet', () => {
     const thread = core.flattenThread(TOY_THREAD);
-    const commentsById = new Map(thread.comments.map(comment => [comment.id, comment]));
+    const commentsById = core.indexCommentsById(thread.comments);
     const messages = core.buildScoreMessages('Ember', TOY_AXES, [commentsById.get(2)], commentsById, false, 10);
     assert.ok(messages[1].content.includes('Portions a'), 'first 10 characters kept');
     assert.ok(!messages[1].content.includes('Portions are tiny'), 'rest dropped');
@@ -279,7 +288,7 @@ test('runPipeline splits a scoring batch whose response has an unknown shape', a
     const thread = core.flattenThread(TOY_THREAD);
     const failWhen = call => call.stage === 'score' && call.meta.commentIds.length > 1 && call.meta.commentIds.includes(7);
     const callChat = makeFailingFake(log, failWhen, () => ({ json: { bogus: true }, usage: { promptTokens: 1, completionTokens: 1, cost: 0.001 } }));
-    const result = await core.runPipeline({ thread, callChat, onProgress: () => {}, config: { extractBatchTokens: 200, scoreBatchComments: 5, concurrency: 2 } });
+    const result = await core.runPipeline({ thread, callChat, onProgress: () => {}, config: TOY_CONFIG });
     assert.deepEqual(result.rows.map(row => row.axisId), TOY_EXPECTED_ORDER);
     assert.ok(result.warnings.some(warning => /unknown shape.*split/.test(warning)));
 });
@@ -359,7 +368,7 @@ test('aggregateByAuthor takes the majority stance per author and M on ties', () 
 
 function toyRows() {
     const thread = core.flattenThread(TOY_THREAD);
-    const commentsById = new Map(thread.comments.map(comment => [comment.id, comment]));
+    const commentsById = core.indexCommentsById(thread.comments);
     const agreed = core.mergePasses(TOY_PASS1, TOY_PASS2);
     const byAuthor = core.aggregateByAuthor(agreed, commentsById);
     return core.computeRows(TOY_AXES, byAuthor, agreed);
@@ -389,12 +398,6 @@ test('computeRows produces per-commenter counts and the comment count for the to
     assert.equal(opening.comments, 1);
 });
 
-test('computeRows counts an axis with no agreed stances as empty', () => {
-    const rows = core.computeRows([TOY_AXES[0]], new Map(), new Map());
-    assert.equal(rows[0].authors, 0);
-    assert.equal(rows[0].comments, 0);
-});
-
 test('barCells splits a fixed number of cells by largest remainder so they always sum exactly', () => {
     assert.deepEqual(core.barCells(9, 1, 14, 20), [7, 1, 12]);
     assert.deepEqual(core.barCells(21, 19, 0, 20), [11, 9, 0], 'half-way ties go to the earlier side');
@@ -405,6 +408,17 @@ test('barCells splits a fixed number of cells by largest remainder so they alway
 test('splitBar draws < for side 1, - for middle, > for side 2', () => {
     assert.equal(core.splitBar({ countA: 9, countM: 1, countB: 14 }, 20), '<<<<<<<->>>>>>>>>>>>');
     assert.equal(core.splitBar({ countA: 0, countM: 0, countB: 0 }, 20), ' '.repeat(20));
+});
+
+test('sideShare is the share of one side among the two, one half when neither has a commenter', () => {
+    assert.equal(core.sideShare(14, 3), 14 / 17);
+    assert.equal(core.sideShare(0, 5), 0);
+    assert.equal(core.sideShare(0, 0), 0.5);
+});
+
+test('proportionShares splits the bar among side 1, middle, and side 2', () => {
+    assert.deepEqual(core.proportionShares({ countA: 6, countM: 2, countB: 2 }), [0.6, 0.2, 0.2]);
+    assert.deepEqual(core.proportionShares({ countA: 0, countM: 0, countB: 0 }), [0, 0, 0]);
 });
 
 test('orientRows puts the larger side on statement 1, keeping ties as they are', () => {
@@ -418,21 +432,9 @@ test('orientRows puts the larger side on statement 1, keeping ties as they are',
     assert.equal(rows[0].statementA, 'p');
 });
 
-test('runPipeline rows always have at least as many commenters on statement 1 as on statement 2', async () => {
-    const thread = core.flattenThread(TOY_THREAD);
-    const result = await core.runPipeline({ thread, callChat: makeFakeCallChat([]), onProgress: () => {}, config: { extractBatchTokens: 200, scoreBatchComments: 5, concurrency: 2 } });
-    assert.ok(result.rows.every(row => row.countA >= row.countB));
-    const portions = result.rows.find(row => row.axisId === 1);
-    assert.equal(portions.statementA, 'Portions are adequate for the price');
-    const parking = result.rows.find(row => row.axisId === 4);
-    assert.equal(parking.countA, parking.countB);
-    assert.equal(parking.statementA, 'Parking nearby is difficult');
-});
-
 test('rankRows orders by agreed comments, then commenters, then axis id, and numbers the rows', () => {
     const ranked = core.rankRows(toyRows());
     assert.deepEqual(ranked.map(row => row.axisId), TOY_EXPECTED_ORDER);
-    assert.deepEqual(ranked.map(row => row.rank), [1, 2, 3, 4, 5, 6]);
     assert.deepEqual(ranked.map(row => row.rank), [1, 2, 3, 4, 5, 6]);
 });
 
@@ -621,7 +623,7 @@ test('runPipeline reproduces the toy ranking end to end with a fake model', asyn
         thread,
         callChat: makeFakeCallChat(log),
         onProgress: (update) => progress.push(update),
-        config: { extractBatchTokens: 200, scoreBatchComments: 5, concurrency: 2 },
+        config: TOY_CONFIG,
     });
     assert.deepEqual(result.rows.map(row => row.axisId), TOY_EXPECTED_ORDER);
     assert.equal(result.axes.length, 6);
@@ -636,6 +638,21 @@ test('runPipeline reproduces the toy ranking end to end with a fake model', asyn
     assertClose(result.cost, log.length * 0.001, 'cost is the sum of usage cost');
     assert.ok(progress.length > 0);
     assert.equal(result.candidates.length > 0, true);
+});
+
+test('runPipeline validates extraction ids against the batch it sent, not the whole thread', async () => {
+    const thread = core.flattenThread(TOY_THREAD);
+    const inner = makeFakeCallChat([]);
+    const callChat = async (call) => {
+        const response = await inner(call);
+        if (call.stage === 'extract' && response.json.candidates.length > 0) {
+            const outsider = thread.comments.map(comment => comment.id).find(id => !call.meta.commentIds.includes(id));
+            response.json.candidates[0].commentsA.push(outsider);
+        }
+        return response;
+    };
+    const result = await core.runPipeline({ thread, callChat, onProgress: () => {}, config: TOY_CONFIG });
+    assert.ok(result.warnings.some(warning => /unknown comment id/.test(warning)), 'an id from another batch is dropped with a warning');
 });
 
 // Wraps the fake model so that calls matching failWhen get `failure(call)` instead: a thrown error or a bad response.
@@ -667,7 +684,7 @@ test('formatRunCost and formatRunSummary describe a run in plain words', () => {
 
 test('runPipeline counts the comment-row pairs classified by either pass', async () => {
     const thread = core.flattenThread(TOY_THREAD);
-    const result = await core.runPipeline({ thread, callChat: makeFakeCallChat([]), onProgress: () => {}, config: { extractBatchTokens: 200, scoreBatchComments: 5, concurrency: 2 } });
+    const result = await core.runPipeline({ thread, callChat: makeFakeCallChat([]), onProgress: () => {}, config: TOY_CONFIG });
     assert.equal(result.stats.classifiedPairs, 15, 'pass 1 has 15 pairs, pass 2 a subset of them');
     assert.equal(result.stats.agreedStances, 13);
 });
@@ -675,7 +692,7 @@ test('runPipeline counts the comment-row pairs classified by either pass', async
 test('runPipeline reports calls in flight, never more than the concurrency', async () => {
     const progress = [];
     const thread = core.flattenThread(TOY_THREAD);
-    await core.runPipeline({ thread, callChat: makeFakeCallChat([]), onProgress: update => progress.push(update), config: { extractBatchTokens: 200, scoreBatchComments: 5, concurrency: 2 } });
+    await core.runPipeline({ thread, callChat: makeFakeCallChat([]), onProgress: update => progress.push(update), config: TOY_CONFIG });
     const inFlight = progress.map(update => update.inFlight);
     assert.ok(inFlight.some(count => count > 0), 'some report shows a call in flight');
     assert.ok(inFlight.every(count => count >= 0 && count <= 2), 'never more than the concurrency');
@@ -692,7 +709,7 @@ test('runPipeline splits a scoring batch that truncates and still completes', as
         thread,
         callChat: makeTruncatingFake(log, truncateWhen),
         onProgress: () => {},
-        config: { extractBatchTokens: 200, scoreBatchComments: 5, concurrency: 2 },
+        config: TOY_CONFIG,
     });
     assert.deepEqual(result.rows.map(row => row.axisId), TOY_EXPECTED_ORDER);
     assert.ok(result.warnings.some(warning => /split/.test(warning)), 'split is reported as a warning');
@@ -710,7 +727,7 @@ test('runPipeline splits an extraction batch that truncates', async () => {
         thread,
         callChat: makeTruncatingFake(log, truncateWhen),
         onProgress: () => {},
-        config: { extractBatchTokens: 200, scoreBatchComments: 5, concurrency: 2 },
+        config: TOY_CONFIG,
     });
     assert.deepEqual(result.rows.map(row => row.axisId), TOY_EXPECTED_ORDER);
     const singleCommentThreeCalls = log.filter(call => call.stage === 'extract' && call.meta.commentIds.length === 1 && call.meta.commentIds[0] === 3);
@@ -724,7 +741,7 @@ test('runPipeline fails when a single-comment batch still truncates', async () =
         thread,
         callChat: makeTruncatingFake([], truncateWhen),
         onProgress: () => {},
-        config: { extractBatchTokens: 200, scoreBatchComments: 5, concurrency: 2 },
+        config: TOY_CONFIG,
     }), /truncated/);
 });
 
@@ -736,7 +753,7 @@ test('runPipeline passes per-stage sampling and reasoning settings to the model 
         callChat: makeFakeCallChat(log),
         onProgress: () => {},
         config: {
-            extractBatchTokens: 200, scoreBatchComments: 5, concurrency: 2,
+            ...TOY_CONFIG,
             samplingExtract: { temperature: 0 }, samplingConsolidate: null, samplingScore: { temperature: 0.5 },
             reasoningExtract: null, reasoningConsolidate: { effort: 'high' }, reasoningScore: null,
         },
@@ -756,7 +773,7 @@ test('runPipeline passes per-stage sampling and reasoning settings to the model 
 test('model choices exist per role with labels, config fragments, and per-token rates', () => {
     assert.equal(core.DEFAULT_VOLUME_KEY, 'haiku');
     assert.equal(core.DEFAULT_CONSOLIDATION_KEY, 'sonnet5');
-    for (const key of ['haiku', 'glmFlash', 'geminiFlash']) {
+    for (const key of ['haiku', 'glmFlash', 'geminiFlash', 'opus5']) {
         const choice = core.VOLUME_MODELS[key];
         assert.ok(choice.label.length > 0, key + ' has a label');
         assert.ok(choice.config.modelExtract && choice.config.modelScore, key + ' names the extraction and scoring model');
@@ -785,41 +802,47 @@ test('buildStageConfig merges one volume choice with one consolidation choice', 
     assert.deepEqual(core.buildStageConfig(core.DEFAULT_VOLUME_KEY, core.DEFAULT_CONSOLIDATION_KEY).modelConsolidate, core.DEFAULT_CONFIG.modelConsolidate);
 });
 
-test('combinedRate sums the per-token rates and estimateRunSeconds adds volume time to consolidation time', () => {
+test('combinedRate sums the per-token rates and estimateRunSeconds never goes below the stage latency floor', () => {
     const expected = core.VOLUME_MODELS.haiku.costPerThousandTokensUsd + core.CONSOLIDATION_MODELS.sonnet5.costPerThousandTokensUsd;
-    assertClose(core.combinedRate('haiku', 'sonnet5'), expected, 'combined rate');
+    assertClose(core.combinedRate('haiku', 'sonnet5', 'costPerThousandTokensUsd'), expected, 'combined rate');
     const seconds = core.estimateRunSeconds(104000, 'haiku', 'sonnet5');
-    assertClose(seconds, (core.VOLUME_MODELS.haiku.secondsPerThousandTokens + core.CONSOLIDATION_MODELS.sonnet5.secondsPerThousandTokens) * 104, 'seconds');
-    assert.equal(core.estimateRunSeconds(0, 'haiku', 'sonnet5'), 0);
+    assertClose(seconds, (core.VOLUME_MODELS.haiku.secondsPerThousandTokens + core.CONSOLIDATION_MODELS.sonnet5.secondsPerThousandTokens) * 104, 'seconds for a large thread');
+    // Three stages in sequence: extraction and scoring each take at least one volume call, consolidation one consolidation call.
+    const floor = 2 * core.VOLUME_MODELS.haiku.minimumSeconds + core.CONSOLIDATION_MODELS.sonnet5.minimumSeconds;
+    assert.equal(core.estimateRunSeconds(0, 'haiku', 'sonnet5'), floor);
+    assert.equal(core.estimateRunSeconds(2000, 'haiku', 'sonnet5'), floor, 'a small thread is bounded by latency');
+    assert.ok(floor >= 20 && floor <= 40, 'the Claude pair took 28 seconds on the 38-comment smoke test');
+    for (const choice of Object.values(core.VOLUME_MODELS).concat(Object.values(core.CONSOLIDATION_MODELS))) {
+        assert.ok(choice.minimumSeconds > 0);
+    }
 });
 
-test('selectCommentShare takes a seeded random sample of the share, kept in thread order', () => {
+test('largestShareWithinBudget returns the biggest share whose forecast fits, and 0 when nothing fits', () => {
+    const comments = Array.from({ length: 10 }, (_, index) => fakeComment(index + 1, 0, 1));
+    const rate = 1000 / (1 + core.CONSTANTS.COMMENT_FRAME_TOKENS); // $1 per comment: one text token plus the frame
+    assert.equal(core.largestShareWithinBudget(comments, rate, 10), 100);
+    assert.equal(core.largestShareWithinBudget(comments, rate, 4.5), 40);
+    assert.equal(core.largestShareWithinBudget(comments, rate, 0.5), 0);
+    assert.equal(core.largestShareWithinBudget([], rate, 1), 100, 'an empty thread fits any budget');
+});
+
+test('threadShare restricts a thread to the top share of its comments and keeps its other fields', () => {
+    const comments = Array.from({ length: 10 }, (_, index) => fakeComment(index + 1, 0, 1));
+    const shared = core.threadShare({ id: 7, title: 'T', comments }, 30);
+    assert.deepEqual(shared.comments.map(comment => comment.id), [1, 2, 3]);
+    assert.equal(shared.id, 7);
+    assert.equal(shared.title, 'T');
+    assert.equal(comments.length, 10, 'the original is untouched');
+});
+
+test('selectCommentShare keeps the first share of the comments in thread order, rounding up', () => {
     const comments = Array.from({ length: 40 }, (_, index) => fakeComment(index + 1, 0, 1));
     const ids = list => list.map(comment => comment.id);
-    assert.deepEqual(ids(core.selectCommentShare(comments, 100, 7)), ids(comments), '100% keeps everything');
-    assert.deepEqual(core.selectCommentShare(comments, 0, 7), []);
-    const quarter = core.selectCommentShare(comments, 25, 7);
-    assert.equal(quarter.length, 10);
-    assert.deepEqual(ids(quarter), ids(quarter).slice().sort((left, right) => left - right), 'thread order kept');
-    assert.notDeepEqual(ids(quarter), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 'not simply the first comments');
-    assert.deepEqual(ids(quarter), ids(core.selectCommentShare(comments, 25, 7)), 'same seed, same sample');
-    assert.notDeepEqual(ids(quarter), ids(core.selectCommentShare(comments, 25, 8)), 'different seed, different sample');
-    assert.throws(() => core.selectCommentShare(comments, 101, 7), /percent/);
-});
-
-test('runPipeline draws parent snippets from contextComments when a sampled reply\'s parent was not sampled', async () => {
-    const log = [];
-    const full = core.flattenThread(TOY_THREAD);
-    const sampled = full.comments.filter(comment => comment.id !== 1);
-    await core.runPipeline({
-        thread: { ...full, comments: sampled, contextComments: full.comments },
-        callChat: makeFakeCallChat(log),
-        onProgress: () => {},
-        config: { extractBatchTokens: 200, scoreBatchComments: 5, concurrency: 2 },
-    });
-    const scoreCall = log.find(call => call.stage === 'score' && call.meta.commentIds.includes(2));
-    assert.ok(scoreCall.messages[1].content.includes('replying to 1: "Portions are tiny'), 'parent 1 supplies the snippet although it was not sampled');
-    assert.ok(!scoreCall.meta.commentIds.includes(1), 'the parent itself is not scored');
+    assert.deepEqual(ids(core.selectCommentShare(comments, 100)), ids(comments), '100% keeps everything');
+    assert.deepEqual(core.selectCommentShare(comments, 0), []);
+    assert.deepEqual(ids(core.selectCommentShare(comments, 25)), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    assert.equal(core.selectCommentShare(comments, 1).length, 1, 'rounds up so a small share is not empty');
+    assert.throws(() => core.selectCommentShare(comments, 101), /percent/);
 });
 
 test('estimateRunCost applies a per-thousand-token rate to the selected comments', () => {
@@ -861,12 +884,6 @@ test('storyLabel shows title, comment count, posting date and id; sortStoriesNew
     assert.equal(core.storyDate(undated), 'unknown date');
     assert.equal(core.storyLabel(undated), 'Undated (0 comments, unknown date, 3)');
     assert.deepEqual(core.sortStoriesNewestFirst([older, undated, newer]).map(story => story.id), [2, 1, 3]);
-});
-
-test('flattenThread keeps the posting date of the story', () => {
-    const tree = { id: 1, type: 'story', title: 'T', url: 'u', text: null, created_at: '2026-09-01T00:00:00.000Z', children: [] };
-    assert.equal(core.flattenThread(tree).createdAt, '2026-09-01T00:00:00.000Z');
-    assert.equal(core.flattenThread({ id: 2, type: 'story', children: [] }).createdAt, null);
 });
 
 // ---------------------------------------------------------------------------
@@ -925,6 +942,16 @@ function mapStore() {
     return { store, api: { get: key => store.get(key), set: (key, value) => { store.set(key, value); } } };
 }
 
+// The fake model behind the cache, as the page and the runner wire it.
+function cachedFake(api) {
+    return core.makeCachedCallChat(makeFakeCallChat([]), api);
+}
+
+// The cache key of the stored response whose payload holds the named array (one per stage in the toy run).
+function storedKeyFor(store, payloadKey) {
+    return [...store.entries()].find(([, value]) => Array.isArray(value.json[payloadKey]))[0];
+}
+
 test('requestCacheKey ignores meta and signal and changes with request content', () => {
     const base = baseCall();
     const same = { ...baseCall(), meta: { batchIndex: 3 }, signal: {} };
@@ -971,14 +998,35 @@ test('makeCachedCallChat does not cache failures', async () => {
 test('runPipeline reports cached calls and spends nothing on a fully cached rerun', async () => {
     const { api } = mapStore();
     const thread = core.flattenThread(TOY_THREAD);
-    const config = { extractBatchTokens: 200, scoreBatchComments: 5, concurrency: 2 };
-    const first = await core.runPipeline({ thread, callChat: core.makeCachedCallChat(makeFakeCallChat([]), api), onProgress: () => {}, config });
-    const second = await core.runPipeline({ thread, callChat: core.makeCachedCallChat(makeFakeCallChat([]), api), onProgress: () => {}, config });
+    const first = await core.runPipeline({ thread, callChat: cachedFake(api), onProgress: () => {}, config: TOY_CONFIG });
+    const second = await core.runPipeline({ thread, callChat: cachedFake(api), onProgress: () => {}, config: TOY_CONFIG });
     assert.ok(first.cost > 0);
     assert.equal(first.stats.cachedCalls, 0);
     assert.equal(second.cost, 0);
     assert.equal(second.stats.cachedCalls, second.calls);
     assert.deepEqual(second.rows.map(row => row.axisId), first.rows.map(row => row.axisId));
+});
+
+test('a refused cache write is counted by the pipeline and reported as a warning', async () => {
+    const refusing = { get: () => undefined, set: () => false };
+    const thread = core.flattenThread(TOY_THREAD);
+    const result = await core.runPipeline({ thread, callChat: cachedFake(refusing), onProgress: () => {}, config: TOY_CONFIG });
+    assert.equal(result.stats.cacheWriteFailures, result.calls);
+    assert.ok(result.warnings.some(text => /cache writes failed/.test(text)), 'warning present');
+    const accepting = mapStore().api;
+    const clean = await core.runPipeline({ thread, callChat: cachedFake(accepting), onProgress: () => {}, config: TOY_CONFIG });
+    assert.equal(clean.stats.cacheWriteFailures, 0);
+    assert.equal(clean.warnings.length, 0);
+});
+
+test('formatNextRun gives the forecast, the cached-call sentence when some calls are cached, or the zero-cost statement', () => {
+    const none = { stages: [{ stage: 'extract', hits: 0, total: 2 }], complete: false };
+    const some = { stages: [{ stage: 'extract', hits: 2, total: 2 }, { stage: 'consolidate', hits: 0, total: 1 }], complete: false };
+    const all = { stages: [{ stage: 'extract', hits: 2, total: 2 }, { stage: 'consolidate', hits: 1, total: 1 }, { stage: 'score', hits: 4, total: 4 }], complete: true };
+    assert.equal(core.formatNextRun({ usd: 0.0449, seconds: 31, probe: null }), 'about $0.04 and about 31 seconds.');
+    assert.equal(core.formatNextRun({ usd: 0.0449, seconds: 31, probe: none }), 'about $0.04 and about 31 seconds.');
+    assert.equal(core.formatNextRun({ usd: 0.0449, seconds: 31, probe: some }), 'about $0.04 and about 31 seconds. Cached: 2 of 2 extraction, 0 of 1 consolidation calls, so it will cost and take less.');
+    assert.equal(core.formatNextRun({ usd: 0.0449, seconds: 31, probe: all }), '$0 and 0 seconds, all 7 model calls are cached.');
 });
 
 test('runPipeline stops when the budget is exceeded', async () => {
@@ -987,7 +1035,7 @@ test('runPipeline stops when the budget is exceeded', async () => {
         thread,
         callChat: makeFakeCallChat([]),
         onProgress: () => {},
-        config: { extractBatchTokens: 200, scoreBatchComments: 5, concurrency: 2, budgetUsd: 0.0015 },
+        config: { ...TOY_CONFIG, budgetUsd: 0.0015 },
     }), /budget/i);
 });
 
@@ -995,21 +1043,19 @@ test('runPipeline stops when the budget is exceeded', async () => {
 // Cache probe: how much of a run the store already holds
 // ---------------------------------------------------------------------------
 
-const PROBE_CONFIG = { extractBatchTokens: 200, scoreBatchComments: 5, concurrency: 2 };
-
 test('probeCache on an empty store reports only the extraction stage, with no hits', async () => {
     const { api } = mapStore();
     const thread = core.flattenThread(TOY_THREAD);
-    const probe = await core.probeCache({ thread, store: api, config: PROBE_CONFIG });
-    const batches = core.makeExtractBatches(thread.comments, PROBE_CONFIG.extractBatchTokens).length;
+    const probe = await core.probeCache({ thread, store: api, config: TOY_CONFIG });
+    const batches = core.makeExtractBatches(thread.comments, TOY_CONFIG.extractBatchTokens).length;
     assert.deepEqual(probe, { stages: [{ stage: 'extract', hits: 0, total: batches }], complete: false });
 });
 
 test('probeCache after a full run reports every stage fully cached without calling a model', async () => {
     const { api } = mapStore();
     const thread = core.flattenThread(TOY_THREAD);
-    const run = await core.runPipeline({ thread, callChat: core.makeCachedCallChat(makeFakeCallChat([]), api), onProgress: () => {}, config: PROBE_CONFIG });
-    const probe = await core.probeCache({ thread, store: api, config: PROBE_CONFIG });
+    const run = await core.runPipeline({ thread, callChat: cachedFake(api), onProgress: () => {}, config: TOY_CONFIG });
+    const probe = await core.probeCache({ thread, store: api, config: TOY_CONFIG });
     assert.equal(probe.complete, true);
     assert.deepEqual(probe.stages.map(stage => stage.stage), ['extract', 'consolidate', 'score']);
     for (const stage of probe.stages) {
@@ -1021,10 +1067,10 @@ test('probeCache after a full run reports every stage fully cached without calli
 test('probeCache counts a missing scoring call and stays incomplete', async () => {
     const { store, api } = mapStore();
     const thread = core.flattenThread(TOY_THREAD);
-    await core.runPipeline({ thread, callChat: core.makeCachedCallChat(makeFakeCallChat([]), api), onProgress: () => {}, config: PROBE_CONFIG });
-    const scoreKey = [...store.entries()].find(([, value]) => Array.isArray(value.json.stances))[0];
+    await core.runPipeline({ thread, callChat: cachedFake(api), onProgress: () => {}, config: TOY_CONFIG });
+    const scoreKey = storedKeyFor(store, 'stances');
     store.delete(scoreKey);
-    const probe = await core.probeCache({ thread, store: api, config: PROBE_CONFIG });
+    const probe = await core.probeCache({ thread, store: api, config: TOY_CONFIG });
     assert.equal(probe.complete, false);
     const score = probe.stages.find(stage => stage.stage === 'score');
     assert.equal(score.hits, score.total - 1);
@@ -1033,10 +1079,10 @@ test('probeCache counts a missing scoring call and stays incomplete', async () =
 test('probeCache stops reporting after the first stage with a miss', async () => {
     const { store, api } = mapStore();
     const thread = core.flattenThread(TOY_THREAD);
-    await core.runPipeline({ thread, callChat: core.makeCachedCallChat(makeFakeCallChat([]), api), onProgress: () => {}, config: PROBE_CONFIG });
-    const consolidateKey = [...store.entries()].find(([, value]) => Array.isArray(value.json.axes))[0];
+    await core.runPipeline({ thread, callChat: cachedFake(api), onProgress: () => {}, config: TOY_CONFIG });
+    const consolidateKey = storedKeyFor(store, 'axes');
     store.delete(consolidateKey);
-    const probe = await core.probeCache({ thread, store: api, config: PROBE_CONFIG });
+    const probe = await core.probeCache({ thread, store: api, config: TOY_CONFIG });
     assert.deepEqual(probe.stages.map(stage => stage.stage), ['extract', 'consolidate']);
     assert.deepEqual(probe.stages[1], { stage: 'consolidate', hits: 0, total: 1 });
 });

@@ -9,8 +9,9 @@
 body { font-family: system-ui, sans-serif; margin: 0.5rem 1rem; }
 h1 { font-size: 1.4rem; margin: 0 0 0.5rem; }
 label { display: inline-block; margin-right: 1rem; }
-input[type="text"], input[type="password"] { width: 22rem; }
+input[type="password"] { width: 22rem; }
 #thread-id { width: 16rem; }
+input[type="number"] { width: 5em; }
 .row { margin: 1em 0; }
 #thread-picker { position: relative; display: inline-block; vertical-align: middle; }
 #story-list { position: absolute; left: 0; top: 100%; z-index: 1; margin: 0; padding: 0; list-style: none; min-width: 100%; max-height: 24rem; overflow-y: auto; background: #fff; border: 1px solid #999; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2); }
@@ -19,29 +20,29 @@ input[type="text"], input[type="password"] { width: 22rem; }
 #story-list li.active { background: #cde; }
 #story-list li.cached { font-weight: bold; }
 input[type="range"] { width: 8rem; vertical-align: middle; }
-select { max-width: 40rem; }
 select.model { display: block; width: 100%; max-width: 70rem; margin-top: 0.25rem; }
 button { margin-right: 0.5rem; }
 #status { margin: 0.5rem 0; white-space: pre-wrap; }
 #status.error { color: #b00020; }
-.hint { color: #666; font-size: 0.9em; }
-table { border-collapse: collapse; margin-top: 1rem; }
-th, td { border: 1px solid #999; padding: 0.25rem 0.5rem; vertical-align: top; }
-th { background: #eee; text-align: left; }
-td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-td.right { text-align: right; }
-td.bar { white-space: nowrap; }
-svg.split { vertical-align: middle; }
-svg.split text { font-size: 11px; dominant-baseline: central; }
-svg.split .side1 { fill: #2b6cb0; }
-svg.split .mid { fill: #b0b0b0; }
-svg.split .side2 { fill: #c05621; }
+#results { margin-top: 1rem; }
+.axis { padding: 0.6rem 0; border-bottom: 1px solid #e4e4e4; }
+.axis .statement { font-size: var(--size); line-height: 1.15; margin: 0.1rem 0; }
+.axis .statement.side1 { color: #2b6cb0; }
+.axis .statement.side2 { color: #c05621; }
+.axis .count { font-size: 11px; color: #666; margin-right: 0.4rem; vertical-align: middle; font-variant-numeric: tabular-nums; }
+.axis .proportion { display: flex; height: 6px; width: 24rem; margin: 0.35rem 0; background: #eee; }
+.axis .proportion span { display: block; height: 100%; flex: var(--share); }
+.axis .proportion .side1 { background: #2b6cb0; }
+.axis .proportion .mid { background: #cfcfcf; }
+.axis .proportion .side2 { background: #c05621; }
+.axis .meta { font-size: 11px; color: #666; }
 #warnings ul { margin: 0; padding-left: 1.5rem; }
 </style>
 </head>
 <body>
 <h1>HN Split</h1>
 <div class="row">
+<label for="min-comments">Min comments</label> <input id="min-comments" type="number" min="0" step="10">
 <label for="thread-id">Thread</label>
 <div id="thread-picker">
 <input id="thread-id" type="text" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="story-list" placeholder="id, or search">
@@ -65,7 +66,8 @@ svg.split .side2 { fill: #c05621; }
 <select id="consolidation-model" class="model"></select>
 </p>
 <p id="share-row" hidden>
-<label for="share">% of comments to analyze</label> <input id="share" type="range" min="0" max="100" value="100">
+<label for="max-cost">Max cost $</label> <input id="max-cost" type="number" min="0" step="1">
+<label for="share">% of top comments to analyze</label> <input id="share" type="range" min="0" max="100" value="100">
 <span id="estimate"></span>
 </p>
 <p id="key-entry">
@@ -100,7 +102,6 @@ const CONSTANTS = Object.freeze({
     MAX_ATTEMPTS: 4,
     RETRY_BASE_MS: 2000,
     BAR_CELLS: 20,
-    SAMPLE_SEED: 4242,
 });
 
 // Models are chosen per role: one for the high-volume stages (extraction and scoring) and one for
@@ -110,8 +111,9 @@ const CONSTANTS = Object.freeze({
 // null omits the field from the request.
 //
 // The cost and time rates come from measured runs on a 1300-comment thread (about 104k comment
-// tokens) and a 38-comment thread; both cost and wall time scaled with comment tokens in those runs,
-// consolidation included, since its thinking grows with the number of candidates.
+// tokens), a 484-comment thread (about 33k), and a 38-comment thread; both cost and wall time scaled with comment tokens in those runs,
+// consolidation included, since its thinking grows with the number of candidates. minimumSeconds is the
+// latency of one call of the model in its role, the floor for a stage no matter how small the thread.
 const SAMPLING_SEED = 12345;
 const DEFAULT_VOLUME_KEY = 'haiku';
 const DEFAULT_CONSOLIDATION_KEY = 'sonnet5';
@@ -127,6 +129,7 @@ const VOLUME_MODELS = Object.freeze({
         },
         costPerThousandTokensUsd: 0.0119,
         secondsPerThousandTokens: 0.87,
+        minimumSeconds: 8,
     }),
     glmFlash: Object.freeze({
         label: 'GLM 5.3 Flash: About $0.19 and 23 to 42 minutes per 1000 comments. Quality: 0.5 to 0.6 confirmed stances per comment, the best coverage; some malformed output, which the page repairs.',
@@ -138,6 +141,7 @@ const VOLUME_MODELS = Object.freeze({
         },
         costPerThousandTokensUsd: 0.0024,
         secondsPerThousandTokens: 31,
+        minimumSeconds: 100,
     }),
     geminiFlash: Object.freeze({
         label: 'Gemini 3.8 Flash: About $1.96 and 3 minutes per 1000 comments. Quality: about 0.3 confirmed stances per comment, the least coverage, the most stable ranking.',
@@ -149,33 +153,50 @@ const VOLUME_MODELS = Object.freeze({
         },
         costPerThousandTokensUsd: 0.0244,
         secondsPerThousandTokens: 2.1,
+        minimumSeconds: 8,
+    }),
+    opus5: Object.freeze({
+        label: 'Claude Opus 5: About $10.50 and 4 minutes per 1000 comments. Quality: about 0.7 confirmed stances per comment and three times the two-sided rows of Haiku 4.5 on a 484-comment thread; the extra stances hold up under blind review.',
+        config: {
+            modelExtract: 'anthropic/claude-opus-5', modelScore: 'anthropic/claude-opus-5',
+            samplingExtract: null, samplingScore: null,
+            reasoningExtract: null, reasoningScore: null,
+            maxTokensExtract: 16000, maxTokensScore: 8000,
+        },
+        costPerThousandTokensUsd: 0.1317,
+        secondsPerThousandTokens: 3.18,
+        minimumSeconds: 50,
     }),
 });
 
 const CONSOLIDATION_MODELS = Object.freeze({
     sonnet5: Object.freeze({
-        label: 'Claude Sonnet 5: About $0.23 and 3 minutes per 1000 comments. Quality: 43 of 58 axes two-sided in the measured run.',
-        config: { modelConsolidate: 'anthropic/claude-sonnet-5', samplingConsolidate: null, reasoningConsolidate: null, maxTokensConsolidate: 32000 },
+        label: 'Claude Sonnet 5: About $0.23 and 3 minutes per 1000 comments. Quality: 39 to 43 of 58 to 64 axes two-sided in the measured runs.',
+        config: { modelConsolidate: 'anthropic/claude-sonnet-5', samplingConsolidate: null, reasoningConsolidate: null, maxTokensConsolidate: 128000 },
         costPerThousandTokensUsd: 0.0029,
         secondsPerThousandTokens: 2.4,
+        minimumSeconds: 15,
     }),
     glm53: Object.freeze({
         label: 'GLM 5.3: About $0.19 and 5 to 7 minutes per 1000 comments. Quality: 46 to 53 of about 60 axes two-sided, the most measured.',
         config: { modelConsolidate: 'z-ai/glm-5.3', samplingConsolidate: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED }, reasoningConsolidate: { effort: 'high' }, maxTokensConsolidate: 128000 },
         costPerThousandTokensUsd: 0.0018,
         secondsPerThousandTokens: 4.6,
+        minimumSeconds: 120,
     }),
     geminiFlash: Object.freeze({
         label: 'Gemini 3.8 Flash: About $0.02 and 15 seconds per 1000 comments. Quality: 42 of 45 axes two-sided, measured only with Gemini scoring.',
         config: { modelConsolidate: 'google/gemini-3.8-flash', samplingConsolidate: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED }, reasoningConsolidate: null, maxTokensConsolidate: 32000 },
         costPerThousandTokensUsd: 0.0003,
         secondsPerThousandTokens: 0.2,
+        minimumSeconds: 8,
     }),
     opus5: Object.freeze({
         label: 'Claude Opus 5: About $0.26 and 45 seconds per 1000 comments. Quality: finer axes, 35 of 60 two-sided, the same stances spread over more rows.',
-        config: { modelConsolidate: 'anthropic/claude-opus-5', samplingConsolidate: null, reasoningConsolidate: null, maxTokensConsolidate: 32000 },
+        config: { modelConsolidate: 'anthropic/claude-opus-5', samplingConsolidate: null, reasoningConsolidate: null, maxTokensConsolidate: 128000 },
         costPerThousandTokensUsd: 0.0033,
         secondsPerThousandTokens: 0.6,
+        minimumSeconds: 10,
     }),
 });
 
@@ -191,24 +212,51 @@ function buildStageConfig(volumeKey, consolidationKey) {
     return { ...volume.config, ...consolidation.config };
 }
 
-// Sums one per-thousand-token rate field over the two chosen models; the field defaults to cost.
+// Sums one per-thousand-token rate field over the two chosen models.
 function combinedRate(volumeKey, consolidationKey, field) {
-    const rateField = field || 'costPerThousandTokensUsd';
-    return VOLUME_MODELS[volumeKey][rateField] + CONSOLIDATION_MODELS[consolidationKey][rateField];
+    return VOLUME_MODELS[volumeKey][field] + CONSOLIDATION_MODELS[consolidationKey][field];
 }
+
+// Wall time scales with tokens, but the three stages run in sequence and each is at least one call
+// long (extraction and scoring one volume call each, consolidation one consolidation call), so a small
+// thread is bounded by latency: the smoke tests took 28 seconds for 38 comments with the Claude pair.
+// Extraction and scoring both use the volume model; consolidation uses the other.
+const VOLUME_STAGE_COUNT = 2;
 
 function estimateRunSeconds(tokens, volumeKey, consolidationKey) {
-    return (combinedRate(volumeKey, consolidationKey, 'secondsPerThousandTokens') * tokens) / 1000;
+    const scaled = (combinedRate(volumeKey, consolidationKey, 'secondsPerThousandTokens') * tokens) / 1000;
+    const floor = VOLUME_STAGE_COUNT * VOLUME_MODELS[volumeKey].minimumSeconds + CONSOLIDATION_MODELS[consolidationKey].minimumSeconds;
+    return Math.max(scaled, floor);
 }
 
-// Applies one model, or one sampling setting, to every stage; the stage list lives here only.
-const STAGE_NAMES = Object.freeze(['Extract', 'Consolidate', 'Score']);
+// The three stages in run order. Config fields carry the suffix (modelExtract, samplingExtract, ...);
+// the estimate line uses the call name.
+const STAGES = Object.freeze([
+    Object.freeze({ key: 'extract', suffix: 'Extract', callName: 'extraction' }),
+    Object.freeze({ key: 'consolidate', suffix: 'Consolidate', callName: 'consolidation' }),
+    Object.freeze({ key: 'score', suffix: 'Score', callName: 'scoring' }),
+]);
+const STAGE_ORDER = Object.freeze(STAGES.map(stage => stage.key));
+const STAGE_BY_KEY = Object.freeze(Object.fromEntries(STAGES.map(stage => [stage.key, stage])));
+
+// Applies one model, or one sampling setting, to every stage.
 function applyToAllStages(config, { model, sampling }) {
-    for (const stage of STAGE_NAMES) {
-        if (model !== undefined) config[`model${stage}`] = model;
-        if (sampling !== undefined) config[`sampling${stage}`] = sampling;
+    for (const stage of STAGES) {
+        if (model !== undefined) config[`model${stage.suffix}`] = model;
+        if (sampling !== undefined) config[`sampling${stage.suffix}`] = sampling;
     }
     return config;
+}
+
+// The model, sampling, reasoning, and output ceiling configured for one stage, as request fields.
+function stageSettings(config, stageKey) {
+    const { suffix } = STAGE_BY_KEY[stageKey];
+    return {
+        model: config[`model${suffix}`],
+        sampling: config[`sampling${suffix}`],
+        reasoning: config[`reasoning${suffix}`],
+        maxTokens: config[`maxTokens${suffix}`],
+    };
 }
 
 const DEFAULT_CONFIG = Object.freeze({
@@ -276,6 +324,10 @@ function flattenThread(item) {
 // Batching
 // ---------------------------------------------------------------------------
 
+function indexCommentsById(comments) {
+    return new Map(comments.map(comment => [comment.id, comment]));
+}
+
 function estimateTokens(text) {
     return Math.ceil(text.length / CONSTANTS.CHARS_PER_TOKEN);
 }
@@ -332,24 +384,33 @@ function makeExtractBatches(comments, maxTokens) {
     return batches;
 }
 
-// Keeps a random `percent` of the comments, chosen with `seed` so the same thread and percentage
-// always give the same sample, returned in thread order. Parents that were not sampled can still
-// supply context through the pipeline's contextComments.
-function selectCommentShare(comments, percent, seed) {
+// Keeps the first `percent` of the comments in thread order, which is Hacker News's own ranking with
+// the best-rated top-level threads first. Since the order is depth-first, every reply's parent is in the share.
+function selectCommentShare(comments, percent) {
     if (!Number.isFinite(percent) || percent < 0 || percent > 100) {
         throw new Error(`percent must be between 0 and 100, got ${percent}`);
     }
-    const count = Math.ceil((comments.length * percent) / 100);
-    if (count >= comments.length) {
-        return comments.slice();
-    }
-    const indices = seededShuffle(comments.map((comment, index) => index), seed).slice(0, count).sort((left, right) => left - right);
-    return indices.map(index => comments[index]);
+    return comments.slice(0, Math.ceil((comments.length * percent) / 100));
+}
+
+// The thread as the pipeline sees it: the same thread restricted to the top share of its comments.
+function threadShare(thread, percent) {
+    return { ...thread, comments: selectCommentShare(thread.comments, percent) };
 }
 
 function estimateRunCost(comments, ratePerThousandTokensUsd) {
     const tokens = comments.reduce((sum, comment) => sum + commentTokens(comment), 0);
     return { tokens, usd: (ratePerThousandTokensUsd * tokens) / 1000 };
+}
+
+// The largest percentage of top comments whose forecast cost stays within budgetUsd; 0 when even one comment does not fit.
+function largestShareWithinBudget(comments, ratePerThousandTokensUsd, budgetUsd) {
+    for (let percent = 100; percent > 0; percent -= 1) {
+        if (estimateRunCost(selectCommentShare(comments, percent), ratePerThousandTokensUsd).usd <= budgetUsd) {
+            return percent;
+        }
+    }
+    return 0;
 }
 
 function storySearchUrl(query) {
@@ -361,20 +422,20 @@ function isThreadId(text) {
 }
 
 // Fetches JSON from the Hacker News API; `what` names the request in the error message.
-async function fetchHnJson(url, what, fetchImpl, signal) {
-    const response = await (fetchImpl || globalThis.fetch)(url, { signal });
+async function fetchHnJson(url, what) {
+    const response = await globalThis.fetch(url);
     if (!response.ok) {
         throw new Error(`Hacker News API returned HTTP ${response.status} for ${what}`);
     }
     return response.json();
 }
 
-function fetchThreadItem(threadId, fetchImpl, signal) {
-    return fetchHnJson(CONSTANTS.HN_ITEM_URL + threadId, `thread ${threadId}`, fetchImpl, signal);
+function fetchThreadItem(threadId) {
+    return fetchHnJson(CONSTANTS.HN_ITEM_URL + threadId, `thread ${threadId}`);
 }
 
-async function fetchStories(url, what, fetchImpl) {
-    return parseFrontPage(await fetchHnJson(url, what, fetchImpl));
+async function fetchStories(url, what) {
+    return parseFrontPage(await fetchHnJson(url, what));
 }
 
 // Parses Algolia search hits (front page or story search) into { id, title, numComments }.
@@ -467,6 +528,8 @@ For each axis output:
 Rules:
 - Include an axis when at least one comment clearly takes a side and a reasonable commenter could take the other side.
 - Prefer specific, concrete propositions over broad ones. Split distinct claims into separate axes.
+- A line inside a comment that begins with ">" quotes another comment or the article and is not the commenter's own claim.
+- Words that only agree or disagree with the parent ("this", "exactly", "+1", "same here", "no", "wrong") state no position; list a reply under a statement only for a claim the rest of its own text makes.
 - Use only comment ids that appear in the batch. A comment may appear under several axes.
 - Do not list a comment under both poles of the same axis.
 - Return JSON matching the schema and nothing else.`;
@@ -492,7 +555,11 @@ Each axis is a pair of rival statements labeled A and B. For each comment, and f
 
 Rules:
 - Skip axes the comment does not address. Most comments address zero, one, or two axes.
-- A comment addresses an axis only when its position is clear from its own text, read together with the parent snippet when one is given. Do not infer a stance from tone, from the author, or from what the parent says.
+- A comment addresses an axis only when its position is clear from its own text. A parent snippet, when one is given, has a single job: to resolve what the comment refers to, such as a pronoun or an omitted subject. The parent's position is never read as the comment's own. Do not infer a stance from tone or from the author.
+- Words that only agree or disagree with the parent ("this", "exactly", "+1", "same here", "no", "wrong") state no position. Judge the rest of the comment's text as if those words were absent, and give no stance when nothing else is left.
+- A line inside a comment that begins with ">" quotes another comment or the article and is not the commenter's own claim. A comment whose own words only accept or reject a quoted line gets no stance.
+- A position the comment attributes to someone else ("people say", "the article claims") is not the comment's own.
+- "M" is not for a comment whose position is unclear, and not for a comment that holds one statement while granting a point to the other, which is still "A" or "B".
 - Use only the comment ids given in the batch and the axis numbers given below.
 - Return JSON matching the schema and nothing else.
 
@@ -600,10 +667,18 @@ function truncateText(text, maxChars) {
     return text.length > maxChars ? text.slice(0, maxChars) + '...' : text;
 }
 
+// A line a parent quotes (starting with ">") is someone else's words, so the excerpt skips such lines;
+// otherwise a reply to a comment that opens with a quote is shown the grandparent's claim as its parent's.
+// A parent made only of quoted lines keeps its text, so the reply still has something to resolve against.
+function parentExcerptSource(text) {
+    const ownLines = text.split('\n').filter(line => !line.trimStart().startsWith('>')).join('\n').trim();
+    return ownLines === '' ? text : ownLines;
+}
+
 function formatCommentForScore(comment, commentsById, snippetChars) {
     const parent = commentsById.get(comment.parentId);
     const parentPart = parent
-        ? `, replying to ${parent.id}: "${truncateText(parent.text.slice(0, snippetChars * 2).replace(/\s+/g, ' '), snippetChars)}"`
+        ? `, replying to ${parent.id}: "${truncateText(parentExcerptSource(parent.text).slice(0, snippetChars * 2).replace(/\s+/g, ' '), snippetChars)}"`
         : '';
     return `[id ${comment.id}${parentPart}]\n${comment.text}`;
 }
@@ -911,16 +986,38 @@ function splitBar(row, cells) {
     return '<'.repeat(cellsA) + '-'.repeat(cellsM) + '>'.repeat(cellsB);
 }
 
+// Share of one side among the two sides; one half when neither side has a commenter.
+function sideShare(count, other) {
+    return count + other === 0 ? 0.5 : count / (count + other);
+}
+
+// Shares of side 1, middle, and side 2 among all commenters on the axis; all zero when there are none.
+function proportionShares(row) {
+    const total = row.countA + row.countM + row.countB;
+    return total === 0 ? [0, 0, 0] : [row.countA / total, row.countM / total, row.countB / total];
+}
+
 // Display helpers shared by the page and the headless runner. All return plain strings.
 const COST_DIGITS = 4;
 const SECONDS_SHOWN_AS_SECONDS_LIMIT = 90;
+const SECONDS_PER_MINUTE = 60;
 
 function formatSplit(row) {
     return `${row.countA} ${splitBar(row, CONSTANTS.BAR_CELLS)} ${row.countB}`;
 }
 
 function formatDuration(seconds) {
-    return seconds < SECONDS_SHOWN_AS_SECONDS_LIMIT ? `${Math.round(seconds)} seconds` : `${Math.round(seconds / 60)} minutes`;
+    return seconds < SECONDS_SHOWN_AS_SECONDS_LIMIT ? `${Math.round(seconds)} seconds` : `${Math.round(seconds / SECONDS_PER_MINUTE)} minutes`;
+}
+
+// A time already spent is reported to the second, so that a counter that ticks once a second keeps
+// changing past a minute. A forecast stays rounded, since its precision does not go that far.
+function formatElapsed(seconds) {
+    const whole = Math.round(seconds);
+    if (whole < SECONDS_PER_MINUTE) {
+        return `${whole} seconds`;
+    }
+    return `${Math.floor(whole / SECONDS_PER_MINUTE)} minutes ${whole % SECONDS_PER_MINUTE} seconds`;
 }
 
 function formatProgress(update) {
@@ -1151,6 +1248,11 @@ async function exchangeOpenRouterCode({ code, verifier, fetchImpl }) {
     return data.key;
 }
 
+// The pipeline's callChat over OpenRouter with one key; signal aborts in-flight requests.
+function makeOpenRouterCallChat({ apiKey, signal }) {
+    return call => callOpenRouter({ apiKey, request: call, signal });
+}
+
 // ---------------------------------------------------------------------------
 // Result cache: reuse finished model calls across runs of the same request.
 // ---------------------------------------------------------------------------
@@ -1182,17 +1284,23 @@ function requestCacheKey(call) {
     return `${fnv1a32(material, false)}${fnv1a32(material, true)}-${material.length.toString(16)}`;
 }
 
-// store: { get(key) -> value | undefined, set(key, value) }; either may be synchronous or return a promise.
+// A stored response replayed: the same JSON, no cost, flagged as cached.
+function cachedResponse(hit) {
+    return { json: hit.json, usage: { ...hit.usage, cost: 0, cached: true } };
+}
+
+// store: { get(key) -> value | undefined, set(key, value) }; either may be synchronous or return a
+// promise. A set that returns false (browser storage full) marks the response so the pipeline can count it.
 function makeCachedCallChat(callChat, store) {
     return async function cachedCallChat(call) {
         const key = requestCacheKey(call);
         const hit = await store.get(key);
         if (hit) {
-            return { json: hit.json, usage: { ...hit.usage, cost: 0, cached: true } };
+            return cachedResponse(hit);
         }
         const response = await callChat(call);
-        await store.set(key, { json: response.json, usage: response.usage });
-        return response;
+        const stored = await store.set(key, { json: response.json, usage: response.usage });
+        return stored === false ? { ...response, usage: { ...response.usage, cacheWriteFailed: true } } : response;
     };
 }
 
@@ -1205,8 +1313,6 @@ const PROBE_PLACEHOLDER_RESPONSES = Object.freeze({
     score: { stances: [] },
 });
 const PROBE_PLACEHOLDER_USAGE = Object.freeze({ promptTokens: 0, completionTokens: 0, cost: 0 });
-const STAGE_ORDER = Object.freeze(['extract', 'consolidate', 'score']);
-const STAGE_CALL_NAMES = Object.freeze({ extract: 'extraction', consolidate: 'consolidation', score: 'scoring' });
 
 // Counts, stage by stage, how many of a run's model calls the store already holds, without calling any
 // model. Stages after the first stage with a miss are left out of the result, because their requests
@@ -1219,7 +1325,7 @@ async function probeCache({ thread, store, config }) {
         const hit = await store.get(requestCacheKey(call));
         if (hit) {
             count.hits += 1;
-            return { json: hit.json, usage: { ...hit.usage, cost: 0, cached: true } };
+            return cachedResponse(hit);
         }
         return { json: PROBE_PLACEHOLDER_RESPONSES[call.stage], usage: PROBE_PLACEHOLDER_USAGE };
     }
@@ -1246,8 +1352,19 @@ function formatCacheProbe(probe) {
     if (totalHits === 0) {
         return '';
     }
-    const parts = probe.stages.map(stage => `${stage.hits} of ${stage.total} ${STAGE_CALL_NAMES[stage.stage]}`).join(', ');
+    const parts = probe.stages.map(stage => `${stage.hits} of ${stage.total} ${STAGE_BY_KEY[stage.stage].callName}`).join(', ');
     return `Cached: ${parts} calls, so it will cost and take less.`;
+}
+
+// The text after "Next run:" on the estimate line: the forecast, with the cached-call sentence when
+// some calls are cached, or the zero-cost statement when all are. probe is null until the probe finishes.
+function formatNextRun({ usd, seconds, probe }) {
+    const cacheText = probe === null ? '' : formatCacheProbe(probe);
+    if (probe !== null && probe.complete) {
+        return `$0 and 0 seconds, ${cacheText}.`;
+    }
+    const forecast = `about $${usd.toFixed(SUMMARY_COST_DIGITS)} and about ${formatDuration(seconds)}.`;
+    return cacheText === '' ? forecast : `${forecast} ${cacheText}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -1260,15 +1377,12 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
     if (comments.length === 0) {
         throw new Error('thread has no comments');
     }
-    const commentsById = new Map(comments.map(comment => [comment.id, comment]));
-    const validIds = new Set(commentsById.keys());
-    // Parent snippets may come from comments outside the analyzed set (a sampled reply whose parent
-    // was not sampled); thread.contextComments, when given, is the full thread for that lookup.
-    const contextById = new Map((thread.contextComments || comments).map(comment => [comment.id, comment]));
+    const commentsById = indexCommentsById(comments);
     const warnings = [];
     let cost = 0;
     let callCount = 0;
     let cachedCalls = 0;
+    let cacheWriteFailures = 0;
 
     let inFlight = 0;
     let stage = { label: 'start', done: 0, total: 0 };
@@ -1288,6 +1402,9 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
         callCount += 1;
         if (usage.cached) {
             cachedCalls += 1;
+        }
+        if (usage.cacheWriteFailed) {
+            cacheWriteFailures += 1;
         }
         cost += usage.cost;
         if (cost > cfg.budgetUsd) {
@@ -1351,17 +1468,15 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
     const extractUnits = makeExtractBatches(comments, cfg.extractBatchTokens).map((batch, batchIndex) => ({ batch, batchIndex }));
     const mergeExtract = (first, second) => ({ candidates: [...first.candidates, ...second.candidates], warnings: [...first.warnings, ...second.warnings] });
     const extractResults = await runStage('extract', extractUnits, async (part, unit) => {
+        const partIds = part.map(comment => comment.id);
         const response = await callModel({
             stage: 'extract',
-            model: cfg.modelExtract,
+            ...stageSettings(cfg, 'extract'),
             messages: buildExtractMessages(thread.title, part),
             schema: EXTRACT_SCHEMA,
-            sampling: cfg.samplingExtract,
-            reasoning: cfg.reasoningExtract,
-            maxTokens: cfg.maxTokensExtract,
-            meta: { batchIndex: unit.batchIndex, commentIds: part.map(comment => comment.id) },
+            meta: { batchIndex: unit.batchIndex, commentIds: partIds },
         });
-        return parseExtractResponse(response.json, validIds);
+        return parseExtractResponse(response.json, new Set(partIds));
     }, mergeExtract);
     const candidates = [];
     for (const result of extractResults) {
@@ -1376,12 +1491,9 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
     report('consolidate', 0, 1);
     const consolidateResponse = await callModel({
         stage: 'consolidate',
-        model: cfg.modelConsolidate,
+        ...stageSettings(cfg, 'consolidate'),
         messages: buildConsolidateMessages(thread.title, candidates),
         schema: CONSOLIDATE_SCHEMA,
-        sampling: cfg.samplingConsolidate,
-        reasoning: cfg.reasoningConsolidate,
-        maxTokens: cfg.maxTokensConsolidate,
         meta: { candidateCount: candidates.length },
     });
     const consolidated = parseConsolidateResponse(consolidateResponse.json);
@@ -1406,12 +1518,9 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
         const { pass } = unit;
         const response = await callModel({
             stage: 'score',
-            model: cfg.modelScore,
-            messages: [pass.systemMessage, buildScoreUserMessage(part, contextById, cfg.parentSnippetChars)],
+            ...stageSettings(cfg, 'score'),
+            messages: [pass.systemMessage, buildScoreUserMessage(part, commentsById, cfg.parentSnippetChars)],
             schema: SCORE_SCHEMA,
-            sampling: cfg.samplingScore,
-            reasoning: cfg.reasoningScore,
-            maxTokens: cfg.maxTokensScore,
             meta: { passIndex: unit.passIndex, batchIndex: unit.batchIndex, commentIds: partIds, presentedAxes: pass.presentedAxes, swapPoles: pass.swapPoles },
         });
         return parseScoreResponse(response.json, new Set(partIds), pass.presentedAxes, pass.swapPoles);
@@ -1429,6 +1538,9 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
     const agreed = mergePasses(passMaps[0], passMaps[1]);
     const byAuthor = aggregateByAuthor(agreed, commentsById);
     const rows = orientRows(rankRows(computeRows(axes, byAuthor, agreed)));
+    if (cacheWriteFailures > 0) {
+        warnings.push(`${cacheWriteFailures} cache writes failed (browser storage full); those calls will be repeated on a rerun`);
+    }
     report('done', 1, 1);
     return {
         rows,
@@ -1441,10 +1553,7 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
             comments: comments.length,
             authors: new Set(comments.map(comment => comment.author)).size,
             cachedCalls,
-            extractBatches: extractUnits.length,
-            scoreBatches: scoreBatches.length,
-            pass1Stances: passMaps[0].size,
-            pass2Stances: passMaps[1].size,
+            cacheWriteFailures,
             classifiedPairs: new Set([...passMaps[0].keys(), ...passMaps[1].keys()]).size,
             agreedStances: agreed.size,
         },
@@ -1456,14 +1565,14 @@ if (typeof module !== 'undefined' && module.exports) {
         CONSTANTS, DEFAULT_CONFIG, VOLUME_MODELS, CONSOLIDATION_MODELS, DEFAULT_VOLUME_KEY, DEFAULT_CONSOLIDATION_KEY,
         buildStageConfig, combinedRate, estimateRunSeconds, applyToAllStages,
         stripHtml, flattenThread, estimateTokens, makeExtractBatches, makeScoreBatches, seededShuffle,
-        selectCommentShare, estimateRunCost, parseFrontPage, storyDate, storyDetails, storyLabel, sortStoriesNewestFirst, storySearchUrl, isThreadId, fetchThreadItem, fetchStories,
+        selectCommentShare, threadShare, indexCommentsById, estimateRunCost, largestShareWithinBudget, parseFrontPage, storyDate, storyDetails, storyLabel, sortStoriesNewestFirst, storySearchUrl, isThreadId, fetchThreadItem, fetchStories,
         buildExtractMessages, buildConsolidateMessages, buildScoreMessages,
         parseExtractResponse, parseConsolidateResponse, parseScoreResponse,
-        stanceKey, parseStanceKey, flipStance,
-        mergePasses, aggregateByAuthor, computeRows, orientRows, rankRows, barCells, splitBar,
-        formatSplit, formatDuration, formatProgress, formatRunCost, formatRunSummary,
-        runPool, callOpenRouter, runPipeline, TruncationError, InvalidResponseError,
-        requestCacheKey, makeCachedCallChat, probeCache, formatCacheProbe,
+        parseStanceKey, flipStance,
+        mergePasses, aggregateByAuthor, computeRows, orientRows, rankRows, barCells, splitBar, sideShare, proportionShares,
+        formatSplit, formatDuration, formatElapsed, formatProgress, formatRunCost, formatRunSummary,
+        runPool, callOpenRouter, makeOpenRouterCallChat, runPipeline, TruncationError, InvalidResponseError,
+        requestCacheKey, makeCachedCallChat, probeCache, formatCacheProbe, formatNextRun,
         makePkceVerifier, pkceChallenge, openRouterAuthUrl, exchangeOpenRouterCode,
     };
 }
@@ -1472,15 +1581,10 @@ if (typeof module !== 'undefined' && module.exports) {
 <script id="page">
 // Page glue: DOM only. All computation lives in the core script above.
 
-// Rows are shown biggest first (agreed comments, then commenters). A column with a render function shows
-// that text, one with a cell function shows the element it returns, else the value under its key.
-const COLUMNS = [
-    { key: 'comments', label: 'Comments', className: 'num' },
-    { key: 'authors', label: 'Authors', className: 'num' },
-    { key: 'statementA', label: 'Statement 1', className: 'right' },
-    { key: 'split', label: 'Split', cell: (row, context) => renderSplitCell(row, context.splitScale), className: 'bar' },
-    { key: 'statementB', label: 'Statement 2' },
-];
+// Rows are shown biggest first (agreed comments, then commenters), one block per axis: statement 1 above,
+// statement 2 below, each in a font sized by its share of the two sides, with a proportion bar between them.
+const STATEMENT_FONT_MIN_PX = 11;
+const STATEMENT_FONT_MAX_PX = 26;
 
 // A JSON store over localStorage keys sharing one prefix. get returns null when absent; set returns
 // false when the browser refuses the write (storage full or value too large) instead of throwing.
@@ -1513,10 +1617,8 @@ function makePrefixedStore(prefix) {
             }
             return found;
         },
-        usage() {
-            const keys = this.keys();
-            const chars = keys.reduce((sum, key) => sum + key.length + (localStorage.getItem(key) || '').length, 0);
-            return { count: keys.length, chars };
+        count() {
+            return this.keys().length;
         },
         clear() {
             for (const key of this.keys()) localStorage.removeItem(key);
@@ -1524,17 +1626,9 @@ function makePrefixedStore(prefix) {
     };
 }
 
-// Model call results, so reruns of the same request cost nothing. Failed writes are counted, not hidden.
+// Model call results, so reruns of the same request cost nothing. A refused write returns false, which
+// the pipeline counts and reports.
 const cacheStore = makePrefixedStore(CONSTANTS.CACHE_KEY_PREFIX);
-const pageCacheStore = {
-    writeFailures: 0,
-    get: key => cacheStore.get(key),
-    set(key, value) {
-        if (!cacheStore.set(key, value)) {
-            this.writeFailures += 1;
-        }
-    },
-};
 
 // Fetched threads by id, so reruns score the same comments; a live thread gains comments, which would
 // change every prompt and miss the result cache.
@@ -1545,13 +1639,14 @@ function storedApiKey() {
 }
 
 const elements = {
-    threadPicker: document.getElementById('thread-picker'),
     storyList: document.getElementById('story-list'),
     threadId: document.getElementById('thread-id'),
+    minComments: document.getElementById('min-comments'),
     loadThread: document.getElementById('load-thread'),
     refreshThread: document.getElementById('refresh-thread'),
     shareRow: document.getElementById('share-row'),
     share: document.getElementById('share'),
+    maxCost: document.getElementById('max-cost'),
     volumeModel: document.getElementById('volume-model'),
     consolidationModel: document.getElementById('consolidation-model'),
     estimate: document.getElementById('estimate'),
@@ -1579,9 +1674,35 @@ function setStatus(text, isError) {
     elements.status.classList.toggle('error', Boolean(isError));
 }
 
-// The slider's share of a thread's comments, as a seeded sample.
+// The slider's share of a thread's comments: the top of the thread.
+// The Max cost box caps the next run: it is the budget the pipeline stops at, and it sets the slider to the
+// largest share of top comments whose forecast fits. The slider can still be moved by hand afterwards; the
+// budget still applies. An empty or non-positive box counts as the default, and editing it writes the default back.
+const DEFAULT_MAX_COST_USD = DEFAULT_CONFIG.budgetUsd;
+
+// A number box's value when it holds a positive number, else null; each caller applies its own fallback.
+function positiveNumberInBox(element) {
+    const value = Number(element.value);
+    return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function maxCostInBox() {
+    return positiveNumberInBox(elements.maxCost) ?? DEFAULT_MAX_COST_USD;
+}
+
+function applyMaxCostToShare() {
+    if (loadedThread === null) {
+        return;
+    }
+    elements.share.value = largestShareWithinBudget(loadedThread.comments, selectedCostRate(), maxCostInBox());
+}
+
+function sharePercent() {
+    return Number(elements.share.value);
+}
+
 function sampleComments(thread) {
-    return selectCommentShare(thread.comments, Number(elements.share.value), CONSTANTS.SAMPLE_SEED);
+    return selectCommentShare(thread.comments, sharePercent());
 }
 
 function selectedComments() {
@@ -1596,69 +1717,159 @@ function keyAvailable() {
     return storedApiKey() !== null || elements.apiKey.value.trim() !== '';
 }
 
-// The thread as the pipeline sees it: the selected comments, with the full thread for parent snippets.
-function selectedThread(comments) {
-    return { ...loadedThread, comments, contextComments: loadedThread.comments };
-}
-
-let probeSequence = 0;
-// Set by a thread load and consumed by the next estimate: when that load's run is fully cached, it starts by itself.
-let runWhenFullyCached = false;
-
-// Counts the run's model calls already cached, then hands the result to onProbe unless a newer probe
-// has started since (the slider and the model selects can change faster than a probe finishes).
-async function refreshCacheInfo(comments, onProbe) {
-    probeSequence += 1;
-    const sequence = probeSequence;
+// The run as the page would start it now: DEFAULT_CONFIG, then the two model choices, then the Max cost box.
+function selectedRunConfig() {
     const { volumeKey, consolidationKey } = selectedModelKeys();
-    const probe = await probeCache({ thread: selectedThread(comments), store: pageCacheStore, config: buildStageConfig(volumeKey, consolidationKey) });
-    if (sequence === probeSequence) {
-        onProbe(probe);
-    }
+    return { ...buildStageConfig(volumeKey, consolidationKey), budgetUsd: maxCostInBox() };
 }
 
-// Writes the estimate line. Until the probe finishes, probe is null and the estimate stands alone; a
-// complete probe turns it into the zero-cost statement, a partial one appends the cached-call sentence.
+function selectedCostRate() {
+    const { volumeKey, consolidationKey } = selectedModelKeys();
+    return combinedRate(volumeKey, consolidationKey, 'costPerThousandTokensUsd');
+}
+
+// The loaded thread restricted to the selected share.
+function selectedThread() {
+    return threadShare(loadedThread, sharePercent());
+}
+
+function shareText(comments) {
+    return `${sharePercent()}%, ${comments.length} of ${loadedThread.comments.length} comments`;
+}
+
+function isLoadedThread(threadId) {
+    return loadedThread !== null && String(loadedThread.id) === threadId;
+}
+
+// An element with an optional class and text.
+function makeElement(tag, { className, text } = {}) {
+    const element = document.createElement(tag);
+    if (className !== undefined) element.className = className;
+    if (text !== undefined) element.textContent = text;
+    return element;
+}
+
+// Latest-request-wins for async work that a later change supersedes: start() returns a function that
+// says whether that request is still the latest; cancel() makes every pending request stale.
+function makeLatest() {
+    let current = 0;
+    return {
+        start() {
+            current += 1;
+            const mine = current;
+            return () => mine === current;
+        },
+        cancel() {
+            current += 1;
+        },
+    };
+}
+
+const probeLatest = makeLatest();
+const searchLatest = makeLatest();
+const listLatest = makeLatest();
+
+// Everything derived from the two stores is cached in memory and dropped only when a store changed:
+// the result cache after a run that called a model, both stores after Delete, one thread's snapshot
+// after a refetch. A stored-thread load and a fully cached replay change nothing and keep the memos.
+// Probes build and hash every request of a run, and the slider and the list ask for the same probe
+// many times, so they are kept per thread, share, models, and generation.
+let cacheGeneration = 0;
+const flattenedThreads = new Map();
+const probeMemo = new Map();
+
+function probeSelection(thread) {
+    const { volumeKey, consolidationKey } = selectedModelKeys();
+    const key = [thread.id, thread.comments.length, volumeKey, consolidationKey, cacheGeneration].join('|');
+    if (!probeMemo.has(key)) {
+        probeMemo.set(key, probeCache({ thread, store: cacheStore, config: selectedRunConfig() }));
+    }
+    return probeMemo.get(key);
+}
+
+// The flattened form of a stored thread, or null when none is stored.
+function storedThread(threadId) {
+    if (!flattenedThreads.has(threadId)) {
+        const snapshot = snapshotStore.get(threadId);
+        if (snapshot === null) {
+            return null;
+        }
+        flattenedThreads.set(threadId, flattenThread(snapshot.item));
+    }
+    return flattenedThreads.get(threadId);
+}
+
+function invalidateResultCache() {
+    cacheGeneration += 1;
+    probeMemo.clear();
+}
+
+// Refreshes what the stores drive: the storage line, the thread buttons, the estimate.
+function afterStoreChange() {
+    refreshStorageInfo();
+    refreshThreadButtons();
+    return updateEstimate();
+}
+
+// The probe for the current thread, share, and models once it has finished, null until then. A run
+// it reports as fully cached needs no key.
+let latestProbe = null;
+
+function runIsFullyCached() {
+    return latestProbe !== null && latestProbe.complete;
+}
+
 function renderEstimate(comments, estimate, seconds, probe) {
-    const header = `${elements.share.value}%, ${comments.length} of ${loadedThread.comments.length} comments, ${Math.round(estimate.tokens / 1000)}k tokens: `;
-    const cacheText = probe === null ? '' : formatCacheProbe(probe);
-    if (probe !== null && probe.complete) {
-        elements.estimate.textContent = `${header}$0 and 0 seconds, ${cacheText}.`;
-        return;
-    }
-    const cacheSentence = cacheText === '' ? '' : ` ${cacheText}`;
-    elements.estimate.textContent = `${header}about $${estimate.usd.toFixed(2)} and about ${formatDuration(seconds)}, from measured runs.${cacheSentence}`;
+    elements.estimate.textContent = `${shareText(comments)}, ${Math.round(estimate.tokens / 1000)}k tokens. Next run: ${formatNextRun({ usd: estimate.usd, seconds, probe })}`;
 }
 
-// Refreshes the share text, the cost and time estimate with its cached-call note, and whether Run is possible.
-function updateEstimate() {
-    probeSequence += 1;
-    const autoRun = runWhenFullyCached;
-    runWhenFullyCached = false;
+// Dragging the slider fires many input events; the text forecast follows each one, the probe waits for a pause.
+const PROBE_DEBOUNCE_MS = 150;
+
+// Refreshes the share text, the forecast, and the Run button. Returns a promise of the probe for the
+// current selection, resolving to null when a later change superseded it or nothing is selected.
+async function updateEstimate() {
+    const isCurrent = probeLatest.start();
+    latestProbe = null;
     if (loadedThread === null) {
         elements.shareRow.hidden = true;
         elements.estimate.textContent = '';
-        elements.run.disabled = true;
-        return;
+        refreshRunButton();
+        return null;
     }
     const comments = selectedComments();
     const { volumeKey, consolidationKey } = selectedModelKeys();
-    const estimate = estimateRunCost(comments, combinedRate(volumeKey, consolidationKey));
+    const estimate = estimateRunCost(comments, selectedCostRate());
     const seconds = estimateRunSeconds(estimate.tokens, volumeKey, consolidationKey);
     elements.shareRow.hidden = false;
+    refreshRunButton();
     if (comments.length === 0) {
-        elements.estimate.textContent = `${elements.share.value}%, 0 of ${loadedThread.comments.length} comments.`;
-    } else {
-        renderEstimate(comments, estimate, seconds, null);
-        refreshCacheInfo(comments, probe => {
-            renderEstimate(comments, estimate, seconds, probe);
-            if (autoRun && probe.complete && activeController === null) {
-                runFromPage(true);
-            }
-        })
-            .catch(error => setStatus(`Cache check failed: ${error.message}`, true));
+        elements.estimate.textContent = `${shareText(comments)}.`;
+        return null;
     }
-    elements.run.disabled = activeController !== null || comments.length === 0 || !keyAvailable();
+    renderEstimate(comments, estimate, seconds, null);
+    try {
+        await defaultSleep(PROBE_DEBOUNCE_MS);
+        if (!isCurrent()) {
+            return null;
+        }
+        const probe = await probeSelection(selectedThread());
+        if (!isCurrent()) {
+            return null;
+        }
+        latestProbe = probe;
+        renderEstimate(comments, estimate, seconds, probe);
+        refreshRunButton();
+        return probe;
+    } catch (error) {
+        setStatus(`Cache check failed: ${error.message}`, true);
+        return null;
+    }
+}
+
+function refreshRunButton() {
+    elements.run.disabled = activeController !== null || loadedThread === null || selectedComments().length === 0
+        || (!keyAvailable() && !runIsFullyCached());
 }
 
 function setRunning() {
@@ -1667,16 +1878,14 @@ function setRunning() {
     elements.cancel.hidden = !isRunning;
     elements.loadThread.disabled = isRunning;
     elements.refreshThread.disabled = isRunning;
-    updateEstimate();
+    refreshRunButton();
 }
 
-
-// The storage line reads every stored value to size it, so it runs only when the contents change.
 function refreshStorageInfo() {
-    const cache = cacheStore.usage();
-    const snapshots = snapshotStore.usage();
-    elements.storageInfo.textContent = `Cached in this browser: ${cache.count} model calls, ${snapshots.count} threads.`;
-    elements.deleteCached.hidden = cache.count === 0 && snapshots.count === 0;
+    const cachedCalls = cacheStore.count();
+    const storedThreads = snapshotStore.count();
+    elements.storageInfo.textContent = `Cached in this browser: ${cachedCalls} model calls, ${storedThreads} threads.`;
+    elements.deleteCached.hidden = cachedCalls === 0 && storedThreads === 0;
 }
 
 // Cheap enough to run on every keystroke in the thread box: existence checks only.
@@ -1684,7 +1893,7 @@ function refreshStorageInfo() {
 function refreshThreadButtons() {
     const threadId = threadIdInBox();
     elements.refreshThread.hidden = loadedThread === null || !snapshotStore.has(String(loadedThread.id));
-    elements.loadThread.hidden = threadId === null || (loadedThread !== null && String(loadedThread.id) === threadId);
+    elements.loadThread.hidden = threadId === null || isLoadedThread(threadId);
 }
 
 // The stored key is never written back into the input; while one is stored the input is hidden.
@@ -1696,9 +1905,8 @@ function refreshKeyState() {
 
 function fillModelOptions(select, choices, defaultKey) {
     for (const [key, choice] of Object.entries(choices)) {
-        const option = document.createElement('option');
+        const option = makeElement('option', { text: choice.label });
         option.value = key;
-        option.textContent = choice.label;
         select.appendChild(option);
     }
     select.value = defaultKey;
@@ -1709,7 +1917,19 @@ function fillModelOptions(select, choices, defaultKey) {
 const SEARCH_MIN_CHARS = 3;
 const SEARCH_DEBOUNCE_MS = 300;
 let searchTimer = null;
-let searchSequence = 0;
+
+// The Min comments box hides stories with fewer comments from both lists. An empty or non-numeric box hides
+// nothing. The default keeps front-page stories large enough for a table with more than a few rows.
+const DEFAULT_MIN_COMMENTS = 100;
+
+function minCommentsInBox() {
+    return positiveNumberInBox(elements.minComments) ?? 0;
+}
+
+function storiesAboveMinComments(stories) {
+    const minimum = minCommentsInBox();
+    return stories.filter(story => story.numComments >= minimum);
+}
 
 // The thread id the box currently denotes: a typed id, or the id behind a picked or loaded title.
 function threadIdInBox() {
@@ -1727,32 +1947,34 @@ const HEADER_NO_MATCHES = 'No matches';
 const HEADER_LOADING_HOME_PAGE = 'Loading the home page';
 const HEADER_HOME_PAGE_UNAVAILABLE = 'Home page unavailable';
 const HEADER_SEARCH_FAILED = 'Search failed';
+const searchHeader = rows => (rows.length === 0 ? HEADER_NO_MATCHES : HEADER_MATCHES);
 
 let homePageStories = null;
 let homePageHeader = HEADER_LOADING_HOME_PAGE;
+let lastSearch = null;
 let listStories = [];
 let activeIndex = -1;
-let listSequence = 0;
 
 // Bolds the rows whose run would be served entirely from the cache at the current share and models,
-// so picking them gives the result at once. Probing builds every request of the run, so it runs after
-// the list is shown and only for stored threads; a list drawn later makes the probe's marks moot.
+// so picking them gives the result at once. It runs after the list is painted, yielding before each
+// probe so typing stays responsive, and only for stored threads; a list drawn later ends it.
 async function markFullyCachedRows(rows) {
-    const sequence = listSequence;
-    const { volumeKey, consolidationKey } = selectedModelKeys();
-    const config = buildStageConfig(volumeKey, consolidationKey);
+    const isCurrent = listLatest.start();
     for (const { story, item } of rows) {
-        const snapshot = snapshotStore.get(String(story.id));
-        if (snapshot === null) {
+        const thread = storedThread(String(story.id));
+        if (thread === null) {
             continue;
         }
-        const thread = flattenThread(snapshot.item);
-        const comments = sampleComments(thread);
-        if (comments.length === 0) {
+        const selection = threadShare(thread, sharePercent());
+        if (selection.comments.length === 0) {
             continue;
         }
-        const probe = await probeCache({ thread: { ...thread, comments, contextComments: thread.comments }, store: pageCacheStore, config });
-        if (sequence !== listSequence) {
+        await defaultSleep(0);
+        if (!isCurrent()) {
+            return;
+        }
+        const probe = await probeSelection(selection);
+        if (!isCurrent()) {
             return;
         }
         if (probe.complete) {
@@ -1766,19 +1988,17 @@ function listIsOpen() {
     return !elements.storyList.hidden;
 }
 
-// Fills and opens the list: the header row, then one row per story, newest first.
-function showList(stories, header) {
-    listStories = sortStoriesNewestFirst(stories);
+// Fills and opens the list: the header row, then one row per story above the Min comments box, newest
+// first. headerFor names the header from the rows that remain.
+function showList(stories, headerFor) {
+    listStories = sortStoriesNewestFirst(storiesAboveMinComments(stories));
     activeIndex = -1;
-    listSequence += 1;
-    const headerItem = document.createElement('li');
-    headerItem.className = 'header';
-    headerItem.textContent = header;
+    const header = headerFor(listStories);
+    const headerItem = makeElement('li', { className: 'header', text: header });
     const rows = listStories.map((story, index) => {
-        const item = document.createElement('li');
+        const item = makeElement('li', { text: storyLabel(story) });
         item.setAttribute('role', 'option');
         item.id = `story-option-${index}`;
-        item.textContent = storyLabel(story);
         item.addEventListener('mousedown', () => pickStory(story));
         return { story, item };
     });
@@ -1824,23 +2044,26 @@ function refreshList() {
         return;
     }
     if (text.length >= SEARCH_MIN_CHARS) {
-        scheduleStorySearch(text);
+        if (lastSearch !== null && lastSearch.text === text) {
+            showList(lastSearch.stories, searchHeader);
+        } else {
+            scheduleStorySearch(text);
+        }
         return;
     }
     clearTimeout(searchTimer);
-    searchSequence += 1;
+    searchLatest.cancel();
     if (homePageStories === null) {
-        showList([], homePageHeader);
+        showList([], () => homePageHeader);
         return;
     }
     const needle = text.toLowerCase();
-    showList(homePageStories.filter(story => story.title.toLowerCase().includes(needle)), HEADER_HOME_PAGE);
+    showList(homePageStories.filter(story => story.title.toLowerCase().includes(needle)), () => HEADER_HOME_PAGE);
 }
 
 async function populateFrontPage() {
     try {
         homePageStories = await fetchStories(CONSTANTS.HN_FRONT_PAGE_URL, 'the home page');
-        homePageHeader = HEADER_HOME_PAGE;
     } catch (error) {
         homePageHeader = HEADER_HOME_PAGE_UNAVAILABLE;
         setStatus(`Home page suggestions unavailable: ${error.message}. A thread id can still be typed.`, true);
@@ -1853,19 +2076,19 @@ async function populateFrontPage() {
 // Keeps the current rows under a "searching" header until the results arrive; a result for a search that
 // is no longer the latest, or that arrives after the list was closed, is dropped.
 function scheduleStorySearch(text) {
-    showList(listStories, HEADER_SEARCHING);
+    showList(listStories, () => HEADER_SEARCHING);
     clearTimeout(searchTimer);
     searchTimer = setTimeout(async () => {
-        searchSequence += 1;
-        const sequence = searchSequence;
+        const isCurrent = searchLatest.start();
         try {
             const stories = await fetchStories(storySearchUrl(text), `the search "${text}"`);
-            if (sequence === searchSequence && listIsOpen()) {
-                showList(stories, stories.length === 0 ? HEADER_NO_MATCHES : HEADER_MATCHES);
+            lastSearch = { text, stories };
+            if (isCurrent() && listIsOpen()) {
+                showList(stories, searchHeader);
             }
         } catch (error) {
-            if (sequence === searchSequence && listIsOpen()) {
-                showList([], HEADER_SEARCH_FAILED);
+            if (isCurrent() && listIsOpen()) {
+                showList([], () => HEADER_SEARCH_FAILED);
             }
             setStatus(`Story search failed: ${error.message}`, true);
         }
@@ -1905,7 +2128,8 @@ async function loadThreadFromPage(threadId) {
         } else {
             setStatus('');
         }
-        loadedThread = flattenThread(snapshot.item);
+        loadedThread = storedThread(threadId) || flattenThread(snapshot.item);
+        applyMaxCostToShare();
         elements.threadId.value = '';
         closeList();
         elements.threadTitle.textContent = loadedThread.title;
@@ -1915,117 +2139,63 @@ async function loadThreadFromPage(threadId) {
         elements.threadInfo.textContent = '';
         setStatus(`Error: ${error.message}`, true);
     }
-    runWhenFullyCached = loadedThread !== null;
-    updateEstimate();
-    refreshThreadButtons();
-    refreshStorageInfo();
+    // A load that turns out fully cached runs by itself: the result is free and instant.
+    const probe = await afterStoreChange();
+    if (probe !== null && probe.complete && activeController === null) {
+        runFromPage();
+    }
 }
 
-const SVG_NS = 'http://www.w3.org/2000/svg';
-const SPLIT_ARM_PX = 120;
-const SPLIT_COUNT_PX = 24;
-const SPLIT_MIN_GAP_PX = 16;
-const SPLIT_HEIGHT_PX = 14;
-const SPLIT_TEXT_PAD_PX = 3;
+function statementFontSize(share) {
+    return `${(STATEMENT_FONT_MIN_PX + (STATEMENT_FONT_MAX_PX - STATEMENT_FONT_MIN_PX) * share).toFixed(1)}px`;
+}
 
-function svgElement(name, attributes) {
-    const element = document.createElementNS(SVG_NS, name);
-    for (const [key, value] of Object.entries(attributes)) {
-        element.setAttribute(key, value);
-    }
+function renderStatement(sideClass, count, text, share) {
+    const element = makeElement('p', { className: `statement ${sideClass}` });
+    element.style.setProperty('--size', statementFontSize(share));
+    const countElement = makeElement('span', { className: 'count', text: String(count) });
+    element.appendChild(countElement);
+    element.appendChild(document.createTextNode(text));
     return element;
 }
 
-// The split bar diverges from a center: statement 1 commenters extend left, statement 2 right, and the
-// middle is a grey gap holding its count. One scale serves the whole table, so the longest arm is the
-// largest side count and bar length compares axis sizes across rows; the center is at the same x in every row.
-function splitScale(rows) {
-    const maxSide = Math.max(1, ...rows.map(row => Math.max(row.countA, row.countB)));
-    const pixelsPerCommenter = SPLIT_ARM_PX / maxSide;
-    const gapWidth = row => (row.countM === 0 ? 0 : Math.max(SPLIT_MIN_GAP_PX, row.countM * pixelsPerCommenter));
-    const maxGap = Math.max(0, ...rows.map(gapWidth));
-    return {
-        pixelsPerCommenter,
-        gapWidth,
-        center: SPLIT_COUNT_PX + SPLIT_ARM_PX + maxGap / 2,
-        width: 2 * (SPLIT_COUNT_PX + SPLIT_ARM_PX) + maxGap,
-    };
+// Three segments sized by share of all commenters on the axis; the bar itself has a fixed width.
+function renderProportionBar(row) {
+    const bar = makeElement('div', { className: 'proportion' });
+    const shares = proportionShares(row);
+    ['side1', 'mid', 'side2'].forEach((segmentClass, index) => {
+        const segment = makeElement('span', { className: segmentClass });
+        segment.style.setProperty('--share', shares[index]);
+        bar.appendChild(segment);
+    });
+    return bar;
 }
 
-function splitText(x, anchor, value) {
-    const element = svgElement('text', { x, y: SPLIT_HEIGHT_PX / 2, 'text-anchor': anchor });
-    element.textContent = String(value);
-    return element;
+function axisMetaText(row) {
+    const middlePart = row.countM === 0 ? '' : `, ${row.countM} middle`;
+    return `${row.comments} comments, ${row.authors} commenters${middlePart}`;
 }
 
-function renderSplitCell(row, scale) {
-    const svg = svgElement('svg', { class: 'split', width: scale.width, height: SPLIT_HEIGHT_PX });
-    const gap = scale.gapWidth(row);
-    const widthA = row.countA * scale.pixelsPerCommenter;
-    const widthB = row.countB * scale.pixelsPerCommenter;
-    const leftEdge = scale.center - gap / 2 - widthA;
-    const rightEdge = scale.center + gap / 2 + widthB;
-    svg.appendChild(svgElement('rect', { class: 'side1', x: leftEdge, y: 0, width: widthA, height: SPLIT_HEIGHT_PX }));
-    if (gap > 0) {
-        svg.appendChild(svgElement('rect', { class: 'mid', x: scale.center - gap / 2, y: 0, width: gap, height: SPLIT_HEIGHT_PX }));
-        svg.appendChild(splitText(scale.center, 'middle', row.countM));
-    }
-    svg.appendChild(svgElement('rect', { class: 'side2', x: scale.center + gap / 2, y: 0, width: widthB, height: SPLIT_HEIGHT_PX }));
-    svg.appendChild(splitText(leftEdge - SPLIT_TEXT_PAD_PX, 'end', row.countA));
-    svg.appendChild(splitText(rightEdge + SPLIT_TEXT_PAD_PX, 'start', row.countB));
-    return svg;
+function renderAxis(row) {
+    const block = makeElement('div', { className: 'axis' });
+    block.appendChild(renderStatement('side1', row.countA, row.statementA, sideShare(row.countA, row.countB)));
+    block.appendChild(renderProportionBar(row));
+    block.appendChild(renderStatement('side2', row.countB, row.statementB, sideShare(row.countB, row.countA)));
+    const meta = makeElement('div', { className: 'meta', text: axisMetaText(row) });
+    block.appendChild(meta);
+    return block;
 }
 
-function formatCell(row, column) {
-    if (column.render) {
-        return column.render(row);
-    }
-    const value = row[column.key];
-    if (value === null || value === undefined) {
-        return '-';
-    }
-    return String(value);
-}
-
-function renderTable(rows) {
-    const table = document.createElement('table');
-    const headRow = document.createElement('tr');
-    for (const columnDefinition of COLUMNS) {
-        const header = document.createElement('th');
-        header.textContent = columnDefinition.label;
-        headRow.appendChild(header);
-    }
-    table.appendChild(headRow);
-    const context = { splitScale: splitScale(rows) };
-    for (const row of rows) {
-        const tableRow = document.createElement('tr');
-        for (const columnDefinition of COLUMNS) {
-            const cell = document.createElement('td');
-            if (columnDefinition.cell) {
-                cell.appendChild(columnDefinition.cell(row, context));
-            } else {
-                cell.textContent = formatCell(row, columnDefinition);
-            }
-            if (columnDefinition.className) {
-                cell.classList.add(columnDefinition.className);
-            }
-            tableRow.appendChild(cell);
-        }
-        table.appendChild(tableRow);
-    }
-    elements.results.replaceChildren(table);
+function renderRows(rows) {
+    elements.results.replaceChildren(...rows.map(renderAxis));
 }
 
 function renderResults(result) {
     const warningList = elements.warnings.querySelector('ul');
-    warningList.replaceChildren(...result.warnings.map(text => {
-        const item = document.createElement('li');
-        item.textContent = text;
-        return item;
-    }));
+    warningList.replaceChildren(...result.warnings.map(text => makeElement('li', { text })));
     elements.warnings.querySelector('summary').textContent = `${result.warnings.length} warnings`;
     elements.warnings.hidden = result.warnings.length === 0;
-    renderTable(result.rows);
+    renderRows(result.rows);
 }
 
 // PKCE sign-in needs an http(s) page with a stable URL as the callback and a secure context for
@@ -2093,7 +2263,7 @@ let elapsedTimer = null;
 let progressText = '';
 
 function elapsedSince(startedAt) {
-    return formatDuration((Date.now() - startedAt) / 1000);
+    return formatElapsed((Date.now() - startedAt) / 1000);
 }
 
 function startElapsedCounter() {
@@ -2102,7 +2272,7 @@ function startElapsedCounter() {
     const tick = () => setStatus(`${progressText}, ${elapsedSince(startedAt)} elapsed`);
     tick();
     elapsedTimer = setInterval(tick, ELAPSED_TICK_MS);
-    return startedAt;
+    return { startedAt, tick };
 }
 
 function stopElapsedCounter() {
@@ -2110,8 +2280,8 @@ function stopElapsedCounter() {
     elapsedTimer = null;
 }
 
-// fullyCached is true when every model call is known to be in the cache; such a run needs no key.
-async function runFromPage(fullyCached) {
+// A run the latest probe reports as fully cached needs no key; any other run resolves one first.
+async function runFromPage() {
     if (loadedThread === null) {
         setStatus('Load a thread first.', true);
         return;
@@ -2121,46 +2291,43 @@ async function runFromPage(fullyCached) {
         setStatus('Nothing selected: move the slider above 0%.', true);
         return;
     }
-    const apiKey = fullyCached === true ? storedApiKey() : resolveApiKey();
-    if (apiKey === null && fullyCached !== true) {
+    const fullyCached = runIsFullyCached();
+    const apiKey = fullyCached ? storedApiKey() : resolveApiKey();
+    if (apiKey === null && !fullyCached) {
         return;
     }
-    const { volumeKey, consolidationKey } = selectedModelKeys();
-    const stageConfig = buildStageConfig(volumeKey, consolidationKey);
+    let calledModel = true;
     activeController = new AbortController();
     const signal = activeController.signal;
     setRunning();
     clearResults();
-    const pageWarnings = [];
-    const startedAt = startElapsedCounter();
+    const counter = startElapsedCounter();
     try {
-        const thread = selectedThread(comments);
-        pageCacheStore.writeFailures = 0;
         const result = await runPipeline({
-            thread,
+            thread: selectedThread(),
             signal,
-            config: stageConfig,
+            config: selectedRunConfig(),
             onProgress: update => {
                 progressText = formatProgress(update);
-                setStatus(`${progressText}, ${elapsedSince(startedAt)} elapsed`);
+                counter.tick();
             },
-            callChat: makeCachedCallChat(call => callOpenRouter({ apiKey, request: call, signal }), pageCacheStore),
+            callChat: makeCachedCallChat(makeOpenRouterCallChat({ apiKey, signal }), cacheStore),
         });
-        if (pageCacheStore.writeFailures > 0) {
-            pageWarnings.push(`${pageCacheStore.writeFailures} cache writes failed (browser storage full); those calls will be repeated on a rerun`);
-        }
-        result.warnings.push(...pageWarnings);
         stopElapsedCounter();
+        calledModel = result.calls !== result.stats.cachedCalls;
         renderResults(result);
-        setStatus(`Done in ${elapsedSince(startedAt)}, ${formatRunCost(result)}. ${formatRunSummary(result).join(' ')}`);
+        setStatus(`Done in ${elapsedSince(counter.startedAt)}, ${formatRunCost(result)}. ${formatRunSummary(result).join(' ')}`);
     } catch (error) {
         stopElapsedCounter();
-        setStatus(signal.aborted ? `Cancelled after ${elapsedSince(startedAt)}.` : `Error after ${elapsedSince(startedAt)}: ${error.message}`, !signal.aborted);
+        setStatus(signal.aborted ? `Cancelled after ${elapsedSince(counter.startedAt)}.` : `Error after ${elapsedSince(counter.startedAt)}: ${error.message}`, !signal.aborted);
         console.error(error);
     } finally {
         activeController = null;
         setRunning();
-        refreshStorageInfo();
+        if (calledModel) {
+            invalidateResultCache();
+        }
+        afterStoreChange();
     }
 }
 
@@ -2173,21 +2340,24 @@ elements.cancel.addEventListener('click', () => {
 elements.wipeKey.addEventListener('click', () => {
     localStorage.removeItem(CONSTANTS.STORAGE_KEY_OPENROUTER);
     refreshKeyState();
-    updateEstimate();
+    refreshRunButton();
     setStatus('OpenRouter key wiped from this browser.');
 });
 elements.deleteCached.addEventListener('click', () => {
-    const removedCalls = cacheStore.usage().count;
-    const removedSnapshots = snapshotStore.usage().count;
+    const removedCalls = cacheStore.count();
+    const removedSnapshots = snapshotStore.count();
     cacheStore.clear();
     snapshotStore.clear();
-    refreshStorageInfo();
-    refreshThreadButtons();
+    flattenedThreads.clear();
+    invalidateResultCache();
+    afterStoreChange();
     setStatus(`Deleted from this browser: ${removedCalls} cached model calls and ${removedSnapshots} threads. The OpenRouter key is kept.`);
 });
 elements.loadThread.addEventListener('click', loadThreadFromBox);
 // The list opens on focus, click, or typing; arrows move the highlight, Enter picks it (or loads a typed
 // id), Escape closes; leaving the box closes it too. A press inside the list keeps the focus in the box.
+// Editing the box moves focus off the thread box, which closes the list; the filter applies when the list is next drawn.
+elements.minComments.value = DEFAULT_MIN_COMMENTS;
 elements.threadId.addEventListener('focus', refreshList);
 elements.threadId.addEventListener('click', () => {
     if (!listIsOpen()) {
@@ -2221,19 +2391,28 @@ elements.storyList.addEventListener('mousedown', event => event.preventDefault()
 // A typed id followed by leaving the box loads the thread unless it is already loaded.
 elements.threadId.addEventListener('change', () => {
     const threadId = threadIdInBox();
-    if (threadId !== null && !(loadedThread !== null && String(loadedThread.id) === threadId)) {
+    if (threadId !== null && !isLoadedThread(threadId)) {
         loadThreadFromPage(threadId);
     }
 });
 elements.refreshThread.addEventListener('click', () => {
     const threadId = String(loadedThread.id);
     snapshotStore.remove(threadId);
+    flattenedThreads.delete(threadId);
+    invalidateResultCache();
     loadThreadFromPage(threadId);
 });
+elements.maxCost.value = DEFAULT_MAX_COST_USD;
+function refitShareAndEstimate() {
+    elements.maxCost.value = maxCostInBox();
+    applyMaxCostToShare();
+    updateEstimate();
+}
 elements.share.addEventListener('input', updateEstimate);
-elements.volumeModel.addEventListener('change', updateEstimate);
-elements.consolidationModel.addEventListener('change', updateEstimate);
-elements.apiKey.addEventListener('input', updateEstimate);
+elements.maxCost.addEventListener('change', refitShareAndEstimate);
+elements.volumeModel.addEventListener('change', refitShareAndEstimate);
+elements.consolidationModel.addEventListener('change', refitShareAndEstimate);
+elements.apiKey.addEventListener('input', refreshRunButton);
 elements.connectOpenRouter.hidden = !pkceAvailable();
 elements.connectOpenRouter.addEventListener('click', () => {
     startOpenRouterSignIn().catch(error => setStatus(`OpenRouter sign-in could not start: ${error.message}`, true));
