@@ -24,8 +24,18 @@ function readArgument(name) {
     return found ? found.slice(prefix.length) : null;
 }
 
-// Config overrides, applied in this order so that later flags win: config file, role choices,
-// one model for every stage, one sampling setting for every stage, concurrency.
+// Config overrides, applied in this order so that later flags win: config file, role choices (each
+// touching only its own stages), one model for every stage, one sampling setting for every stage,
+// concurrency.
+
+// The config fields of one role's option entry.
+function roleChoiceConfig(choices, key, roleName) {
+    const choice = choices[key];
+    if (!choice) {
+        throw new Error(`unknown ${roleName} choice: ${key}`);
+    }
+    return choice.config;
+}
 function buildConfig() {
     const config = {};
     const configFile = readArgument('config-file');
@@ -33,9 +43,12 @@ function buildConfig() {
         Object.assign(config, JSON.parse(fs.readFileSync(configFile, 'utf8')));
     }
     const volume = readArgument('volume');
+    if (volume !== null) {
+        Object.assign(config, roleChoiceConfig(core.VOLUME_MODELS, volume, 'volume model'));
+    }
     const consolidation = readArgument('consolidation');
-    if (volume !== null || consolidation !== null) {
-        Object.assign(config, core.buildStageConfig(volume || core.DEFAULT_VOLUME_KEY, consolidation || core.DEFAULT_CONSOLIDATION_KEY));
+    if (consolidation !== null) {
+        Object.assign(config, roleChoiceConfig(core.CONSOLIDATION_MODELS, consolidation, 'consolidation model'));
     }
     const model = readArgument('model');
     if (model !== null) {

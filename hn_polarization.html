@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-J52pWnXo6r1VloaE9QyH9kqdav4aAvkEdTMzthKJqPk=' 'sha256-zesbPlDt99syWCmHEN4EBckH3sdOsRG5TtPqaBp4kC0='; style-src 'sha256-02q7yaMzCCmNgtvNIkNG3a+OuKGswc+RxrY0SQATM8U='; connect-src https://openrouter.ai https://hn.algolia.com; img-src data:; base-uri 'none'; form-action 'none'">
 <title>HN Split</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EHN:s%3C/text%3E%3C/svg%3E">
 <style>
@@ -110,7 +110,8 @@ const CONSTANTS = Object.freeze({
 // consolidation. Sampling and reasoning are per stage because providers differ: Haiku 4.5 accepts
 // temperature but not seed; Sonnet 5 and Opus 5 accept neither and think adaptively; GLM 5.3 Flash
 // cannot run without reasoning and needs large output ceilings; Gemini accepts temperature and seed;
-// the GPT-5.6 models (Luna, Sol) accept seed and a reasoning effort but not temperature.
+// the GPT-5.6 models (Luna, Sol) accept seed and a reasoning effort but not temperature; Claude Fable 5.1
+// accepts a reasoning effort but neither temperature nor seed.
 // null omits the field from the request.
 //
 // The cost and time rates come from measured runs on a 1300-comment thread (about 104k comment
@@ -123,7 +124,7 @@ const DEFAULT_CONSOLIDATION_KEY = 'sonnet5';
 
 const VOLUME_MODELS = Object.freeze({
     haiku: Object.freeze({
-        label: 'Claude Haiku 4.5: $0.96 and 70 seconds per 1000 comments. 0.5 stances per comment; 59% of stances held under blind review, 12% wrong; clean output.',
+        label: 'Claude Haiku 4.5: $0.96 and 70 seconds per 1000 comments. 0.5 stances per comment; 3 to 4 two-sided rows per 100 comments; 59% of stances held under blind review, 12% wrong.',
         config: {
             modelExtract: 'anthropic/claude-haiku-4.5', modelScore: 'anthropic/claude-haiku-4.5',
             samplingExtract: { temperature: CONSTANTS.TEMPERATURE }, samplingScore: { temperature: CONSTANTS.TEMPERATURE },
@@ -133,9 +134,10 @@ const VOLUME_MODELS = Object.freeze({
         costPerThousandTokensUsd: 0.0119,
         secondsPerThousandTokens: 0.87,
         minimumSeconds: 8,
+        candidateFactor: 1, // the reference: 64 candidates on thread 49537553
     }),
     glmFlash: Object.freeze({
-        label: 'GLM 5.3 Flash: $0.19 and 23 to 42 minutes per 1000 comments. 0.5 to 0.6 stances per comment; the most coverage; some nonstandard output shapes, which the page accepts.',
+        label: 'GLM 5.3 Flash: $0.19 and 23 to 42 minutes per 1000 comments. 0.5 to 0.6 stances per comment; 3.5 to 4 two-sided rows per 100 comments; some nonstandard output shapes, which the page accepts.',
         config: {
             modelExtract: 'z-ai/glm-5.3-flash', modelScore: 'z-ai/glm-5.3-flash',
             samplingExtract: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED }, samplingScore: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED },
@@ -145,9 +147,10 @@ const VOLUME_MODELS = Object.freeze({
         costPerThousandTokensUsd: 0.0024,
         secondsPerThousandTokens: 31,
         minimumSeconds: 100,
+        candidateFactor: 1.3, // 247 candidates against Haiku 4.5's 195 on the test thread
     }),
     geminiFlash: Object.freeze({
-        label: 'Gemini 3.8 Flash: $1.96 and 3 minutes per 1000 comments. 0.3 stances per comment; the least coverage; the most stable ranking.',
+        label: 'Gemini 3.8 Flash: $1.96 and 3 minutes per 1000 comments. 0.3 stances per comment; 3 two-sided rows per 100 comments; the most stable ranking between runs.',
         config: {
             modelExtract: 'google/gemini-3.8-flash', modelScore: 'google/gemini-3.8-flash',
             samplingExtract: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED }, samplingScore: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED },
@@ -157,9 +160,10 @@ const VOLUME_MODELS = Object.freeze({
         costPerThousandTokensUsd: 0.0244,
         secondsPerThousandTokens: 2.1,
         minimumSeconds: 8,
+        candidateFactor: 1, // not measured; assumed equal to Haiku 4.5
     }),
     opus5: Object.freeze({
-        label: 'Claude Opus 5: $10.50 and 4 minutes per 1000 comments. 0.7 stances per comment; 3 times the two-sided rows of Haiku 4.5; 74% of stances held under blind review, 0% wrong.',
+        label: 'Claude Opus 5: $10.50 and 4 minutes per 1000 comments. 0.7 stances per comment; 13 two-sided rows per 100 comments; 74% of stances held under blind review, 0% wrong.',
         config: {
             modelExtract: 'anthropic/claude-opus-5', modelScore: 'anthropic/claude-opus-5',
             samplingExtract: null, samplingScore: null,
@@ -169,9 +173,10 @@ const VOLUME_MODELS = Object.freeze({
         costPerThousandTokensUsd: 0.1317,
         secondsPerThousandTokens: 3.18,
         minimumSeconds: 50,
+        candidateFactor: 2.1, // 134 candidates against 64
     }),
     lunaLow: Object.freeze({
-        label: 'GPT-5.6 Luna, reasoning low: $0.26 and 90 seconds per 1000 comments. 0.5 stances per comment; 1.5 times the two-sided rows of Haiku 4.5; 80% of stances held under blind review, 6% wrong.',
+        label: 'GPT-5.6 Luna, reasoning low: $0.26 and 90 seconds per 1000 comments. 0.5 stances per comment; 6 two-sided rows per 100 comments; 80% of stances held under blind review, 6% wrong.',
         config: {
             modelExtract: 'openai/gpt-5.6-luna', modelScore: 'openai/gpt-5.6-luna',
             samplingExtract: { seed: SAMPLING_SEED }, samplingScore: { seed: SAMPLING_SEED },
@@ -181,6 +186,7 @@ const VOLUME_MODELS = Object.freeze({
         costPerThousandTokensUsd: 0.0033,
         secondsPerThousandTokens: 1.16,
         minimumSeconds: 20,
+        candidateFactor: 1, // 62 candidates against 64
     }),
 });
 
@@ -200,32 +206,39 @@ const CONSOLIDATION_MODELS = Object.freeze({
         minimumSeconds: 120,
     }),
     geminiFlash: Object.freeze({
-        label: 'Gemini 3.8 Flash: $0.02 and 15 seconds per 1000 comments. 93% of axes two-sided, measured only with Gemini scoring.',
-        config: { modelConsolidate: 'google/gemini-3.8-flash', samplingConsolidate: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED }, reasoningConsolidate: null, maxTokensConsolidate: 32000 },
+        label: 'Gemini 3.8 Flash: $0.02 and 15 seconds per 1000 comments. 93% of axes two-sided, measured with the same model scoring.',
+        config: { modelConsolidate: 'google/gemini-3.8-flash', samplingConsolidate: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED }, reasoningConsolidate: null, maxTokensConsolidate: 65536 },
         costPerThousandTokensUsd: 0.0003,
         secondsPerThousandTokens: 0.2,
         minimumSeconds: 8,
     }),
     opus5: Object.freeze({
-        label: 'Claude Opus 5: $0.26 and 45 seconds per 1000 comments. 58% of axes two-sided; finer axes that spread the same stances over more rows.',
+        label: 'Claude Opus 5: $0.26 and 45 seconds per 1000 comments. 58% of axes two-sided; fine-grained axes.',
         config: { modelConsolidate: 'anthropic/claude-opus-5', samplingConsolidate: null, reasoningConsolidate: null, maxTokensConsolidate: 128000 },
         costPerThousandTokensUsd: 0.0033,
         secondsPerThousandTokens: 0.6,
         minimumSeconds: 10,
     }),
     solLow: Object.freeze({
-        label: 'GPT-5.6 Sol, reasoning low: $0.08 and 90 seconds per 1000 comments. 38% of axes two-sided; merges less than Sonnet 5.',
+        label: 'GPT-5.6 Sol, reasoning low: $0.08 and 90 seconds per 1000 comments. 38% of axes two-sided, 55% one-arm.',
         config: { modelConsolidate: 'openai/gpt-5.6-sol', samplingConsolidate: { seed: SAMPLING_SEED }, reasoningConsolidate: { effort: 'low' }, maxTokensConsolidate: 128000 },
         costPerThousandTokensUsd: 0.0010,
         secondsPerThousandTokens: 1.16,
         minimumSeconds: 8,
     }),
     lunaMax: Object.freeze({
-        label: 'GPT-5.6 Luna, reasoning max: $0.20 and 29 minutes per 1000 comments. 56% of axes two-sided; as many two-sided rows as Sonnet 5 at a third of the cost and 3.6 times the time.',
+        label: 'GPT-5.6 Luna, reasoning max: $0.20 and 29 minutes per 1000 comments. 56% of axes two-sided.',
         config: { modelConsolidate: 'openai/gpt-5.6-luna', samplingConsolidate: { seed: SAMPLING_SEED }, reasoningConsolidate: { effort: 'max' }, maxTokensConsolidate: 128000 },
         costPerThousandTokensUsd: 0.0025,
         secondsPerThousandTokens: 21.6,
         minimumSeconds: 190,
+    }),
+    fableLow: Object.freeze({
+        label: 'Claude Fable 5.1, reasoning low: $0.76 and 2 minutes per 1000 comments. 59% of axes two-sided.',
+        config: { modelConsolidate: 'anthropic/claude-fable-5.1', samplingConsolidate: null, reasoningConsolidate: { effort: 'low' }, maxTokensConsolidate: 128000 },
+        costPerThousandTokensUsd: 0.0096,
+        secondsPerThousandTokens: 1.71,
+        minimumSeconds: 15,
     }),
 });
 
@@ -241,9 +254,12 @@ function buildStageConfig(volumeKey, consolidationKey) {
     return { ...volume.config, ...consolidation.config };
 }
 
-// Sums one per-thousand-token rate field over the two chosen models.
+// One per-thousand-token rate field over the two chosen models. The consolidation call's cost and time
+// grow with the number of candidates, which the volume model sets, so its rate is scaled by that model's
+// candidateFactor, its candidate count relative to Haiku 4.5's on the same thread.
 function combinedRate(volumeKey, consolidationKey, field) {
-    return VOLUME_MODELS[volumeKey][field] + CONSOLIDATION_MODELS[consolidationKey][field];
+    const volume = VOLUME_MODELS[volumeKey];
+    return volume[field] + CONSOLIDATION_MODELS[consolidationKey][field] * volume.candidateFactor;
 }
 
 // Wall time scales with tokens, but the three stages run in sequence and each is at least one call
@@ -1076,11 +1092,12 @@ function orientRows(rows) {
 }
 
 // Biggest axes first: by agreed comments, then commenters, then axis id.
+// Ties on both counts fall back to the statement text, so the consolidator's output order never decides a rank.
 function rankRows(rows) {
     const sorted = rows.slice().sort((left, right) =>
         right.comments - left.comments
         || right.authors - left.authors
-        || left.axisId - right.axisId);
+        || left.statementA.localeCompare(right.statementA));
     return sorted.map((row, index) => ({ ...row, rank: index + 1 }));
 }
 

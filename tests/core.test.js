@@ -63,7 +63,7 @@ TOY_PASS2.delete('12|2');
 TOY_PASS2.set('7|2', 'B');
 
 // Order by agreed comments, then commenters, then axis id: axes 1 and 5 have 3 comments by 3 commenters each.
-const TOY_EXPECTED_ORDER = [1, 5, 2, 3, 4, 6];
+const TOY_EXPECTED_ORDER = [1, 5, 4, 3, 2, 6];
 
 // ---------------------------------------------------------------------------
 // Stage 0: thread parsing
@@ -432,7 +432,7 @@ test('orientRows puts the larger side on statement 1, keeping ties as they are',
     assert.equal(rows[0].statementA, 'p');
 });
 
-test('rankRows orders by agreed comments, then commenters, then axis id, and numbers the rows', () => {
+test('rankRows orders by agreed comments, then commenters, then statement text, and numbers the rows', () => {
     const ranked = core.rankRows(toyRows());
     assert.deepEqual(ranked.map(row => row.axisId), TOY_EXPECTED_ORDER);
     assert.deepEqual(ranked.map(row => row.rank), [1, 2, 3, 4, 5, 6]);
@@ -780,7 +780,7 @@ test('model choices exist per role with labels, config fragments, and per-token 
         assert.equal(choice.config.modelConsolidate, undefined, key + ' does not set the consolidation model');
         assert.equal(typeof choice.costPerThousandTokensUsd, 'number');
     }
-    for (const key of ['sonnet5', 'glm53', 'geminiFlash', 'opus5', 'solLow', 'lunaMax']) {
+    for (const key of ['sonnet5', 'glm53', 'geminiFlash', 'opus5', 'solLow', 'lunaMax', 'fableLow']) {
         const choice = core.CONSOLIDATION_MODELS[key];
         assert.ok(choice.label.length > 0, key + ' has a label');
         assert.ok(choice.config.modelConsolidate, key + ' names the consolidation model');
@@ -800,6 +800,16 @@ test('buildStageConfig merges one volume choice with one consolidation choice', 
     assert.throws(() => core.buildStageConfig('nope', 'sonnet5'), /volume/);
     assert.throws(() => core.buildStageConfig('haiku', 'nope'), /consolidation/);
     assert.deepEqual(core.buildStageConfig(core.DEFAULT_VOLUME_KEY, core.DEFAULT_CONSOLIDATION_KEY).modelConsolidate, core.DEFAULT_CONFIG.modelConsolidate);
+});
+
+test('combinedRate scales the consolidation rate by the volume model\'s candidate factor', () => {
+    const opus = core.VOLUME_MODELS.opus5;
+    const sonnet = core.CONSOLIDATION_MODELS.sonnet5;
+    assertClose(core.combinedRate('opus5', 'sonnet5', 'costPerThousandTokensUsd'), opus.costPerThousandTokensUsd + sonnet.costPerThousandTokensUsd * opus.candidateFactor, 'opus factor applied');
+    assert.equal(core.VOLUME_MODELS.haiku.candidateFactor, 1, 'Haiku is the reference');
+    for (const choice of Object.values(core.VOLUME_MODELS)) {
+        assert.ok(choice.candidateFactor > 0);
+    }
 });
 
 test('combinedRate sums the per-token rates and estimateRunSeconds never goes below the stage latency floor', () => {
