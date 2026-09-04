@@ -4,7 +4,8 @@
 // Run with: node --test
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { HTML_PATH, expectedPolicy, currentPolicy, readPage } = require('../scripts/csp');
+const { HTML_PATH, readPage } = require('../scripts/load_core');
+const { expectedPolicy, currentPolicy } = require('../scripts/csp');
 
 test('the page has LF line endings, since CRLF would change every hash', () => {
     assert.ok(!readPage().includes('\r'), `${HTML_PATH} contains CR characters`);

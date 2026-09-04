@@ -6,10 +6,9 @@
 //   node scripts/csp.js --write  rewrites the policy in the page
 // tests/csp.test.js runs the same comparison, so a stale policy fails the test suite.
 const fs = require('node:fs');
-const path = require('node:path');
 const crypto = require('node:crypto');
+const { HTML_PATH, CORE_SCRIPT_PATTERN, readPage, blockText } = require('./load_core');
 
-const HTML_PATH = path.join(__dirname, '..', 'hn_polarization.html');
 const WRITE_FLAG = '--write';
 
 // The only hosts the page connects to; the browser refuses every other connection.
@@ -18,7 +17,7 @@ const CONNECT_HOSTS = ['https://openrouter.ai', 'https://hn.algolia.com'];
 // The inline blocks the policy names, each hashed over the text between its open and close tags,
 // which is what the browser hashes.
 const INLINE_BLOCKS = [
-    { directive: 'script-src', pattern: /<script id="core">([\s\S]*?)<\/script>/ },
+    { directive: 'script-src', pattern: CORE_SCRIPT_PATTERN },
     { directive: 'script-src', pattern: /<script id="page">([\s\S]*?)<\/script>/ },
     { directive: 'style-src', pattern: /<style>([\s\S]*?)<\/style>/ },
 ];
@@ -29,19 +28,11 @@ function sha256Base64(text) {
     return crypto.createHash('sha256').update(text, 'utf8').digest('base64');
 }
 
-function blockText(html, block) {
-    const match = html.match(block.pattern);
-    if (!match) {
-        throw new Error(`inline block ${block.pattern} not found in ${HTML_PATH}`);
-    }
-    return match[1];
-}
-
 // The policy the page should carry for its current content.
 function expectedPolicy(html) {
     const hashesByDirective = {};
     for (const block of INLINE_BLOCKS) {
-        const hash = `'sha256-${sha256Base64(blockText(html, block))}'`;
+        const hash = `'sha256-${sha256Base64(blockText(html, block.pattern))}'`;
         hashesByDirective[block.directive] = (hashesByDirective[block.directive] || []).concat(hash);
     }
     return [
@@ -62,10 +53,6 @@ function currentPolicy(html) {
         throw new Error(`Content-Security-Policy meta tag not found in ${HTML_PATH}`);
     }
     return match[1];
-}
-
-function readPage() {
-    return fs.readFileSync(HTML_PATH, 'utf8');
 }
 
 function withPolicy(html, policy) {
@@ -89,7 +76,7 @@ function main() {
     return 1;
 }
 
-module.exports = { HTML_PATH, expectedPolicy, currentPolicy, readPage };
+module.exports = { expectedPolicy, currentPolicy };
 
 if (require.main === module) {
     process.exitCode = main();

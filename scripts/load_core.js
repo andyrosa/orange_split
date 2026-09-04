@@ -7,15 +7,23 @@ const path = require('node:path');
 const HTML_PATH = path.join(__dirname, '..', 'hn_polarization.html');
 const CORE_SCRIPT_PATTERN = /<script id="core">([\s\S]*?)<\/script>/;
 
-function loadCore() {
-    const html = fs.readFileSync(HTML_PATH, 'utf8');
-    const match = html.match(CORE_SCRIPT_PATTERN);
+function readPage() {
+    return fs.readFileSync(HTML_PATH, 'utf8');
+}
+
+// The text between a block's open and close tags, which `pattern` captures.
+function blockText(html, pattern) {
+    const match = html.match(pattern);
     if (!match) {
-        throw new Error('core script block not found in ' + HTML_PATH);
+        throw new Error(`inline block ${pattern} not found in ${HTML_PATH}`);
     }
+    return match[1];
+}
+
+function loadCore() {
     const moduleShim = { exports: {} };
-    new Function('module', match[1])(moduleShim);
+    new Function('module', blockText(readPage(), CORE_SCRIPT_PATTERN))(moduleShim);
     return moduleShim.exports;
 }
 
-module.exports = { loadCore };
+module.exports = { HTML_PATH, CORE_SCRIPT_PATTERN, readPage, blockText, loadCore };

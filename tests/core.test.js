@@ -6,7 +6,6 @@ const { loadCore } = require('../scripts/load_core');
 
 const FLOAT_TOLERANCE = 0.001;
 
-// HN_POLARIZATION_HTML (read by loadCore) overrides the page under test, used for mutation checks.
 const core = loadCore();
 
 function assertClose(actual, expected, label) {
@@ -410,12 +409,6 @@ test('splitBar draws < for side 1, - for middle, > for side 2', () => {
     assert.equal(core.splitBar({ countA: 0, countM: 0, countB: 0 }, 20), ' '.repeat(20));
 });
 
-test('sideShare is the share of one side among the two, one half when neither has a commenter', () => {
-    assert.equal(core.sideShare(14, 3), 14 / 17);
-    assert.equal(core.sideShare(0, 5), 0);
-    assert.equal(core.sideShare(0, 0), 0.5);
-});
-
 test('proportionShares splits the bar among side 1, middle, and side 2', () => {
     assert.deepEqual(core.proportionShares({ countA: 6, countM: 2, countB: 2 }), [0.6, 0.2, 0.2]);
     assert.deepEqual(core.proportionShares({ countA: 0, countM: 0, countB: 0 }), [0, 0, 0]);
@@ -773,15 +766,13 @@ test('runPipeline passes per-stage sampling and reasoning settings to the model 
 test('model choices exist per role with labels, config fragments, and per-token rates', () => {
     assert.equal(core.DEFAULT_VOLUME_KEY, 'lunaLow');
     assert.equal(core.DEFAULT_CONSOLIDATION_KEY, 'sonnet5');
-    for (const key of ['haiku', 'glmFlash', 'geminiFlash', 'opus5', 'lunaLow']) {
-        const choice = core.VOLUME_MODELS[key];
+    for (const [key, choice] of Object.entries(core.VOLUME_MODELS)) {
         assert.ok(choice.label.length > 0, key + ' has a label');
         assert.ok(choice.config.modelExtract && choice.config.modelScore, key + ' names the extraction and scoring model');
         assert.equal(choice.config.modelConsolidate, undefined, key + ' does not set the consolidation model');
         assert.equal(typeof choice.costPerThousandTokensUsd, 'number');
     }
-    for (const key of ['sonnet5', 'glm53', 'geminiFlash', 'opus5', 'solLow', 'lunaMax', 'fableLow']) {
-        const choice = core.CONSOLIDATION_MODELS[key];
+    for (const [key, choice] of Object.entries(core.CONSOLIDATION_MODELS)) {
         assert.ok(choice.label.length > 0, key + ' has a label');
         assert.ok(choice.config.modelConsolidate, key + ' names the consolidation model');
         assert.equal(choice.config.modelScore, undefined, key + ' does not set the scoring model');
@@ -932,7 +923,7 @@ test('exchangeOpenRouterCode posts the code and verifier and returns the key', a
     const seen = [];
     const fetchImpl = async (url, options) => {
         seen.push({ url, options });
-        return { ok: true, status: 200, json: async () => ({ key: 'sk-or-v1-new' }) };
+        return fakeResponse(200, { key: 'sk-or-v1-new' });
     };
     const key = await core.exchangeOpenRouterCode({ code: 'c1', verifier: 'v1', fetchImpl });
     assert.equal(key, 'sk-or-v1-new');
@@ -942,9 +933,9 @@ test('exchangeOpenRouterCode posts the code and verifier and returns the key', a
 });
 
 test('exchangeOpenRouterCode surfaces HTTP errors and a missing key', async () => {
-    const failing = async () => ({ ok: false, status: 400, json: async () => ({ error: { message: 'bad code' } }) });
+    const failing = async () => fakeResponse(400, { error: { message: 'bad code' } });
     await assert.rejects(core.exchangeOpenRouterCode({ code: 'c', verifier: 'v', fetchImpl: failing }), /400.*bad code/);
-    const empty = async () => ({ ok: true, status: 200, json: async () => ({}) });
+    const empty = async () => fakeResponse(200, {});
     await assert.rejects(core.exchangeOpenRouterCode({ code: 'c', verifier: 'v', fetchImpl: empty }), /no key/);
 });
 

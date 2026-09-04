@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-DpAlr2bjGHjGn9ksLQ479a6XPGVfi8l3ojwiVMkMj3c=' 'sha256-zesbPlDt99syWCmHEN4EBckH3sdOsRG5TtPqaBp4kC0='; style-src 'sha256-02q7yaMzCCmNgtvNIkNG3a+OuKGswc+RxrY0SQATM8U='; connect-src https://openrouter.ai https://hn.algolia.com; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-st4oiW1qf/dlxFzlVtPGNELrWr5AqRNXtvZVn9RoTLg=' 'sha256-/1dSt0k5NwzguVrTfJdqV/uJHm8CZC4INgNeJbpOK4s='; style-src 'sha256-DbzIqc1MLte3S0V8mxdgQqB5me10rzM3wHIaHgQfJCw='; connect-src https://openrouter.ai https://hn.algolia.com; img-src data:; base-uri 'none'; form-action 'none'">
 <title>HN Split</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EHN:s%3C/text%3E%3C/svg%3E">
 <style>
@@ -27,11 +27,14 @@ button { margin-right: 0.5rem; }
 #status.error { color: #b00020; }
 #results { margin-top: 1rem; }
 .axis { padding: 0.6rem 0; border-bottom: 1px solid #e4e4e4; }
-.axis .statement { font-size: var(--size); line-height: 1.15; margin: 0.1rem 0; }
-.axis .statement.side1 { color: #2b6cb0; }
-.axis .statement.side2 { color: #c05621; }
-.axis .count { font-size: 11px; color: #666; margin-right: 0.4rem; vertical-align: middle; font-variant-numeric: tabular-nums; }
-.axis .proportion { display: flex; height: 6px; width: 24rem; margin: 0.35rem 0; background: #eee; }
+.axis .statement { line-height: 1.15; margin: 0.1rem 0; }
+.axis .statement.side1 { color: #2b6cb0; font-size: 18px; }
+.axis .statement.side2 { color: #c05621; font-size: 14px; }
+.axis .proportion-row { display: flex; align-items: center; margin: 0.35rem 0; }
+.axis .count { font-size: 11px; color: #666; font-variant-numeric: tabular-nums; }
+.axis .count.side1 { margin-right: 0.4rem; }
+.axis .count.side2 { margin-left: 0.4rem; }
+.axis .proportion { display: flex; height: 6px; width: 24rem; background: #eee; }
 .axis .proportion span { display: block; height: 100%; flex: var(--share); }
 .axis .proportion .side1 { background: #2b6cb0; }
 .axis .proportion .mid { background: #cfcfcf; }
@@ -122,77 +125,89 @@ const SAMPLING_SEED = 12345;
 const DEFAULT_VOLUME_KEY = 'lunaLow';
 const DEFAULT_CONSOLIDATION_KEY = 'sonnet5';
 
+// The sampling profiles the providers accept.
+const SAMPLING_TEMPERATURE = Object.freeze({ temperature: CONSTANTS.TEMPERATURE });
+const SAMPLING_TEMPERATURE_AND_SEED = Object.freeze({ temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED });
+const SAMPLING_SEED_ONLY = Object.freeze({ seed: SAMPLING_SEED });
+
+// The output ceiling of the consolidation call for every consolidator whose provider allows it.
+const CONSOLIDATION_MAX_TOKENS = 128000;
+
+// The three stages in run order, each served by one role's model. Config fields carry the suffix
+// (modelExtract, samplingExtract, ...); the estimate line uses the call name.
+const STAGES = Object.freeze([
+    Object.freeze({ key: 'extract', suffix: 'Extract', callName: 'extraction', role: 'volume' }),
+    Object.freeze({ key: 'consolidate', suffix: 'Consolidate', callName: 'consolidation', role: 'consolidation' }),
+    Object.freeze({ key: 'score', suffix: 'Score', callName: 'scoring', role: 'volume' }),
+]);
+const STAGE_ORDER = Object.freeze(STAGES.map(stage => stage.key));
+const STAGE_BY_KEY = Object.freeze(Object.fromEntries(STAGES.map(stage => [stage.key, stage])));
+
+// An option entry of one role: the model, sampling, and reasoning shared by every stage the role serves,
+// and the output ceiling per stage key, expanded into the config fields of those stages. The label is
+// built from the entry when read.
+function optionEntry(role, labelFor, { model, sampling, reasoning, maxTokens, ...rest }) {
+    const config = {};
+    for (const stage of STAGES.filter(stage => stage.role === role)) {
+        if (typeof maxTokens[stage.key] !== 'number') {
+            throw new Error(`${rest.name}: no output ceiling for the ${stage.key} stage`);
+        }
+        config[`model${stage.suffix}`] = model;
+        config[`sampling${stage.suffix}`] = sampling;
+        config[`reasoning${stage.suffix}`] = reasoning;
+        config[`maxTokens${stage.suffix}`] = maxTokens[stage.key];
+    }
+    return Object.freeze({ ...rest, config, get label() { return labelFor(this); } });
+}
+const volumeEntry = entry => optionEntry('volume', volumeLabel, entry);
+const consolidationEntry = entry => optionEntry('consolidation', consolidationLabel, entry);
+
 const VOLUME_MODELS = Object.freeze({
-    haiku: Object.freeze({
+    haiku: volumeEntry({
         name: 'Claude Haiku 4.5',
         quality: { stancesPerComment: [0.5], twoSidedPer100Comments: [3, 4], reviewHeldPercent: 59, reviewWrongPercent: 12, note: 'clean output' },
-        get label() { return volumeLabel(this); },
-        config: {
-            modelExtract: 'anthropic/claude-haiku-4.5', modelScore: 'anthropic/claude-haiku-4.5',
-            samplingExtract: { temperature: CONSTANTS.TEMPERATURE }, samplingScore: { temperature: CONSTANTS.TEMPERATURE },
-            reasoningExtract: null, reasoningScore: null,
-            maxTokensExtract: 16000, maxTokensScore: 8000,
-        },
+        model: 'anthropic/claude-haiku-4.5', sampling: SAMPLING_TEMPERATURE, reasoning: null,
+        maxTokens: { extract: 16000, score: 8000 },
         costPerThousandTokensUsd: 0.0119,
         secondsPerThousandTokens: 0.87,
         minimumSeconds: 8,
         candidateFactor: 1, // the reference: 64 candidates on thread 49537553
     }),
-    glmFlash: Object.freeze({
+    glmFlash: volumeEntry({
         name: 'GLM 5.3 Flash',
         quality: { stancesPerComment: [0.5, 0.6], twoSidedPer100Comments: [3.5, 4], note: 'the most coverage; some nonstandard output shapes, which the page accepts' },
-        get label() { return volumeLabel(this); },
-        config: {
-            modelExtract: 'z-ai/glm-5.3-flash', modelScore: 'z-ai/glm-5.3-flash',
-            samplingExtract: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED }, samplingScore: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED },
-            reasoningExtract: { effort: 'low' }, reasoningScore: { effort: 'low' },
-            maxTokensExtract: 64000, maxTokensScore: 32000,
-        },
+        model: 'z-ai/glm-5.3-flash', sampling: SAMPLING_TEMPERATURE_AND_SEED, reasoning: { effort: 'low' },
+        maxTokens: { extract: 64000, score: 32000 },
         costPerThousandTokensUsd: 0.0024,
         secondsPerThousandTokens: 31,
         minimumSeconds: 100,
         candidateFactor: 1.3, // 247 candidates against Haiku 4.5's 195 on the test thread
     }),
-    geminiFlash: Object.freeze({
+    geminiFlash: volumeEntry({
         name: 'Gemini 3.8 Flash',
         quality: { stancesPerComment: [0.3], twoSidedPer100Comments: [3], note: 'the least coverage; the most stable ranking between runs' },
-        get label() { return volumeLabel(this); },
-        config: {
-            modelExtract: 'google/gemini-3.8-flash', modelScore: 'google/gemini-3.8-flash',
-            samplingExtract: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED }, samplingScore: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED },
-            reasoningExtract: null, reasoningScore: null,
-            maxTokensExtract: 16000, maxTokensScore: 16000,
-        },
+        model: 'google/gemini-3.8-flash', sampling: SAMPLING_TEMPERATURE_AND_SEED, reasoning: null,
+        maxTokens: { extract: 16000, score: 16000 },
         costPerThousandTokensUsd: 0.0244,
         secondsPerThousandTokens: 2.1,
         minimumSeconds: 8,
         candidateFactor: 1, // not measured; assumed equal to Haiku 4.5
     }),
-    opus5: Object.freeze({
+    opus5: volumeEntry({
         name: 'Claude Opus 5',
         quality: { stancesPerComment: [0.7], twoSidedPer100Comments: [13], reviewHeldPercent: 74, reviewWrongPercent: 0 },
-        get label() { return volumeLabel(this); },
-        config: {
-            modelExtract: 'anthropic/claude-opus-5', modelScore: 'anthropic/claude-opus-5',
-            samplingExtract: null, samplingScore: null,
-            reasoningExtract: null, reasoningScore: null,
-            maxTokensExtract: 16000, maxTokensScore: 8000,
-        },
+        model: 'anthropic/claude-opus-5', sampling: null, reasoning: null,
+        maxTokens: { extract: 16000, score: 8000 },
         costPerThousandTokensUsd: 0.1317,
         secondsPerThousandTokens: 3.18,
         minimumSeconds: 50,
         candidateFactor: 2.1, // 134 candidates against 64
     }),
-    lunaLow: Object.freeze({
+    lunaLow: volumeEntry({
         name: 'GPT-5.6 Luna, reasoning low',
         quality: { stancesPerComment: [0.5], twoSidedPer100Comments: [6], reviewHeldPercent: 80, reviewWrongPercent: 6 },
-        get label() { return volumeLabel(this); },
-        config: {
-            modelExtract: 'openai/gpt-5.6-luna', modelScore: 'openai/gpt-5.6-luna',
-            samplingExtract: { seed: SAMPLING_SEED }, samplingScore: { seed: SAMPLING_SEED },
-            reasoningExtract: { effort: 'low' }, reasoningScore: { effort: 'low' },
-            maxTokensExtract: 32000, maxTokensScore: 16000,
-        },
+        model: 'openai/gpt-5.6-luna', sampling: SAMPLING_SEED_ONLY, reasoning: { effort: 'low' },
+        maxTokens: { extract: 32000, score: 16000 },
         costPerThousandTokensUsd: 0.0033,
         secondsPerThousandTokens: 1.16,
         minimumSeconds: 20,
@@ -201,81 +216,77 @@ const VOLUME_MODELS = Object.freeze({
 });
 
 const CONSOLIDATION_MODELS = Object.freeze({
-    sonnet5: Object.freeze({
+    sonnet5: consolidationEntry({
         name: 'Claude Sonnet 5',
         quality: { twoSidedPercent: [61, 74], runs: 'three runs' },
-        get label() { return consolidationLabel(this); },
-        config: { modelConsolidate: 'anthropic/claude-sonnet-5', samplingConsolidate: null, reasoningConsolidate: null, maxTokensConsolidate: 128000 },
+        model: 'anthropic/claude-sonnet-5', sampling: null, reasoning: null, maxTokens: { consolidate: CONSOLIDATION_MAX_TOKENS },
         costPerThousandTokensUsd: 0.0029,
         secondsPerThousandTokens: 2.4,
         minimumSeconds: 15,
     }),
-    glm53: Object.freeze({
+    glm53: consolidationEntry({
         name: 'GLM 5.3',
         quality: { twoSidedPercent: [79, 88], runs: 'two runs' },
-        get label() { return consolidationLabel(this); },
-        config: { modelConsolidate: 'z-ai/glm-5.3', samplingConsolidate: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED }, reasoningConsolidate: { effort: 'high' }, maxTokensConsolidate: 128000 },
+        model: 'z-ai/glm-5.3', sampling: SAMPLING_TEMPERATURE_AND_SEED, reasoning: { effort: 'high' }, maxTokens: { consolidate: CONSOLIDATION_MAX_TOKENS },
         costPerThousandTokensUsd: 0.0018,
         secondsPerThousandTokens: 4.6,
         minimumSeconds: 120,
     }),
-    geminiFlash: Object.freeze({
+    geminiFlash: consolidationEntry({
         name: 'Gemini 3.8 Flash',
         quality: { twoSidedPercent: [93], note: 'measured with the same model scoring' },
-        get label() { return consolidationLabel(this); },
-        config: { modelConsolidate: 'google/gemini-3.8-flash', samplingConsolidate: { temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED }, reasoningConsolidate: null, maxTokensConsolidate: 65536 },
+        model: 'google/gemini-3.8-flash', sampling: SAMPLING_TEMPERATURE_AND_SEED, reasoning: null, maxTokens: { consolidate: 65536 },
         costPerThousandTokensUsd: 0.0003,
         secondsPerThousandTokens: 0.2,
         minimumSeconds: 8,
     }),
-    opus5: Object.freeze({
+    opus5: consolidationEntry({
         name: 'Claude Opus 5',
         quality: { twoSidedPercent: [58], note: 'fine-grained axes' },
-        get label() { return consolidationLabel(this); },
-        config: { modelConsolidate: 'anthropic/claude-opus-5', samplingConsolidate: null, reasoningConsolidate: null, maxTokensConsolidate: 128000 },
+        model: 'anthropic/claude-opus-5', sampling: null, reasoning: null, maxTokens: { consolidate: CONSOLIDATION_MAX_TOKENS },
         costPerThousandTokensUsd: 0.0033,
         secondsPerThousandTokens: 0.6,
         minimumSeconds: 10,
     }),
-    solLow: Object.freeze({
+    solLow: consolidationEntry({
         name: 'GPT-5.6 Sol, reasoning low',
         quality: { twoSidedPercent: [38], note: '55% one-arm' },
-        get label() { return consolidationLabel(this); },
-        config: { modelConsolidate: 'openai/gpt-5.6-sol', samplingConsolidate: { seed: SAMPLING_SEED }, reasoningConsolidate: { effort: 'low' }, maxTokensConsolidate: 128000 },
+        model: 'openai/gpt-5.6-sol', sampling: SAMPLING_SEED_ONLY, reasoning: { effort: 'low' }, maxTokens: { consolidate: CONSOLIDATION_MAX_TOKENS },
         costPerThousandTokensUsd: 0.0010,
         secondsPerThousandTokens: 1.16,
         minimumSeconds: 8,
     }),
-    lunaMax: Object.freeze({
+    lunaMax: consolidationEntry({
         name: 'GPT-5.6 Luna, reasoning max',
         quality: { twoSidedPercent: [56] },
-        get label() { return consolidationLabel(this); },
-        config: { modelConsolidate: 'openai/gpt-5.6-luna', samplingConsolidate: { seed: SAMPLING_SEED }, reasoningConsolidate: { effort: 'max' }, maxTokensConsolidate: 128000 },
+        model: 'openai/gpt-5.6-luna', sampling: SAMPLING_SEED_ONLY, reasoning: { effort: 'max' }, maxTokens: { consolidate: CONSOLIDATION_MAX_TOKENS },
         costPerThousandTokensUsd: 0.0025,
         secondsPerThousandTokens: 21.6,
         minimumSeconds: 190,
     }),
-    fableLow: Object.freeze({
+    fableLow: consolidationEntry({
         name: 'Claude Fable 5.1, reasoning low',
         quality: { twoSidedPercent: [59] },
-        get label() { return consolidationLabel(this); },
-        config: { modelConsolidate: 'anthropic/claude-fable-5.1', samplingConsolidate: null, reasoningConsolidate: { effort: 'low' }, maxTokensConsolidate: 128000 },
+        model: 'anthropic/claude-fable-5.1', sampling: null, reasoning: { effort: 'low' }, maxTokens: { consolidate: CONSOLIDATION_MAX_TOKENS },
         costPerThousandTokensUsd: 0.0096,
         secondsPerThousandTokens: 1.71,
         minimumSeconds: 15,
     }),
 });
 
+const ROLE_CHOICES = Object.freeze({ volume: VOLUME_MODELS, consolidation: CONSOLIDATION_MODELS });
+
+// One role's option entry by key.
+function roleChoice(role, key) {
+    const choice = ROLE_CHOICES[role][key];
+    if (!choice) {
+        throw new Error(`unknown ${role} model choice: ${key}`);
+    }
+    return choice;
+}
+
 function buildStageConfig(volumeKey, consolidationKey) {
-    const volume = VOLUME_MODELS[volumeKey];
-    if (!volume) {
-        throw new Error(`unknown volume model choice: ${volumeKey}`);
-    }
-    const consolidation = CONSOLIDATION_MODELS[consolidationKey];
-    if (!consolidation) {
-        throw new Error(`unknown consolidation model choice: ${consolidationKey}`);
-    }
-    return { ...volume.config, ...consolidation.config };
+    return { ...roleChoice('volume', volumeKey).config, ...roleChoice('consolidation', consolidationKey).config };
 }
 
 // Option labels are built from each entry's constants and measured quality record, so a label can never
@@ -296,6 +307,12 @@ function perThousandCommentsText(choice) {
     return `$${usd} and ${formatDuration(seconds)} per ${COMMENTS_PER_LABEL} comments`;
 }
 
+// The name, the rates, then the quality parts and the note when the entry has one.
+function optionLabel(choice, qualityParts) {
+    const parts = choice.quality.note ? [...qualityParts, choice.quality.note] : qualityParts;
+    return `${choice.name}: ${perThousandCommentsText(choice)}. ${parts.join('; ')}.`;
+}
+
 // Extraction and scoring: stances per comment, two-sided rows per 100 comments, the blind-review shares
 // when measured, then a note.
 function volumeLabel(choice) {
@@ -307,58 +324,40 @@ function volumeLabel(choice) {
     if (quality.reviewHeldPercent !== undefined) {
         parts.push(`${quality.reviewHeldPercent}% of stances held under blind review, ${quality.reviewWrongPercent}% wrong`);
     }
-    if (quality.note) {
-        parts.push(quality.note);
-    }
-    return `${choice.name}: ${perThousandCommentsText(choice)}. ${parts.join('; ')}.`;
+    return optionLabel(choice, parts);
 }
 
 // Consolidation: the share of axes two-sided, the run count when a range, then a note.
 function consolidationLabel(choice) {
     const quality = choice.quality;
     const runsPart = quality.runs ? ` across ${quality.runs}` : '';
-    const parts = [`${rangeText(quality.twoSidedPercent, '%')} of axes two-sided${runsPart}`];
-    if (quality.note) {
-        parts.push(quality.note);
-    }
-    return `${choice.name}: ${perThousandCommentsText(choice)}. ${parts.join('; ')}.`;
+    return optionLabel(choice, [`${rangeText(quality.twoSidedPercent, '%')} of axes two-sided${runsPart}`]);
 }
 
 // One per-thousand-token rate field over the two chosen models. The consolidation call's cost and time
 // grow with the number of candidates, which the volume model sets, so its rate is scaled by that model's
 // candidateFactor, its candidate count relative to Haiku 4.5's on the same thread.
 function combinedRate(volumeKey, consolidationKey, field) {
-    const volume = VOLUME_MODELS[volumeKey];
-    return volume[field] + CONSOLIDATION_MODELS[consolidationKey][field] * volume.candidateFactor;
+    const volume = roleChoice('volume', volumeKey);
+    return volume[field] + roleChoice('consolidation', consolidationKey)[field] * volume.candidateFactor;
 }
 
 // Wall time scales with tokens, but the three stages run in sequence and each is at least one call
 // long (extraction and scoring one volume call each, consolidation one consolidation call), so a small
 // thread is bounded by latency: the smoke tests took 28 seconds for 38 comments with the Claude pair.
-// Extraction and scoring both use the volume model; consolidation uses the other.
-const VOLUME_STAGE_COUNT = 2;
-
 function estimateRunSeconds(tokens, volumeKey, consolidationKey) {
+    const choices = { volume: roleChoice('volume', volumeKey), consolidation: roleChoice('consolidation', consolidationKey) };
     const scaled = (combinedRate(volumeKey, consolidationKey, 'secondsPerThousandTokens') * tokens) / 1000;
-    const floor = VOLUME_STAGE_COUNT * VOLUME_MODELS[volumeKey].minimumSeconds + CONSOLIDATION_MODELS[consolidationKey].minimumSeconds;
+    const floor = STAGES.reduce((sum, stage) => sum + choices[stage.role].minimumSeconds, 0);
     return Math.max(scaled, floor);
 }
 
-// The three stages in run order. Config fields carry the suffix (modelExtract, samplingExtract, ...);
-// the estimate line uses the call name.
-const STAGES = Object.freeze([
-    Object.freeze({ key: 'extract', suffix: 'Extract', callName: 'extraction' }),
-    Object.freeze({ key: 'consolidate', suffix: 'Consolidate', callName: 'consolidation' }),
-    Object.freeze({ key: 'score', suffix: 'Score', callName: 'scoring' }),
-]);
-const STAGE_ORDER = Object.freeze(STAGES.map(stage => stage.key));
-const STAGE_BY_KEY = Object.freeze(Object.fromEntries(STAGES.map(stage => [stage.key, stage])));
-
-// Applies one model, or one sampling setting, to every stage.
-function applyToAllStages(config, { model, sampling }) {
+// Applies per-stage fields (model, sampling, reasoning, maxTokens) to every stage.
+function applyToAllStages(config, fields) {
     for (const stage of STAGES) {
-        if (model !== undefined) config[`model${stage.suffix}`] = model;
-        if (sampling !== undefined) config[`sampling${stage.suffix}`] = sampling;
+        for (const [field, value] of Object.entries(fields)) {
+            config[`${field}${stage.suffix}`] = value;
+        }
     }
     return config;
 }
@@ -381,7 +380,7 @@ const DEFAULT_CONFIG = Object.freeze({
     parentSnippetChars: 300,
     concurrency: 30,
     shuffleSeed: 777,
-    budgetUsd: 5.0,
+    budgetUsd: 1.0,
 });
 
 const STANCE_A = 'A';
@@ -451,6 +450,10 @@ function commentTokens(comment) {
     return estimateTokens(comment.text) + CONSTANTS.COMMENT_FRAME_TOKENS;
 }
 
+function totalCommentTokens(comments) {
+    return comments.reduce((sum, comment) => sum + commentTokens(comment), 0);
+}
+
 function splitSubtrees(comments) {
     const subtrees = [];
     for (const comment of comments) {
@@ -474,7 +477,7 @@ function makeExtractBatches(comments, maxTokens) {
         }
     }
     for (const subtree of splitSubtrees(comments)) {
-        const subtreeTokens = subtree.reduce((sum, comment) => sum + commentTokens(comment), 0);
+        const subtreeTokens = totalCommentTokens(subtree);
         if (currentTokens + subtreeTokens <= maxTokens) {
             current.push(...subtree);
             currentTokens += subtreeTokens;
@@ -514,7 +517,7 @@ function threadShare(thread, percent) {
 }
 
 function estimateRunCost(comments, ratePerThousandTokensUsd) {
-    const tokens = comments.reduce((sum, comment) => sum + commentTokens(comment), 0);
+    const tokens = totalCommentTokens(comments);
     return { tokens, usd: (ratePerThousandTokensUsd * tokens) / 1000 };
 }
 
@@ -793,7 +796,7 @@ function parentExcerptSource(text) {
 function formatCommentForScore(comment, commentsById, snippetChars) {
     const parent = commentsById.get(comment.parentId);
     const parentPart = parent
-        ? `, replying to ${parent.id}: "${truncateText(parentExcerptSource(parent.text).slice(0, snippetChars * 2).replace(/\s+/g, ' '), snippetChars)}"`
+        ? `, replying to ${parent.id}: "${truncateText(parentExcerptSource(parent.text).replace(/\s+/g, ' '), snippetChars)}"`
         : '';
     return `[id ${comment.id}${parentPart}]\n${comment.text}`;
 }
@@ -1101,11 +1104,6 @@ function splitBar(row, cells) {
     return '<'.repeat(cellsA) + '-'.repeat(cellsM) + '>'.repeat(cellsB);
 }
 
-// Share of one side among the two sides; one half when neither side has a commenter.
-function sideShare(count, other) {
-    return count + other === 0 ? 0.5 : count / (count + other);
-}
-
 // Shares of side 1, middle, and side 2 among all commenters on the axis; all zero when there are none.
 function proportionShares(row) {
     const total = row.countA + row.countM + row.countB;
@@ -1364,9 +1362,10 @@ async function exchangeOpenRouterCode({ code, verifier, fetchImpl }) {
     return data.key;
 }
 
-// The pipeline's callChat over OpenRouter with one key; signal aborts in-flight requests.
-function makeOpenRouterCallChat({ apiKey, signal }) {
-    return call => callOpenRouter({ apiKey, request: call, signal });
+// The pipeline's callChat over OpenRouter with one key; the signal the pipeline stamps on each call
+// aborts in-flight requests.
+function makeOpenRouterCallChat({ apiKey }) {
+    return call => callOpenRouter({ apiKey, request: call, signal: call.signal });
 }
 
 // ---------------------------------------------------------------------------
@@ -1430,12 +1429,20 @@ const PROBE_PLACEHOLDER_RESPONSES = Object.freeze({
 });
 const PROBE_PLACEHOLDER_USAGE = Object.freeze({ promptTokens: 0, completionTokens: 0, cost: 0 });
 
+// Thrown by the probe at the first call of a stage after the first stage with a miss, so the pipeline
+// stops before building and hashing requests the result leaves out.
+const PROBE_STOP = new Error('probe stopped after the first stage with a miss');
+
 // Counts, stage by stage, how many of a run's model calls the store already holds, without calling any
 // model. Stages after the first stage with a miss are left out of the result, because their requests
 // depend on the missing responses; complete is true when every call of every stage is cached.
 async function probeCache({ thread, store, config }) {
     const counts = new Map(STAGE_ORDER.map(stage => [stage, { stage, hits: 0, total: 0 }]));
+    let missedStage = null;
     async function probingCallChat(call) {
+        if (missedStage !== null && call.stage !== missedStage) {
+            throw PROBE_STOP;
+        }
         const count = counts.get(call.stage);
         count.total += 1;
         const hit = await store.get(requestCacheKey(call));
@@ -1443,9 +1450,16 @@ async function probeCache({ thread, store, config }) {
             count.hits += 1;
             return cachedResponse(hit);
         }
+        missedStage = call.stage;
         return { json: PROBE_PLACEHOLDER_RESPONSES[call.stage], usage: PROBE_PLACEHOLDER_USAGE };
     }
-    await runPipeline({ thread, callChat: probingCallChat, onProgress: () => {}, config });
+    try {
+        await runPipeline({ thread, callChat: probingCallChat, onProgress: () => {}, config });
+    } catch (error) {
+        if (error !== PROBE_STOP) {
+            throw error;
+        }
+    }
     const stages = [];
     for (const stage of STAGE_ORDER) {
         const count = counts.get(stage);
@@ -1524,7 +1538,7 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
         }
         cost += usage.cost;
         if (cost > cfg.budgetUsd) {
-            throw new Error(`Budget of $${cfg.budgetUsd.toFixed(2)} exceeded: spent $${cost.toFixed(4)} after ${callCount} calls`);
+            throw new Error(`Budget of $${cfg.budgetUsd.toFixed(SUMMARY_COST_DIGITS)} exceeded: spent $${cost.toFixed(COST_DIGITS)} after ${callCount} calls`);
         }
     }
 
@@ -1679,13 +1693,13 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         CONSTANTS, DEFAULT_CONFIG, VOLUME_MODELS, CONSOLIDATION_MODELS, DEFAULT_VOLUME_KEY, DEFAULT_CONSOLIDATION_KEY, volumeLabel, consolidationLabel, TOKENS_PER_COMMENT,
-        buildStageConfig, combinedRate, estimateRunSeconds, applyToAllStages,
+        roleChoice, buildStageConfig, combinedRate, estimateRunSeconds, applyToAllStages,
         stripHtml, flattenThread, estimateTokens, makeExtractBatches, makeScoreBatches, seededShuffle,
         selectCommentShare, threadShare, indexCommentsById, estimateRunCost, largestShareWithinBudget, parseFrontPage, storyDate, storyDetails, storyLabel, sortStoriesNewestFirst, storySearchUrl, isThreadId, fetchThreadItem, fetchStories,
         buildExtractMessages, buildConsolidateMessages, buildScoreMessages,
         parseExtractResponse, parseConsolidateResponse, parseScoreResponse,
         parseStanceKey, flipStance,
-        mergePasses, aggregateByAuthor, computeRows, orientRows, rankRows, barCells, splitBar, sideShare, proportionShares,
+        mergePasses, aggregateByAuthor, computeRows, orientRows, rankRows, barCells, splitBar, proportionShares,
         formatSplit, formatDuration, formatElapsed, formatProgress, formatRunCost, formatRunSummary,
         runPool, callOpenRouter, makeOpenRouterCallChat, runPipeline, TruncationError, InvalidResponseError,
         requestCacheKey, makeCachedCallChat, probeCache, formatCacheProbe, formatNextRun,
@@ -1698,9 +1712,7 @@ if (typeof module !== 'undefined' && module.exports) {
 // Page glue: DOM only. All computation lives in the core script above.
 
 // Rows are shown biggest first (agreed comments, then commenters), one block per axis: statement 1 above,
-// statement 2 below, each in a font sized by its share of the two sides, with a proportion bar between them.
-const STATEMENT_FONT_MIN_PX = 11;
-const STATEMENT_FONT_MAX_PX = 26;
+// statement 2 below, with a proportion bar between them flanked by each side's vote count.
 
 // A JSON store over localStorage keys sharing one prefix. get returns null when absent; set returns
 // false when the browser refuses the write (storage full or value too large) instead of throwing.
@@ -1851,12 +1863,8 @@ function sharePercent() {
     return Number(elements.share.value);
 }
 
-function sampleComments(thread) {
-    return selectCommentShare(thread.comments, sharePercent());
-}
-
 function selectedComments() {
-    return loadedThread === null ? [] : sampleComments(loadedThread);
+    return loadedThread === null ? [] : selectedThread().comments;
 }
 
 function selectedModelKeys() {
@@ -1923,14 +1931,13 @@ const listLatest = makeLatest();
 // the result cache after a run that called a model, both stores after Delete, one thread's snapshot
 // after a refetch. A stored-thread load and a fully cached replay change nothing and keep the memos.
 // Probes build and hash every request of a run, and the slider and the list ask for the same probe
-// many times, so they are kept per thread, share, models, and generation.
-let cacheGeneration = 0;
+// many times, so they are kept per thread, share, and models.
 const flattenedThreads = new Map();
 const probeMemo = new Map();
 
 function probeSelection(thread) {
     const { volumeKey, consolidationKey } = selectedModelKeys();
-    const key = [thread.id, thread.comments.length, volumeKey, consolidationKey, cacheGeneration].join('|');
+    const key = [thread.id, thread.comments.length, volumeKey, consolidationKey].join('|');
     if (!probeMemo.has(key)) {
         probeMemo.set(key, probeCache({ thread, store: cacheStore, config: selectedRunConfig() }));
     }
@@ -1950,7 +1957,6 @@ function storedThread(threadId) {
 }
 
 function invalidateResultCache() {
-    cacheGeneration += 1;
     probeMemo.clear();
 }
 
@@ -1987,7 +1993,8 @@ async function updateEstimate() {
         refreshRunButton();
         return null;
     }
-    const comments = selectedComments();
+    const thread = selectedThread();
+    const comments = thread.comments;
     const { volumeKey, consolidationKey } = selectedModelKeys();
     const estimate = estimateRunCost(comments, selectedCostRate());
     const seconds = estimateRunSeconds(estimate.tokens, volumeKey, consolidationKey);
@@ -2003,7 +2010,7 @@ async function updateEstimate() {
         if (!isCurrent()) {
             return null;
         }
-        const probe = await probeSelection(selectedThread());
+        const probe = await probeSelection(thread);
         if (!isCurrent()) {
             return null;
         }
@@ -2067,7 +2074,6 @@ function fillModelOptions(select, choices, defaultKey) {
 // row from the list loads that story directly. After a load the box is emptied.
 const SEARCH_MIN_CHARS = 3;
 const SEARCH_DEBOUNCE_MS = 300;
-let searchTimer = null;
 
 // The Min comments box hides stories with fewer comments from both lists. An empty or non-numeric box hides
 // nothing. The default keeps front-page stories large enough for a table with more than a few rows.
@@ -2157,8 +2163,7 @@ function showList(stories, headerFor) {
     elements.storyList.hidden = false;
     elements.threadId.setAttribute('aria-expanded', 'true');
     elements.threadId.removeAttribute('aria-activedescendant');
-    markFullyCachedRows(rows.filter(row => snapshotStore.has(String(row.story.id))))
-        .catch(error => setStatus(`Cache check failed: ${error.message}`, true));
+    markFullyCachedRows(rows).catch(error => setStatus(`Cache check failed: ${error.message}`, true));
 }
 
 function closeList() {
@@ -2202,7 +2207,6 @@ function refreshList() {
         }
         return;
     }
-    clearTimeout(searchTimer);
     searchLatest.cancel();
     if (homePageStories === null) {
         showList([], () => homePageHeader);
@@ -2224,26 +2228,28 @@ async function populateFrontPage() {
     }
 }
 
-// Keeps the current rows under a "searching" header until the results arrive; a result for a search that
-// is no longer the latest, or that arrives after the list was closed, is dropped.
-function scheduleStorySearch(text) {
+// Keeps the current rows under a "searching" header until the results arrive. Typing fires many input
+// events; the search waits for a pause. A result for a search that is no longer the latest, or that
+// arrives after the list was closed, is dropped.
+async function scheduleStorySearch(text) {
     showList(listStories, () => HEADER_SEARCHING);
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(async () => {
-        const isCurrent = searchLatest.start();
-        try {
-            const stories = await fetchStories(storySearchUrl(text), `the search "${text}"`);
-            lastSearch = { text, stories };
-            if (isCurrent() && listIsOpen()) {
-                showList(stories, searchHeader);
-            }
-        } catch (error) {
-            if (isCurrent() && listIsOpen()) {
-                showList([], () => HEADER_SEARCH_FAILED);
-            }
-            setStatus(`Story search failed: ${error.message}`, true);
+    const isCurrent = searchLatest.start();
+    await defaultSleep(SEARCH_DEBOUNCE_MS);
+    if (!isCurrent()) {
+        return;
+    }
+    try {
+        const stories = await fetchStories(storySearchUrl(text), `the search "${text}"`);
+        lastSearch = { text, stories };
+        if (isCurrent() && listIsOpen()) {
+            showList(stories, searchHeader);
         }
-    }, SEARCH_DEBOUNCE_MS);
+    } catch (error) {
+        if (isCurrent() && listIsOpen()) {
+            showList([], () => HEADER_SEARCH_FAILED);
+        }
+        setStatus(`Story search failed: ${error.message}`, true);
+    }
 }
 
 // Loads the thread named in the box. The box is emptied after a load so the suggestion list shows in full
@@ -2279,7 +2285,10 @@ async function loadThreadFromPage(threadId) {
         } else {
             setStatus('');
         }
-        loadedThread = storedThread(threadId) || flattenThread(snapshot.item);
+        loadedThread = flattenedThreads.get(threadId) ?? flattenThread(snapshot.item);
+        if (stored) {
+            flattenedThreads.set(threadId, loadedThread);
+        }
         applyMaxCostToShare();
         elements.threadId.value = '';
         closeList();
@@ -2297,17 +2306,8 @@ async function loadThreadFromPage(threadId) {
     }
 }
 
-function statementFontSize(share) {
-    return `${(STATEMENT_FONT_MIN_PX + (STATEMENT_FONT_MAX_PX - STATEMENT_FONT_MIN_PX) * share).toFixed(1)}px`;
-}
-
-function renderStatement(sideClass, count, text, share) {
-    const element = makeElement('p', { className: `statement ${sideClass}` });
-    element.style.setProperty('--size', statementFontSize(share));
-    const countElement = makeElement('span', { className: 'count', text: String(count) });
-    element.appendChild(countElement);
-    element.appendChild(document.createTextNode(text));
-    return element;
+function renderStatement(sideClass, text) {
+    return makeElement('p', { className: `statement ${sideClass}`, text });
 }
 
 // Three segments sized by share of all commenters on the axis; the bar itself has a fixed width.
@@ -2322,6 +2322,15 @@ function renderProportionBar(row) {
     return bar;
 }
 
+// The vote counts sit flanking the bar, one on each side, rather than inline with the statements.
+function renderProportionRow(row) {
+    const wrapper = makeElement('div', { className: 'proportion-row' });
+    wrapper.appendChild(makeElement('span', { className: 'count side1', text: String(row.countA) }));
+    wrapper.appendChild(renderProportionBar(row));
+    wrapper.appendChild(makeElement('span', { className: 'count side2', text: String(row.countB) }));
+    return wrapper;
+}
+
 function axisMetaText(row) {
     const middlePart = row.countM === 0 ? '' : `, ${row.countM} middle`;
     return `${row.comments} comments, ${row.authors} commenters${middlePart}`;
@@ -2329,16 +2338,12 @@ function axisMetaText(row) {
 
 function renderAxis(row) {
     const block = makeElement('div', { className: 'axis' });
-    block.appendChild(renderStatement('side1', row.countA, row.statementA, sideShare(row.countA, row.countB)));
-    block.appendChild(renderProportionBar(row));
-    block.appendChild(renderStatement('side2', row.countB, row.statementB, sideShare(row.countB, row.countA)));
+    block.appendChild(renderStatement('side1', row.statementA));
+    block.appendChild(renderProportionRow(row));
+    block.appendChild(renderStatement('side2', row.statementB));
     const meta = makeElement('div', { className: 'meta', text: axisMetaText(row) });
     block.appendChild(meta);
     return block;
-}
-
-function renderRows(rows) {
-    elements.results.replaceChildren(...rows.map(renderAxis));
 }
 
 function renderResults(result) {
@@ -2346,7 +2351,7 @@ function renderResults(result) {
     warningList.replaceChildren(...result.warnings.map(text => makeElement('li', { text })));
     elements.warnings.querySelector('summary').textContent = `${result.warnings.length} warnings`;
     elements.warnings.hidden = result.warnings.length === 0;
-    renderRows(result.rows);
+    elements.results.replaceChildren(...result.rows.map(renderAxis));
 }
 
 // PKCE sign-in needs an http(s) page with a stable URL as the callback and a secure context for
@@ -2412,25 +2417,24 @@ function resolveApiKey() {
 // While a run is in progress the status line shows the latest progress report with the elapsed time,
 // ticking once a second; afterwards it shows the outcome with the time taken.
 const ELAPSED_TICK_MS = 1000;
-let elapsedTimer = null;
-let progressText = '';
-
-function elapsedSince(startedAt) {
-    return formatElapsed((Date.now() - startedAt) / 1000);
-}
 
 function startElapsedCounter() {
     const startedAt = Date.now();
-    progressText = 'Starting';
-    const tick = () => setStatus(`${progressText}, ${elapsedSince(startedAt)} elapsed`);
+    let progressText = 'Starting';
+    const elapsed = () => formatElapsed((Date.now() - startedAt) / 1000);
+    const tick = () => setStatus(`${progressText}, ${elapsed()} elapsed`);
     tick();
-    elapsedTimer = setInterval(tick, ELAPSED_TICK_MS);
-    return { startedAt, tick };
-}
-
-function stopElapsedCounter() {
-    clearInterval(elapsedTimer);
-    elapsedTimer = null;
+    const timer = setInterval(tick, ELAPSED_TICK_MS);
+    return {
+        setProgress(text) {
+            progressText = text;
+            tick();
+        },
+        elapsed,
+        stop() {
+            clearInterval(timer);
+        },
+    };
 }
 
 // A run the latest probe reports as fully cached needs no key; any other run resolves one first.
@@ -2439,8 +2443,8 @@ async function runFromPage() {
         setStatus('Load a thread first.', true);
         return;
     }
-    const comments = selectedComments();
-    if (comments.length === 0) {
+    const thread = selectedThread();
+    if (thread.comments.length === 0) {
         setStatus('Nothing selected: move the slider above 0%.', true);
         return;
     }
@@ -2457,22 +2461,19 @@ async function runFromPage() {
     const counter = startElapsedCounter();
     try {
         const result = await runPipeline({
-            thread: selectedThread(),
+            thread,
             signal,
             config: selectedRunConfig(),
-            onProgress: update => {
-                progressText = formatProgress(update);
-                counter.tick();
-            },
-            callChat: makeCachedCallChat(makeOpenRouterCallChat({ apiKey, signal }), cacheStore),
+            onProgress: update => counter.setProgress(formatProgress(update)),
+            callChat: makeCachedCallChat(makeOpenRouterCallChat({ apiKey }), cacheStore),
         });
-        stopElapsedCounter();
+        counter.stop();
         calledModel = result.calls !== result.stats.cachedCalls;
         renderResults(result);
-        setStatus(`Done in ${elapsedSince(counter.startedAt)}, ${formatRunCost(result)}. ${formatRunSummary(result).join(' ')}`);
+        setStatus(`Done in ${counter.elapsed()}, ${formatRunCost(result)}. ${formatRunSummary(result).join(' ')}`);
     } catch (error) {
-        stopElapsedCounter();
-        setStatus(signal.aborted ? `Cancelled after ${elapsedSince(counter.startedAt)}.` : `Error after ${elapsedSince(counter.startedAt)}: ${error.message}`, !signal.aborted);
+        counter.stop();
+        setStatus(signal.aborted ? `Cancelled after ${counter.elapsed()}.` : `Error after ${counter.elapsed()}: ${error.message}`, !signal.aborted);
         console.error(error);
     } finally {
         activeController = null;

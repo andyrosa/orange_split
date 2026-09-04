@@ -16,7 +16,9 @@ const { loadCore } = require('./load_core');
 const core = loadCore();
 const KEY_ENV_NAME = 'OPENROUTER_API_KEY';
 const DEFAULT_SHARE_PERCENT = 100;
-const STATEMENT_INDENT = '     ';
+const RANK_DIGITS = 3;
+// Statements 2 and 3 of a row line up under statement 1, which follows "#", the rank, and a space.
+const STATEMENT_INDENT = ' '.repeat('#'.length + RANK_DIGITS + ' '.length);
 
 function readArgument(name) {
     const prefix = `--${name}=`;
@@ -27,15 +29,6 @@ function readArgument(name) {
 // Config overrides, applied in this order so that later flags win: config file, role choices (each
 // touching only its own stages), one model for every stage, one sampling setting for every stage,
 // concurrency.
-
-// The config fields of one role's option entry.
-function roleChoiceConfig(choices, key, roleName) {
-    const choice = choices[key];
-    if (!choice) {
-        throw new Error(`unknown ${roleName} choice: ${key}`);
-    }
-    return choice.config;
-}
 function buildConfig() {
     const config = {};
     const configFile = readArgument('config-file');
@@ -44,11 +37,11 @@ function buildConfig() {
     }
     const volume = readArgument('volume');
     if (volume !== null) {
-        Object.assign(config, roleChoiceConfig(core.VOLUME_MODELS, volume, 'volume model'));
+        Object.assign(config, core.roleChoice('volume', volume).config);
     }
     const consolidation = readArgument('consolidation');
     if (consolidation !== null) {
-        Object.assign(config, roleChoiceConfig(core.CONSOLIDATION_MODELS, consolidation, 'consolidation model'));
+        Object.assign(config, core.roleChoice('consolidation', consolidation).config);
     }
     const model = readArgument('model');
     if (model !== null) {
@@ -114,7 +107,7 @@ async function loadThreadItem(threadId, threadFile) {
 function formatRow(row) {
     const metrics = `mid ${row.countM}  authors ${row.authors}  comments ${row.comments}`;
     return [
-        `#${String(row.rank).padStart(3)} ${row.statementA}`,
+        `#${String(row.rank).padStart(RANK_DIGITS)} ${row.statementA}`,
         `${STATEMENT_INDENT}${row.statementB}`,
         `${STATEMENT_INDENT}${core.formatSplit(row)}  ${metrics}`,
     ].join('\n');
