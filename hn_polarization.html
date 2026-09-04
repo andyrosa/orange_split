@@ -3,15 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-6pyHkMdRIaWZ0WlNcpdLTPHZqKDZt659CE6AeA1tfUs=' 'sha256-41tcHL1TXjNawnS0EYJjj3FtA+lqR1XO5QKiauZyiJE='; style-src 'sha256-vu6d6XBhx6/vZXbgkxQZijkjHpUFFE75d7P1DeDSGhU='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-6pyHkMdRIaWZ0WlNcpdLTPHZqKDZt659CE6AeA1tfUs=' 'sha256-BCcF8EJsyzan9F38i5MZcK1ZjBR6YutbpIXspH+9eyE='; style-src 'sha256-kOivQOGbCoRViFWTB6UttqyfgAJJzWsMRARDwefXFFM='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
 <title>HN Split - For and Against on Hacker News</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EHN:s%3C/text%3E%3C/svg%3E">
 <style>
 body { font-family: system-ui, sans-serif; margin: 0.5rem 1rem; }
 h1 { font-size: 1.4rem; margin: 0 0 0.5rem; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 label { display: inline-block; margin-right: 1rem; }
 input[type="password"] { width: 22rem; }
-#thread-id { width: 16rem; }
+#thread-id { width: 10rem; }
 input[type="number"] { width: 5em; }
 #min-comments { width: 3.5em; }
 .row { margin: 1em 0; }
@@ -23,11 +24,20 @@ input[type="number"] { width: 5em; }
 .story-scope button:last-child { border-left: 0; border-radius: 0 3px 3px 0; }
 .story-scope button[aria-pressed="true"] { background: #333; color: #fff; }
 #thread-picker { position: relative; display: inline-block; vertical-align: middle; }
-#story-list { position: absolute; left: 0; top: 100%; z-index: 1; margin: 0; padding: 0; list-style: none; min-width: 100%; max-height: 24rem; overflow-y: auto; background: #fff; border: 1px solid #999; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2); }
-#story-list li { padding: 0.25rem 0.5rem; cursor: pointer; white-space: nowrap; }
+#story-list { position: absolute; left: 0; top: 100%; z-index: 1; width: calc(100vw - 2rem); margin: 0; padding: 0; list-style: none; max-height: calc(100vh - 7rem); overflow: auto; background: #fff; border: 1px solid #999; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2); }
+#story-list li { cursor: pointer; }
 #story-list li.header { color: #666; font-size: 0.9em; cursor: default; background: #eee; }
 #story-list li.active { background: #cde; }
-#story-list li.cached { font-weight: bold; }
+#story-list li.preprocessed .story-title { font-weight: bold; }
+.story-option { display: flex; align-items: center; padding: 0.35rem 0.5rem; white-space: nowrap; }
+.story-option.header { display: block; }
+.story-title { flex: 0 1 auto; min-width: 4rem; overflow: hidden; text-overflow: ellipsis; }
+.story-title a { color: #0645ad; cursor: alias; }
+.story-detail { flex: 0 0 auto; color: #666; font-size: 12px; }
+.story-detail .new { color: #8a5400; font-weight: bold; }
+.story-status { color: #666; }
+.story-status.ready { color: #176b35; font-weight: bold; }
+.story-status.partial { color: #24588f; }
 #cached-threads-toggle { border: 0; background: none; color: #0645ad; cursor: pointer; font: inherit; margin: 0; padding: 0; text-decoration: underline; }
 #cached-threads-toggle:disabled { color: #666; cursor: default; text-decoration: none; }
 #cached-threads-list { margin: -0.5rem 0 1rem; padding-left: 1.5rem; }
@@ -55,6 +65,7 @@ select.model { display: block; width: 100%; max-width: 86rem; margin-top: 0.25re
 .model-option:hover, .model-option:focus { background: #e8f2fb; outline: none; }
 .model-option[aria-selected="true"] { background: #d8eaf8; font-weight: 600; }
 button { margin-right: 0.5rem; }
+#run-hint { color: #666; }
 #status { margin: 0.5rem 0; white-space: pre-wrap; }
 #status.error { color: #b00020; }
 #results { margin-top: 1rem; }
@@ -98,21 +109,22 @@ button { margin-right: 0.5rem; }
 <body>
 <h1>HN Split</h1>
 <div class="row thread-controls">
+<label class="visually-hidden" for="thread-id">Thread</label>
+<div id="thread-picker">
+<input id="thread-id" type="text" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="story-list" placeholder="filter front page, or id">
+<ul id="story-list" role="listbox" hidden></ul>
+</div>
 <label for="min-comments">Min comments</label> <input id="min-comments" type="number" min="0" step="10">
 <span class="story-scope" role="group" aria-label="Story source">
 <button id="front-page-scope" type="button" aria-pressed="true">Front page</button>
 <button id="search-all-scope" type="button" aria-pressed="false">Search all</button>
 </span>
-<label for="thread-id">Thread</label>
-<div id="thread-picker">
-<input id="thread-id" type="text" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="story-list" placeholder="filter front page, or id">
-<ul id="story-list" role="listbox" hidden></ul>
-</div>
 <button id="load-thread" type="button" hidden>Load thread</button>
-<span id="thread-title"></span>
+<a id="thread-title" target="_blank" rel="noopener noreferrer"></a>
 </div>
 <p>
 <button id="run" type="button" disabled>Run</button>
+<span id="run-hint"></span>
 <button id="cancel" type="button" hidden>Cancel</button>
 <span id="thread-info"></span>
 <button id="refresh-thread" type="button" hidden>Refetch</button>
@@ -2123,6 +2135,7 @@ const elements = {
     rememberKey: document.getElementById('remember-key'),
     wipeKey: document.getElementById('wipe-key'),
     run: document.getElementById('run'),
+    runHint: document.getElementById('run-hint'),
     cancel: document.getElementById('cancel'),
     storageInfo: document.getElementById('storage-info'),
     cachedCallCount: document.getElementById('cached-call-count'),
@@ -2240,8 +2253,20 @@ function selectedRunUrlParameters() {
     };
 }
 
-function showRunUrl(selection) {
-    history.pushState(null, '', makeRunPageUrl(location.href, selection));
+// How a run writes its selection into the address bar. A run the user started with the Run button gets
+// its own history entry; one the page started by itself, after a selection change turned out to be fully
+// cached, replaces the entry, so that moving the slider does not fill the history with unasked-for steps.
+const RUN_URL_WRITE = Object.freeze({ none: 'none', push: 'push', replace: 'replace' });
+
+function showRunUrl(selection, mode) {
+    const url = makeRunPageUrl(location.href, selection);
+    if (mode === RUN_URL_WRITE.push) {
+        history.pushState(null, '', url);
+    } else if (mode === RUN_URL_WRITE.replace) {
+        history.replaceState(null, '', url);
+    } else {
+        throw new Error(`showRunUrl needs ${RUN_URL_WRITE.push} or ${RUN_URL_WRITE.replace}, got ${mode}`);
+    }
 }
 
 function selectedCostRate() {
@@ -2338,6 +2363,20 @@ function runIsFullyCached() {
     return latestProbe !== null && latestProbe.complete;
 }
 
+// A result describes one selection: thread, snapshot, share, models, and budget. This holds the key of
+// the selection whose result the page is showing, and null while the results area is empty, so that a
+// change to any part of the selection can tell a stale result from the one it just produced.
+let displayedSelectionKey = null;
+
+function currentSelectionKey() {
+    const selection = selectedRunUrlParameters();
+    return selection === null ? null : runResultCacheKey(selection);
+}
+
+function selectionKeyOf(selection) {
+    return selection === null || selection === undefined ? null : runResultCacheKey(selection);
+}
+
 function renderEstimate(comments, estimate, seconds, probe) {
     elements.estimate.textContent = `${shareText(comments)}, ${Math.round(estimate.chars / 1000)}k characters. Next run: ${formatNextRun({ usd: estimate.usd, seconds, probe })}`;
 }
@@ -2387,9 +2426,45 @@ async function updateEstimate() {
     }
 }
 
+// A change to the share, the models, or the budget selects a different run, which the displayed result
+// no longer describes, so the page drops that result and the line reporting it; what the new selection
+// needs is the Run hint's business. When the probe then reports the new selection fully cached, the run starts by itself,
+// as it does after a load, since the result is free and instant. Returning to the displayed selection
+// changes nothing: the result already on the page is the one that selection produces.
+async function afterSelectionChange() {
+    if (displayedSelectionKey !== null && displayedSelectionKey !== currentSelectionKey()) {
+        clearResults();
+        setStatus('The result shown was for a different selection, so the page removed it.');
+    }
+    const probe = await updateEstimate();
+    if (probe !== null && probe.complete && activeController === null && displayedSelectionKey === null) {
+        runFromPage({ urlWrite: RUN_URL_WRITE.replace });
+    }
+}
+
+// What Run still needs, or the empty string when it needs nothing and while a run is in progress, when
+// Cancel stands in its place. It is recomputed with the button, on every change to the thread, the
+// share, the models, the key, and the cache probe, so it cannot outlive the condition it reports.
+function runHintText() {
+    if (activeController !== null) {
+        return '';
+    }
+    if (loadedThread === null) {
+        return 'Load a thread to run.';
+    }
+    if (selectedComments().length === 0) {
+        return 'Move the slider above 0% to run.';
+    }
+    if (!keyAvailable() && !runIsFullyCached()) {
+        return 'Enter an OpenRouter key to run.';
+    }
+    return '';
+}
+
 function refreshRunButton() {
     elements.run.disabled = activeController !== null || loadedThread === null || selectedComments().length === 0
         || (!keyAvailable() && !runIsFullyCached());
+    elements.runHint.textContent = runHintText();
 }
 
 function setRunning() {
@@ -2692,18 +2767,42 @@ let listStories = [];
 let activeIndex = -1;
 let storyScope = 'front';
 
-// Bolds the rows whose run would be served entirely from the cache at the current share and models,
-// so picking them gives the result at once. It runs after the list is painted, yielding before each
-// probe so typing stays responsive, and only for stored threads; a list drawn later ends it.
-async function markFullyCachedRows(rows) {
+function storyResultSelection(storyId, fetchedAt) {
+    const { volumeKey, consolidationKey } = selectedModelKeys();
+    return {
+        article: String(storyId),
+        snapshot: fetchedAt,
+        share: sharePercent(),
+        volume: volumeKey,
+        consolidation: consolidationKey,
+        budget: maxCostInBox(),
+    };
+}
+
+function setStoryStatus(element, kind, text) {
+    element.className = `story-status ${kind}`;
+    element.textContent = text;
+}
+
+// Resolves each stored row's outcome for the current share and models after painting the list. A title
+// becomes bold once a saved result or cached model call proves that preprocessing exists. A later list
+// draw cancels the work so typing remains responsive.
+async function markCachedRows(rows) {
     const isCurrent = listLatest.start();
-    for (const { story, item } of rows) {
-        const thread = storedThread(String(story.id));
+    for (const { story, thread, item, status } of rows) {
         if (thread === null) {
+            continue;
+        }
+        const snapshot = snapshotStore.get(String(story.id));
+        const saved = resultStore.get(runResultCacheKey(storyResultSelection(story.id, snapshot.fetchedAt)));
+        if (saved !== null && saved.version === RESULT_CACHE_VERSION) {
+            item.classList.add('preprocessed');
+            setStoryStatus(status, 'ready', 'opens from a saved result');
             continue;
         }
         const selection = threadShare(thread, sharePercent());
         if (selection.comments.length === 0) {
+            setStoryStatus(status, 'snapshot', 'thread snapshot only · 0 comments selected');
             continue;
         }
         await defaultSleep(0);
@@ -2715,9 +2814,16 @@ async function markFullyCachedRows(rows) {
             return;
         }
         if (probe.complete) {
-            item.classList.add('cached');
-            item.title = 'Fully cached: the run is instant';
+            item.classList.add('preprocessed');
+            setStoryStatus(status, 'ready', 'opens from cached calls');
+            continue;
         }
+        const hits = probe.stages.reduce((sum, stage) => sum + stage.hits, 0);
+        const total = probe.stages.reduce((sum, stage) => sum + stage.total, 0);
+        if (hits > 0) {
+            item.classList.add('preprocessed');
+        }
+        setStoryStatus(status, hits > 0 ? 'partial' : 'snapshot', hits > 0 ? `${hits} of ${total} calls cached` : 'thread snapshot only');
     }
 }
 
@@ -2731,19 +2837,54 @@ function showList(stories, headerFor) {
     listStories = sortStoriesNewestFirst(storiesAboveMinComments(stories));
     activeIndex = -1;
     const header = headerFor(listStories);
-    const headerItem = makeElement('li', { className: 'header', text: header });
+    const headerItem = makeElement('li', { className: 'header story-option' });
+    headerItem.append(makeElement('span', { text: header }));
     const rows = listStories.map((story, index) => {
-        const item = makeElement('li', { text: storyLabel(story) });
+        const thread = storedThread(String(story.id));
+        const item = makeElement('li', { className: 'story-option' });
         item.setAttribute('role', 'option');
         item.id = `story-option-${index}`;
+        const title = makeElement('span', { className: 'story-title' });
+        const link = makeElement('a', { text: story.title });
+        link.href = CONSTANTS.HN_ITEM_PAGE_URL + story.id;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.title = 'Open the Hacker News post in a new tab';
+        link.addEventListener('mousedown', event => {
+            event.preventDefault();
+            event.stopPropagation();
+        });
+        link.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            window.open(link.href, '_blank', 'noopener');
+        });
+        title.append(link);
+        const detail = makeElement('span', { className: 'story-detail' });
+        detail.append(document.createTextNode(` — ${counted(story.numComments, 'comment')}, posted ${storyDate(story)}, id ${story.id}`));
+        if (thread !== null) {
+            const difference = story.numComments - thread.commentCount;
+            detail.append(document.createTextNode(`; ${thread.commentCount} fetched`));
+            if (difference !== 0) {
+                const direction = difference > 0 ? `+${difference} new` : `${Math.abs(difference)} fewer now`;
+                detail.append(document.createTextNode(' ('), makeElement('span', { className: 'new', text: direction }), document.createTextNode(')'));
+            }
+        }
+        detail.append(document.createTextNode(' — '));
+        const status = makeElement('span', {
+            className: `story-status ${thread === null ? 'snapshot' : 'partial'}`,
+            text: thread === null ? 'not stored' : 'checking preprocessing…',
+        });
+        detail.append(status);
+        item.append(title, detail);
         item.addEventListener('mousedown', () => pickStory(story));
-        return { story, item };
+        return { story, thread, item, status };
     });
     elements.storyList.replaceChildren(headerItem, ...rows.map(row => row.item));
     elements.storyList.hidden = false;
     elements.threadId.setAttribute('aria-expanded', 'true');
     elements.threadId.removeAttribute('aria-activedescendant');
-    markFullyCachedRows(rows).catch(error => setStatus(`Cache check failed: ${error.message}`, true));
+    markCachedRows(rows).catch(error => setStatus(`Cache check failed: ${error.message}`, true));
 }
 
 function closeList() {
@@ -2887,12 +3028,15 @@ function renderThreadInfo(thread, snapshot, stored, currentCommentCount, current
 function clearResults() {
     elements.results.replaceChildren();
     elements.warnings.hidden = true;
+    displayedSelectionKey = null;
 }
 
 async function loadThreadFromPage(threadId, { share, cachedResult, cachedComments, runSelection } = {}) {
     loadedThread = null;
     loadedSnapshotAt = null;
     document.title = APP_TITLE;
+    elements.threadTitle.textContent = '';
+    elements.threadTitle.removeAttribute('href');
     clearResults();
     updateEstimate();
     try {
@@ -2919,6 +3063,7 @@ async function loadThreadFromPage(threadId, { share, cachedResult, cachedComment
         elements.threadId.value = '';
         closeList();
         elements.threadTitle.textContent = loadedThread.title;
+        elements.threadTitle.href = CONSTANTS.HN_ITEM_PAGE_URL + loadedThread.id;
         let currentCommentCount = null;
         let currentCountError = null;
         try {
@@ -2930,6 +3075,7 @@ async function loadThreadFromPage(threadId, { share, cachedResult, cachedComment
         document.title = `${loadedThread.title} - HN Split`;
     } catch (error) {
         elements.threadTitle.textContent = '';
+        elements.threadTitle.removeAttribute('href');
         elements.threadInfo.textContent = '';
         setStatus(`Error: ${error.message}`, true);
     }
@@ -2939,6 +3085,7 @@ async function loadThreadFromPage(threadId, { share, cachedResult, cachedComment
     }
     if (cachedResult !== undefined) {
         renderResults(cachedResult, cachedComments);
+        displayedSelectionKey = runSelection === undefined ? currentSelectionKey() : selectionKeyOf(runSelection);
         const resultSnapshot = runSelection === undefined ? loadedSnapshotAt : runSelection.snapshot;
         setStatus(`Loaded completed result captured ${formatLocalDateTime(resultSnapshot)} from this browser.`);
         return;
@@ -3244,7 +3391,7 @@ function startElapsedCounter() {
 }
 
 // A run the latest probe reports as fully cached needs no key; any other run resolves one first.
-async function runFromPage({ recordUrl = false, runSelection } = {}) {
+async function runFromPage({ urlWrite = RUN_URL_WRITE.none, runSelection } = {}) {
     if (loadedThread === null) {
         setStatus('Load a thread first.', true);
         return;
@@ -3259,9 +3406,10 @@ async function runFromPage({ recordUrl = false, runSelection } = {}) {
     if (apiKey === null && !fullyCached) {
         return;
     }
-    const selection = recordUrl || runSelection === undefined ? selectedRunUrlParameters() : runSelection;
-    if (recordUrl) {
-        showRunUrl(selection);
+    const writesUrl = urlWrite !== RUN_URL_WRITE.none;
+    const selection = writesUrl || runSelection === undefined ? selectedRunUrlParameters() : runSelection;
+    if (writesUrl) {
+        showRunUrl(selection, urlWrite);
     }
     const estimate = estimateRunCost(thread.comments, selectedCostRate());
     const { volumeKey, consolidationKey } = selectedModelKeys();
@@ -3293,6 +3441,7 @@ async function runFromPage({ recordUrl = false, runSelection } = {}) {
             result.warnings.push('Completed result could not be stored in this browser (storage full or result too large).');
         }
         renderResults(result, referencedComments);
+        displayedSelectionKey = selectionKeyOf(selection);
         setStatus(`Done in ${counter.elapsed()} (expected ${formatClockDuration(expectedSeconds)}), ${formatRunCost(result, estimate.usd)}. ${formatRunSummary(result).join(' ')}`);
     } catch (error) {
         counter.stop();
@@ -3308,7 +3457,7 @@ async function runFromPage({ recordUrl = false, runSelection } = {}) {
     }
 }
 
-elements.run.addEventListener('click', () => runFromPage({ recordUrl: true }));
+elements.run.addEventListener('click', () => runFromPage({ urlWrite: RUN_URL_WRITE.push }));
 elements.cancel.addEventListener('click', () => {
     if (activeController) {
         activeController.abort();
@@ -3413,9 +3562,9 @@ for (const picker of modelPickers) {
 function refitShareAndEstimate() {
     elements.maxCost.value = maxCostInBox();
     applyMaxCostToShare();
-    updateEstimate();
+    afterSelectionChange();
 }
-elements.share.addEventListener('input', updateEstimate);
+elements.share.addEventListener('input', afterSelectionChange);
 elements.maxCost.addEventListener('change', refitShareAndEstimate);
 elements.volumeModel.addEventListener('change', () => {
     syncModelPicker(modelPickers[0]);

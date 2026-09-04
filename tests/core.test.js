@@ -1,5 +1,5 @@
 // Unit and integration tests for the core script block of hn_polarization.html.
-// Run with: node --test tests
+// Run with: node --test
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { loadCore } = require('../scripts/load_core');

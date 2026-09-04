@@ -71,6 +71,37 @@ p { line-height: 1.45; }
 .dot.green { background: #2f855a; }
 .dot.blue { background: #4c78a8; }
 .dot.gray { background: #bbb; }
+
+/* E: every option remains one physical line. */
+.single-scroll { overflow-x: auto; }
+.single-grid { display: grid; grid-template-columns: minmax(330px, 2fr) 230px 150px 90px 140px; align-items: center; min-width: 1050px; }
+.single-grid > span { min-width: 0; padding: 9px 10px; border-left: 1px solid #e4e4e4; white-space: nowrap; }
+.single-grid > span:first-child { border-left: 0; }
+.single-head { background: #eee; color: #555; font-size: 11px; font-weight: 700; }
+.single-option { padding: 0; }
+.single-option .option-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.single-option .counts { text-align: right; font-variant-numeric: tabular-nums; }
+.single-option .badges { flex-wrap: nowrap; }
+.single-variant { margin-top: 20px; }
+.single-variant h3 { margin: 0 0 7px; font-size: 15px; }
+.single-variant p { margin: 0 0 8px; color: #666; font-size: 13px; }
+.line-row { display: grid; align-items: center; min-width: 860px; padding: 9px 10px; gap: 10px; white-space: nowrap; }
+.line-row > span { min-width: 0; }
+.line-row .option-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.status-first { grid-template-columns: 100px minmax(330px, 1fr) 230px 180px 150px; }
+.fresh-first { grid-template-columns: 90px minmax(330px, 1fr) 230px 150px 110px; }
+.sentence-row { display: flex; align-items: center; min-width: 900px; padding: 9px 10px; gap: 8px; white-space: nowrap; }
+.sentence-row .option-title { display: inline; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.sentence-detail { color: #666; font-size: 13px; }
+.right-status { grid-template-columns: minmax(330px, 1fr) 230px 220px 170px; }
+.right-status .summary { color: #666; font-size: 13px; text-align: right; }
+.dot-row { grid-template-columns: 16px minmax(330px, 1fr) 170px 110px; }
+.dot-row .dot { margin: 0; }
+.hn-row { grid-template-columns: minmax(330px, 1fr) 170px 140px; }
+.hn-title { overflow: hidden; text-overflow: ellipsis; }
+.hn-title .option-title { display: inline; }
+.hn-id { color: #777; font-size: 12px; }
+.muted { color: #666; font-size: 12px; }
 @media (max-width: 800px) {
     main { padding: 14px; }
     .badges { justify-content: flex-start; }
@@ -85,7 +116,7 @@ p { line-height: 1.45; }
 <body>
 <main>
 <h1>Story picker proposals</h1>
-<p class="intro">Real metadata from the nine stored threads. “Ready” means the current 100% Luna/Sonnet run can open without a model request. Freshness is shown independently because it answers a different question.</p>
+<p class="intro">Real metadata from the nine stored threads. Every treatment preserves the current dropdown’s title, comment count, posting time, and ID, then adds snapshot freshness and readiness. “Ready” means the current 100% Luna/Sonnet run can open without a model request.</p>
 
 <section class="proposal recommended">
 <div class="heading"><h2>A. Outcome badges</h2><span class="recommendation">Recommended</span></div>
@@ -127,19 +158,65 @@ p { line-height: 1.45; }
 <span><strong>Bold title</strong> exact saved result</span>
 </div>
 </section>
+
+<section class="proposal">
+<div class="heading"><h2>E1. Single-line columns</h2></div>
+<p class="description">The most compact treatment. Long titles ellipsize, while counts and status remain aligned and visible.</p>
+<div class="picker single-scroll">
+<div class="single-grid single-head">
+<span>Thread</span><span>Posted / ID</span><span>Current / snapshot</span><span>New</span><span>Status</span>
+</div>
+<div id="single-options"></div>
+</div>
+</section>
+
+<section class="proposal">
+<div class="heading"><h2>E2-E6. More single-line treatments</h2></div>
+<p class="description">The same nine threads rendered five more ways, each keeping every option to one physical line.</p>
+
+<div class="single-variant">
+<h3>E2. Status first</h3>
+<p>Fastest scan for “what happens if I click?”</p>
+<div class="picker single-scroll" id="status-first-options"></div>
+</div>
+
+<div class="single-variant">
+<h3>E3. Freshness first</h3>
+<p>Prioritizes which snapshots have accumulated the most new discussion.</p>
+<div class="picker single-scroll" id="fresh-first-options"></div>
+</div>
+
+<div class="single-variant">
+<h3>E4. Natural-language sentence</h3>
+<p>Avoids column headers and cache jargon where possible.</p>
+<div class="picker single-scroll" id="sentence-options"></div>
+</div>
+
+<div class="single-variant">
+<h3>E5. Title first, status at right</h3>
+<p>Closest to the current dropdown, with compact aligned summaries.</p>
+<div class="picker single-scroll" id="right-status-options"></div>
+</div>
+
+<div class="single-variant">
+<h3>E6. HN-like minimal row</h3>
+<p>Mostly typography: title and subdued ID, comment movement, then a short readiness label. Posting time is intentionally omitted.</p>
+<div class="picker single-scroll" id="hn-options"></div>
+</div>
+</section>
 </main>
 
 <script>
 const threads = [
-    { id: 44163063, title: 'My AI skeptic friends are all nuts', current: 2826, snapshot: 2689, fetched: '2026-09-04 10:15 AM', cached: 381, calls: 402, saved: false },
-    { id: 49554273, title: 'OpenAI begins rolling out GPT-6 Astra', current: 251, snapshot: 249, fetched: '2026-09-04 10:12 AM', cached: 35, calls: 35, saved: true },
-    { id: 49563355, title: 'Discovery of a new OpenAI agent message board', current: 437, snapshot: 292, fetched: '2026-09-04 09:36 AM', cached: 41, calls: 41, saved: true },
-    { id: 49550375, title: 'Porting my 1993 Amiga game to Godot, with an LLM reading the 68000 assembly', current: 115, snapshot: 114, fetched: '2026-09-04 09:34 AM', cached: 0, calls: 4, saved: false },
-    { id: 49548600, title: 'Ask HN: Who is using MCP in production?', current: 147, snapshot: 134, fetched: '2026-09-04 09:00 AM', cached: 20, calls: 20, saved: false },
-    { id: 49554520, title: 'Qwen 3.8 27B available on Cerebras at 1500 tokens/s', current: 208, snapshot: 196, fetched: '2026-09-04 08:59 AM', cached: 26, calls: 26, saved: false },
-    { id: 49525378, title: 'Claude Fable 5.1 and Claude Mythos 5.1', current: 1377, snapshot: 1361, fetched: '2026-09-04 08:58 AM', cached: 180, calls: 180, saved: false },
-    { id: 49296740, title: 'Why does Opus 5 feel worse to work with?', current: 873, snapshot: 871, fetched: '2026-09-04 08:57 AM', cached: 120, calls: 120, saved: true },
-    { id: 49554643, title: 'GPT-6 Astra', current: 1830, snapshot: 1717, fetched: '2026-09-04 07:49 AM', cached: 224, calls: 224, saved: true },
+    { id: 44163063, title: 'My AI skeptic friends are all nuts', current: 2826, posted: '2025-06-02 04:09 PM', snapshot: 2689, fetched: '2026-09-04 10:15 AM', cached: 381, calls: 402, saved: false },
+    { id: 49554273, title: 'OpenAI begins rolling out GPT-6 Astra', current: 251, posted: '2026-09-03 01:18 PM', snapshot: 249, fetched: '2026-09-04 10:12 AM', cached: 35, calls: 35, saved: true },
+    { id: 49563355, title: 'Discovery of a new OpenAI agent message board', current: 437, posted: '2026-09-04 06:54 AM', snapshot: 292, fetched: '2026-09-04 09:36 AM', cached: 41, calls: 41, saved: true },
+    { id: 49550375, title: 'Porting my 1993 Amiga game to Godot, with an LLM reading the 68000 assembly', current: 115, posted: '2026-09-03 09:28 AM', snapshot: 114, fetched: '2026-09-04 09:34 AM', cached: 0, calls: 4, saved: false },
+    { id: 49548600, title: 'Ask HN: Who is using MCP in production?', current: 147, posted: '2026-09-03 06:21 AM', snapshot: 134, fetched: '2026-09-04 09:00 AM', cached: 20, calls: 20, saved: false },
+    { id: 49554520, title: 'Qwen 3.8 27B available on Cerebras at 1500 tokens/s', current: 208, posted: '2026-09-03 01:32 PM', snapshot: 196, fetched: '2026-09-04 08:59 AM', cached: 26, calls: 26, saved: false },
+    { id: 49525378, title: 'Claude Fable 5.1 and Claude Mythos 5.1', current: 1377, posted: '2026-09-01 12:53 PM', snapshot: 1361, fetched: '2026-09-04 08:58 AM', cached: 180, calls: 180, saved: false },
+    { id: 49296740, title: 'Why does Opus 5 feel worse to work with?', current: 873, posted: '2026-08-14 05:12 AM', snapshot: 871, fetched: '2026-09-04 08:57 AM', cached: 120, calls: 120, saved: true },
+    { id: 49554643, title: 'GPT-6 Astra', current: 1830, posted: '2026-09-03 01:41 PM', snapshot: 1717, fetched: '2026-09-04 07:49 AM', cached: 224, calls: 224, saved: true },
 ];
 
 function state(thread) {
@@ -174,7 +251,7 @@ function optionButton(className) {
 for (const thread of threads) {
     const button = optionButton('badge-row');
     const text = document.createElement('span');
-    text.innerHTML = `<span class="option-title">${thread.title}</span><span class="option-meta">${thread.current} comments · snapshot ${thread.snapshot} at ${thread.fetched} · id ${thread.id}</span>`;
+    text.innerHTML = `<span class="option-title">${thread.title}</span><span class="option-meta">${thread.current} comments · posted ${thread.posted} · id ${thread.id} · snapshot ${thread.snapshot} fetched ${thread.fetched}</span>`;
     const badges = document.createElement('span');
     badges.className = 'badges';
     badges.innerHTML = `<span class="badge ${state(thread)}">${stateLabel(thread)}</span><span class="badge ${thread.saved ? 'saved' : 'snapshot'}">${reasonLabel(thread)}</span><span class="badge new">+${newCount(thread)} new</span>`;
@@ -186,7 +263,7 @@ for (const thread of threads) {
     const button = optionButton('table-option');
     const row = document.createElement('span');
     row.className = 'table-grid';
-    row.innerHTML = `<span><span class="option-title">${thread.title}</span><span class="option-meta">id ${thread.id} · fetched ${thread.fetched}</span></span><span>${thread.current}</span><span>${thread.snapshot}</span><span class="delta">+${newCount(thread)}</span><span>${thread.cached}/${thread.calls} calls</span><span>${thread.saved ? 'saved' : '—'}</span>`;
+    row.innerHTML = `<span><span class="option-title">${thread.title}</span><span class="option-meta">posted ${thread.posted} · id ${thread.id} · fetched ${thread.fetched}</span></span><span>${thread.current}</span><span>${thread.snapshot}</span><span class="delta">+${newCount(thread)}</span><span>${thread.cached}/${thread.calls} calls</span><span>${thread.saved ? 'saved' : '—'}</span>`;
     button.append(row);
     document.getElementById('table-options').append(button);
 }
@@ -203,7 +280,7 @@ for (const [label, items] of groups) {
     document.getElementById('grouped-options').append(heading);
     for (const thread of items) {
         const button = optionButton('group-row');
-        button.innerHTML = `<span><span class="option-title">${thread.title}</span><span class="option-meta">${thread.current} comments · +${newCount(thread)} since snapshot · id ${thread.id}</span></span><span class="group-detail">${reasonLabel(thread)}</span>`;
+        button.innerHTML = `<span><span class="option-title">${thread.title}</span><span class="option-meta">${thread.current} comments · posted ${thread.posted} · id ${thread.id} · +${newCount(thread)} since snapshot</span></span><span class="group-detail">${reasonLabel(thread)}</span>`;
         document.getElementById('grouped-options').append(button);
     }
 }
@@ -212,8 +289,48 @@ for (const thread of threads) {
     const button = optionButton(`signal-row${thread.saved ? ' has-saved' : ''}`);
     const status = state(thread);
     const percent = Math.round((thread.cached / thread.calls) * 100);
-    button.innerHTML = `<span class="signal ${status === 'ready' ? 'complete' : status === 'partial' ? 'incomplete' : 'none'}"></span><span><span class="option-title">${thread.title}</span><span class="option-meta">${thread.current} comments · +${newCount(thread)} new · snapshot ${thread.snapshot} · id ${thread.id}</span></span><span class="progress-wrap">${reasonLabel(thread)}<span class="progress ${status === 'ready' ? 'complete' : ''}"><span style="width:${percent}%"></span></span></span>`;
+    button.innerHTML = `<span class="signal ${status === 'ready' ? 'complete' : status === 'partial' ? 'incomplete' : 'none'}"></span><span><span class="option-title">${thread.title}</span><span class="option-meta">${thread.current} comments · posted ${thread.posted} · id ${thread.id} · +${newCount(thread)} new · snapshot ${thread.snapshot}</span></span><span class="progress-wrap">${reasonLabel(thread)}<span class="progress ${status === 'ready' ? 'complete' : ''}"><span style="width:${percent}%"></span></span></span>`;
     document.getElementById('signal-options').append(button);
+}
+
+for (const thread of threads) {
+    const button = optionButton('single-option');
+    const row = document.createElement('span');
+    row.className = 'single-grid';
+    row.innerHTML = `<span><span class="option-title" title="${thread.title}">${thread.title}</span></span><span class="muted">${thread.posted} · ${thread.id}</span><span class="counts">${thread.current} / ${thread.snapshot}</span><span class="delta">+${newCount(thread)}</span><span class="badges"><span class="badge ${state(thread)}">${stateLabel(thread)}</span>${thread.saved ? '<span class="badge saved">saved</span>' : ''}</span>`;
+    button.append(row);
+    document.getElementById('single-options').append(button);
+}
+
+for (const thread of threads) {
+    const button = optionButton('line-row status-first');
+    button.innerHTML = `<span><span class="badge ${state(thread)}">${stateLabel(thread)}</span></span><span class="option-title" title="${thread.title}">${thread.title}</span><span class="muted">${thread.posted} · ${thread.id}</span><span>${thread.current} comments · <span class="delta">+${newCount(thread)} new</span></span><span class="muted">${reasonLabel(thread)}</span>`;
+    document.getElementById('status-first-options').append(button);
+}
+
+for (const thread of threads) {
+    const button = optionButton('line-row fresh-first');
+    button.innerHTML = `<span class="badge new">+${newCount(thread)} new</span><span class="option-title" title="${thread.title}">${thread.title}</span><span class="muted">${thread.posted} · ${thread.id}</span><span class="counts">${thread.current} / ${thread.snapshot} comments</span><span class="badge ${state(thread)}">${stateLabel(thread)}</span>`;
+    document.getElementById('fresh-first-options').append(button);
+}
+
+for (const thread of threads) {
+    const button = optionButton('sentence-row');
+    const availability = thread.saved ? 'opens from a saved result' : state(thread) === 'ready' ? 'opens from cached calls' : state(thread) === 'partial' ? `${thread.cached} of ${thread.calls} calls cached` : 'thread snapshot only';
+    button.innerHTML = `<span class="option-title" title="${thread.title}">${thread.title}</span><span class="sentence-detail">— ${thread.current} comments, posted ${thread.posted}, id ${thread.id}; ${thread.snapshot} fetched (+${newCount(thread)}) — ${availability}</span>`;
+    document.getElementById('sentence-options').append(button);
+}
+
+for (const thread of threads) {
+    const button = optionButton('line-row right-status');
+    button.innerHTML = `<span class="option-title" title="${thread.title}">${thread.title}</span><span class="muted">${thread.posted} · ${thread.id}</span><span class="summary">${thread.current} now · ${thread.snapshot} fetched · <span class="delta">+${newCount(thread)}</span></span><span class="badges"><span class="badge ${state(thread)}">${stateLabel(thread)}</span>${thread.saved ? '<span class="badge saved">saved</span>' : ''}</span>`;
+    document.getElementById('right-status-options').append(button);
+}
+
+for (const thread of threads) {
+    const button = optionButton('line-row hn-row');
+    button.innerHTML = `<span class="hn-title"><span class="option-title" title="${thread.title}">${thread.title}</span> <span class="hn-id">(${thread.id})</span></span><span class="muted">${thread.current} comments · <span class="delta">+${newCount(thread)} new</span></span><span class="muted">${stateLabel(thread)} · ${reasonLabel(thread)}</span>`;
+    document.getElementById('hn-options').append(button);
 }
 </script>
 </body>
