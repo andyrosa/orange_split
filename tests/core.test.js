@@ -379,6 +379,9 @@ test('computeRows produces per-commenter counts and the comment count for the to
         countM: 0,
         authors: 3,
         comments: 3,
+        commentIdsA: [2, 3],
+        commentIdsB: [1],
+        commentIdsM: [],
     });
     const service = byId.get(5);
     assert.equal(service.countA, 2);
@@ -388,6 +391,16 @@ test('computeRows produces per-commenter counts and the comment count for the to
     const opening = byId.get(6);
     assert.equal(opening.countA, 1);
     assert.equal(opening.comments, 1);
+});
+
+test('computeRows excludes consolidated axes with no agreed scoring stance', () => {
+    const thread = core.flattenThread(TOY_THREAD);
+    const commentsById = core.indexCommentsById(thread.comments);
+    const agreed = core.mergePasses(TOY_PASS1, TOY_PASS2);
+    const byAuthor = core.aggregateByAuthor(agreed, commentsById);
+    const emptyAxis = { id: 99, statementA: 'One claim', statementB: 'The rival claim' };
+    const rows = core.computeRows([...TOY_AXES, emptyAxis], byAuthor, agreed);
+    assert.equal(rows.some(row => row.axisId === emptyAxis.id), false);
 });
 
 test('axisMetaText names the agreed comments and commenters, and the middle count only when above zero', () => {
@@ -400,14 +413,15 @@ test('proportionShares splits the bar among side 1, middle, and side 2', () => {
     assert.deepEqual(core.proportionShares({ countA: 0, countM: 0, countB: 0 }), [0, 0, 0]);
 });
 
-test('orientRows puts the larger side on statement 1, keeping ties as they are', () => {
+test('orientRows puts the larger side and its evidence on statement 1, keeping ties as they are', () => {
     const rows = [
-        { axisId: 1, statementA: 'p', statementB: 'q', countA: 2, countB: 5, countM: 1 },
+        { axisId: 1, statementA: 'p', statementB: 'q', countA: 2, countB: 5, countM: 1, commentIdsA: [1], commentIdsB: [2, 3] },
         { axisId: 2, statementA: 'r', statementB: 's', countA: 3, countB: 3, countM: 0 },
         { axisId: 3, statementA: 't', statementB: 'u', countA: 4, countB: 0, countM: 0 },
     ];
     const oriented = core.orientRows(rows);
     assert.deepEqual(oriented.map(row => [row.statementA, row.statementB, row.countA, row.countB]), [['q', 'p', 5, 2], ['r', 's', 3, 3], ['t', 'u', 4, 0]]);
+    assert.deepEqual([oriented[0].commentIdsA, oriented[0].commentIdsB], [[2, 3], [1]]);
     assert.equal(rows[0].statementA, 'p');
 });
 
@@ -653,18 +667,23 @@ function makeTruncatingFake(log, truncateWhen) {
 }
 
 test('formatRunCost and formatRunSummary describe a run in plain words', () => {
-    const result = { rows: [1, 2, 3, 4], cost: 0.0449, calls: 7, stats: { comments: 32, authors: 20, cachedCalls: 0, agreedStances: 10, classifiedPairs: 17 } };
+    const result = { rows: [1, 2, 3, 4], cost: 0.0449, calls: 7, stats: { comments: 32, authors: 20, cachedCalls: 0, agreedStances: 10, classifiedPairs: 17, reviewedPairs: 12, conflictingStances: 2, singlePassStances: 5 } };
     assert.equal(core.formatRunCost(result), '$0.04, 7 model calls (0 cached)');
+    assert.equal(core.formatRunCost(result, 0.081), '$0.04 ($0.08), 7 model calls (0 cached)');
+    assert.equal(core.formatClockDuration(490), '8:10');
     assert.deepEqual(core.formatRunSummary(result), [
         '4 rows from 32 comments by 20 commenters.',
-        '10 of 17 classifications matched between the two scoring passes; only matching ones count.',
+        '10 stances passed blind review. Of 12 comment-axis pairs classified by both passes, 10 agreed (83%); 2 conflicts and 5 single-pass classifications were excluded.',
     ]);
 });
 
-test('runPipeline counts the comment-row pairs classified by either pass', async () => {
+test('runPipeline distinguishes scoring conflicts from single-pass classifications', async () => {
     const thread = core.flattenThread(TOY_THREAD);
     const result = await core.runPipeline({ thread, callChat: makeFakeCallChat([]), onProgress: () => {}, config: TOY_CONFIG });
-    assert.equal(result.stats.classifiedPairs, 15, 'pass 1 has 15 pairs, pass 2 a subset of them');
+    assert.equal(result.stats.classifiedPairs, 15);
+    assert.equal(result.stats.reviewedPairs, 14);
+    assert.equal(result.stats.conflictingStances, 1);
+    assert.equal(result.stats.singlePassStances, 1);
     assert.equal(result.stats.agreedStances, 13);
 });
 
@@ -905,6 +924,38 @@ test('openRouterAuthUrl carries the callback, the challenge and the method', () 
     assert.equal(url.searchParams.get('code_challenge_method'), 'S256');
 });
 
+test('run page URLs carry every setting and use the snapshot time as the cache nonce', () => {
+    const selection = {
+        article: '49537553',
+        snapshot: '2026-09-04T12:34:56.789Z',
+        share: 50,
+        volume: 'lunaLow',
+        consolidation: 'sonnet5',
+        budget: 1.5,
+    };
+    const value = core.makeRunPageUrl('https://example.test/hn.html?code=discarded#old', selection);
+    const url = new URL(value);
+    assert.equal(url.origin + url.pathname, 'https://example.test/hn.html');
+    assert.equal(url.hash, '');
+    assert.deepEqual(Object.fromEntries(url.searchParams), {
+        article: '49537553',
+        snapshot: '2026-09-04T12:34:56.789Z',
+        share: '50',
+        volume: 'lunaLow',
+        consolidation: 'sonnet5',
+        budget: '1.5',
+    });
+    assert.deepEqual(core.parseRunPageUrl(value), selection);
+    assert.equal(core.runResultCacheKey(selection), url.search.slice(1));
+});
+
+test('parseRunPageUrl rejects incomplete or invalid run URLs', () => {
+    assert.equal(core.parseRunPageUrl('https://example.test/hn.html?article=1'), null);
+    assert.equal(core.parseRunPageUrl('https://example.test/hn.html?article=1&snapshot=no&share=50&volume=lunaLow&consolidation=sonnet5&budget=1'), null);
+    assert.equal(core.parseRunPageUrl('https://example.test/hn.html?article=1&snapshot=2026-09-04T12%3A34%3A56Z&share=0&volume=lunaLow&consolidation=sonnet5&budget=1'), null);
+    assert.equal(core.parseRunPageUrl('https://example.test/hn.html?article=1&snapshot=2026-09-04T12%3A34%3A56Z&share=50&volume=unknown&consolidation=sonnet5&budget=1'), null);
+});
+
 test('exchangeOpenRouterCode posts the code and verifier and returns the key', async () => {
     const seen = [];
     const fetchImpl = async (url, options) => {
@@ -957,6 +1008,22 @@ test('requestCacheKey ignores meta and signal and changes with request content',
     assert.notEqual(core.requestCacheKey(base), core.requestCacheKey(differentMessages));
     assert.notEqual(core.requestCacheKey(base), core.requestCacheKey(differentModel));
     assert.match(core.requestCacheKey(base), /^[0-9a-f-]+$/);
+});
+
+test('parseCacheExport accepts cache-only exports and rejects unrelated browser storage', () => {
+    const callKey = core.CONSTANTS.CACHE_KEY_PREFIX + 'abc';
+    const payload = core.parseCacheExport(JSON.stringify({
+        exportedAt: '2026-09-04T12:00:00.000Z',
+        origin: 'http://localhost:8791',
+        entries: { [callKey]: { json: { ok: true }, usage: { cost: 0.01 } } },
+    }));
+    assert.deepEqual(payload.entries[callKey].json, { ok: true });
+    assert.throws(
+        () => core.parseCacheExport(JSON.stringify({ entries: { openrouter_api_key: { value: 'secret' } } })),
+        /unsupported entry: openrouter_api_key/,
+    );
+    assert.throws(() => core.parseCacheExport('{'), /not valid JSON/);
+    assert.throws(() => core.parseCacheExport('{}'), /entries object/);
 });
 
 test('makeCachedCallChat serves a repeated request from the store at zero cost', async () => {

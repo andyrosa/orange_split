@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-i2ZNqdk3h9o093QDKhGH6qzsMRqoemwwp4ITYH7lOdA=' 'sha256-lWuhEjKeV4cQZlBvfSfwyamp2/Svu4rQVQt4FRzhKv8='; style-src 'sha256-2GJwNpuPF4LDmBH1WsCKuxWKyAW0wlJ5zxsApnGpPFI='; connect-src https://openrouter.ai https://hn.algolia.com; img-src data:; base-uri 'none'; form-action 'none'">
-<title>HN Split</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-lvnsYm5vQvnTQtYbhQWoeFkFTwvHUvxFAZBlUuAWSBY=' 'sha256-gdj2MvWcVxfZEeYKScpMrvn+R5Gp9rCDf0YdbaOodRw='; style-src 'sha256-vgvNBHFfAOfiG7aHY18+3zq34nFVciGzoazr5UMnL2g='; connect-src https://openrouter.ai https://hn.algolia.com; img-src data:; base-uri 'none'; form-action 'none'">
+<title>HN Split - For and Against on Hacker News</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EHN:s%3C/text%3E%3C/svg%3E">
 <style>
 body { font-family: system-ui, sans-serif; margin: 0.5rem 1rem; }
@@ -40,6 +40,16 @@ button { margin-right: 0.5rem; }
 .axis .proportion .mid { background: #cfcfcf; }
 .axis .proportion .side2 { background: #c05621; }
 .axis .meta { font-size: 11px; color: #666; margin-left: 0.75rem; }
+.axis .comments-toggle { border: 0; background: none; color: #0645ad; cursor: pointer; font: inherit; margin: 0; padding: 0; text-decoration: underline; }
+.axis .evidence { margin: 0.5rem 0 0.25rem; padding-left: 1rem; border-left: 3px solid #ddd; }
+.axis .evidence-group { margin: 0.6rem 0; }
+.axis .evidence-group h3 { font-size: 13px; margin: 0 0 0.3rem; }
+.axis .evidence-group.side1 h3 { color: #2b6cb0; }
+.axis .evidence-group.mid h3 { color: #666; }
+.axis .evidence-group.side2 h3 { color: #c05621; }
+.axis .evidence-comment { margin: 0.5rem 0; max-width: 70rem; }
+.axis .evidence-comment header { font-size: 11px; color: #666; }
+.axis .evidence-comment p { font-size: 13px; line-height: 1.35; margin: 0.15rem 0; white-space: pre-wrap; }
 #warnings ul { margin: 0; padding-left: 1.5rem; }
 </style>
 </head>
@@ -75,10 +85,13 @@ button { margin-right: 0.5rem; }
 <span id="estimate"></span>
 </p>
 <p id="key-entry">
-<label>OpenRouter key <input id="api-key" type="password" autocomplete="off"></label> <button id="connect-openrouter" type="button" hidden>Sign in with OpenRouter instead</button> <label><input id="remember-key" type="checkbox"> Remember in this browser</label>
+<label>OpenRouter key <input id="api-key" type="password" autocomplete="off"></label> <label><input id="remember-key" type="checkbox"> Remember pasted key</label> <button id="connect-openrouter" type="button" hidden>Sign in with OpenRouter instead</button>
 </p>
 <p>
 <span id="storage-info"></span>
+<button id="export-cache" type="button">Export</button>
+<button id="import-cache" type="button">Import</button>
+<input id="import-cache-file" type="file" accept=".json,application/json" hidden>
 <button id="delete-cached" type="button" hidden>Delete</button>
 <span id="key-stored" hidden>OpenRouter key <span id="key-scope"></span> <button id="wipe-key" type="button">Delete</button></span>
 </p>
@@ -91,16 +104,17 @@ button { margin-right: 0.5rem; }
 
 const CONSTANTS = Object.freeze({
     HN_ITEM_URL: 'https://hn.algolia.com/api/v1/items/',
+    HN_ITEM_PAGE_URL: 'https://news.ycombinator.com/item?id=',
     HN_FRONT_PAGE_URL: 'https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=30',
     HN_STORY_SEARCH_URL: 'https://hn.algolia.com/api/v1/search?tags=story&hitsPerPage=20&query=',
     OPENROUTER_URL: 'https://openrouter.ai/api/v1/chat/completions',
     OPENROUTER_AUTH_URL: 'https://openrouter.ai/auth',
     OPENROUTER_KEY_EXCHANGE_URL: 'https://openrouter.ai/api/v1/auth/keys',
     PKCE_VERIFIER_STORAGE_KEY: 'openrouter_pkce_verifier',
-    PKCE_REMEMBER_STORAGE_KEY: 'openrouter_pkce_remember',
     STORAGE_KEY_OPENROUTER: 'openrouter_api_key',
     CACHE_KEY_PREFIX: 'hn_polarization_cache:',
     THREAD_KEY_PREFIX: 'hn_polarization_thread:',
+    RESULT_KEY_PREFIX: 'hn_polarization_result:',
     COMMENT_FRAME_CHARS: 48, // the id line and the separators around a comment in a prompt
     TEMPERATURE: 0,
     MAX_ATTEMPTS: 4,
@@ -1013,6 +1027,22 @@ function mergePasses(pass1, pass2) {
     return agreed;
 }
 
+function comparePasses(pass1, pass2, agreed) {
+    const classifiedPairs = new Set([...pass1.keys(), ...pass2.keys()]).size;
+    let reviewedPairs = 0;
+    for (const key of pass1.keys()) {
+        if (pass2.has(key)) {
+            reviewedPairs += 1;
+        }
+    }
+    return {
+        classifiedPairs,
+        reviewedPairs,
+        conflictingStances: reviewedPairs - agreed.size,
+        singlePassStances: classifiedPairs - reviewedPairs,
+    };
+}
+
 function majorityStance(tally) {
     const best = Math.max(tally[STANCE_A], tally[STANCE_B], tally[STANCE_M]);
     const winners = [STANCE_A, STANCE_B, STANCE_M].filter(stance => tally[stance] === best);
@@ -1047,15 +1077,20 @@ function aggregateByAuthor(agreed, commentsById) {
     return byAuthor;
 }
 
-// One row per axis: commenters on each statement and in the middle, their total, and the agreed comments.
+// One row per axis with at least one agreed stance: commenters on each statement and in the middle,
+// plus agreed comment ids by stance.
 function computeRows(axes, byAuthor, agreed) {
-    const commentCounts = new Map();
-    for (const key of agreed.keys()) {
-        const { axisId } = parseStanceKey(key);
-        commentCounts.set(axisId, (commentCounts.get(axisId) || 0) + 1);
+    const commentIds = new Map();
+    for (const [key, stance] of agreed) {
+        const { commentId, axisId } = parseStanceKey(key);
+        if (!commentIds.has(axisId)) {
+            commentIds.set(axisId, { [STANCE_A]: [], [STANCE_B]: [], [STANCE_M]: [] });
+        }
+        commentIds.get(axisId)[stance].push(commentId);
     }
     return axes.map(axis => {
         const authorStances = byAuthor.get(axis.id) || new Map();
+        const ids = commentIds.get(axis.id) || { [STANCE_A]: [], [STANCE_B]: [], [STANCE_M]: [] };
         let countA = 0;
         let countB = 0;
         let countM = 0;
@@ -1072,9 +1107,12 @@ function computeRows(axes, byAuthor, agreed) {
             countB,
             countM,
             authors: countA + countB + countM,
-            comments: commentCounts.get(axis.id) || 0,
+            comments: ids[STANCE_A].length + ids[STANCE_B].length + ids[STANCE_M].length,
+            commentIdsA: ids[STANCE_A],
+            commentIdsB: ids[STANCE_B],
+            commentIdsM: ids[STANCE_M],
         };
-    });
+    }).filter(row => row.comments > 0);
 }
 
 // Shares of side 1, middle, and side 2 among all commenters on the axis; all zero when there are none.
@@ -1108,29 +1146,49 @@ function formatElapsed(seconds) {
     return `${Math.floor(whole / SECONDS_PER_MINUTE)} minutes ${whole % SECONDS_PER_MINUTE} seconds`;
 }
 
+function formatClockDuration(seconds) {
+    const whole = Math.round(seconds);
+    return `${Math.floor(whole / SECONDS_PER_MINUTE)}:${String(whole % SECONDS_PER_MINUTE).padStart(2, '0')}`;
+}
+
 function formatProgress(update) {
     return `${update.stage}: ${update.done}/${update.total} done, ${update.inFlight} in flight, ${update.calls} calls (${update.cachedCalls} from cache), $${update.cost.toFixed(COST_DIGITS)} spent`;
 }
 
 const SUMMARY_COST_DIGITS = 2;
 
-function formatRunCost(result) {
-    return `$${result.cost.toFixed(SUMMARY_COST_DIGITS)}, ${result.calls} model calls (${result.stats.cachedCalls} cached)`;
+function formatRunCost(result, expectedUsd) {
+    const expected = expectedUsd === undefined ? '' : ` ($${expectedUsd.toFixed(SUMMARY_COST_DIGITS)})`;
+    return `$${result.cost.toFixed(SUMMARY_COST_DIGITS)}${expected}, ${result.calls} model calls (${result.stats.cachedCalls} cached)`;
 }
 
 // What came out and why the counts are lower than the comment count.
 function formatRunSummary(result) {
     const stats = result.stats;
+    const agreementPercent = stats.reviewedPairs > 0
+        ? Math.round((100 * stats.agreedStances) / stats.reviewedPairs)
+        : 0;
+    const reviewSummary = Number.isInteger(stats.reviewedPairs)
+        ? `${stats.agreedStances} stances passed blind review. Of ${stats.reviewedPairs} comment-axis pairs classified by both passes, ${stats.agreedStances} agreed (${agreementPercent}%); ${stats.conflictingStances} conflicts and ${stats.singlePassStances} single-pass classifications were excluded.`
+        : `${stats.agreedStances} of ${stats.classifiedPairs} classifications matched between the two scoring passes; only matching ones count.`;
     return [
         `${result.rows.length} rows from ${stats.comments} comments by ${stats.authors} commenters.`,
-        `${stats.agreedStances} of ${stats.classifiedPairs} classifications matched between the two scoring passes; only matching ones count.`,
+        reviewSummary,
     ];
 }
 
 // The side with more commenters is always statement 1, so the larger arm of the split is on the left.
 function orientRows(rows) {
     return rows.map(row => (row.countB > row.countA
-        ? { ...row, statementA: row.statementB, statementB: row.statementA, countA: row.countB, countB: row.countA }
+        ? {
+            ...row,
+            statementA: row.statementB,
+            statementB: row.statementA,
+            countA: row.countB,
+            countB: row.countA,
+            commentIdsA: row.commentIdsB,
+            commentIdsB: row.commentIdsA,
+        }
         : row));
 }
 
@@ -1321,6 +1379,44 @@ function openRouterAuthUrl(callbackUrl, challenge) {
     return url.toString();
 }
 
+const RUN_URL_PARAMETERS = Object.freeze(['article', 'snapshot', 'share', 'volume', 'consolidation', 'budget']);
+
+function runResultCacheKey(selection) {
+    return RUN_URL_PARAMETERS.map(key => `${key}=${encodeURIComponent(selection[key])}`).join('&');
+}
+
+function makeRunPageUrl(baseUrl, selection) {
+    const url = new URL(baseUrl);
+    url.search = '';
+    url.hash = '';
+    for (const key of RUN_URL_PARAMETERS) {
+        url.searchParams.set(key, String(selection[key]));
+    }
+    return url.toString();
+}
+
+function parseRunPageUrl(urlValue) {
+    const params = new URL(urlValue).searchParams;
+    if (!RUN_URL_PARAMETERS.every(key => params.has(key))) {
+        return null;
+    }
+    const article = params.get('article');
+    const snapshot = params.get('snapshot');
+    const share = Number(params.get('share'));
+    const volume = params.get('volume');
+    const consolidation = params.get('consolidation');
+    const budget = Number(params.get('budget'));
+    if (!/^[1-9]\d*$/.test(article)
+        || snapshot === '' || !Number.isFinite(Date.parse(snapshot))
+        || !Number.isFinite(share) || share <= 0 || share > 100
+        || !Object.hasOwn(VOLUME_MODELS, volume)
+        || !Object.hasOwn(CONSOLIDATION_MODELS, consolidation)
+        || !Number.isFinite(budget) || budget <= 0) {
+        return null;
+    }
+    return { article, snapshot, share, volume, consolidation, budget };
+}
+
 async function exchangeOpenRouterCode({ code, verifier, fetchImpl }) {
     const response = await (fetchImpl || globalThis.fetch)(CONSTANTS.OPENROUTER_KEY_EXCHANGE_URL, {
         method: 'POST',
@@ -1372,6 +1468,34 @@ function requestCacheKey(call) {
         maxTokens: call.maxTokens,
     });
     return `${fnv1a32(material, false)}${fnv1a32(material, true)}-${material.length.toString(16)}`;
+}
+
+const CACHE_EXPORT_PREFIXES = Object.freeze([
+    CONSTANTS.CACHE_KEY_PREFIX,
+    CONSTANTS.THREAD_KEY_PREFIX,
+    CONSTANTS.RESULT_KEY_PREFIX,
+]);
+
+function parseCacheExport(text) {
+    let payload;
+    try {
+        payload = JSON.parse(text);
+    } catch (error) {
+        throw new Error(`Cache import is not valid JSON: ${error.message}`);
+    }
+    if (payload === null || typeof payload !== 'object' || Array.isArray(payload)
+        || payload.entries === null || typeof payload.entries !== 'object' || Array.isArray(payload.entries)) {
+        throw new Error('Cache import must contain an entries object.');
+    }
+    for (const [key, value] of Object.entries(payload.entries)) {
+        if (!CACHE_EXPORT_PREFIXES.some(prefix => key.startsWith(prefix))) {
+            throw new Error(`Cache import contains an unsupported entry: ${key}`);
+        }
+        if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+            throw new Error(`Cache import entry ${key} must contain an object.`);
+        }
+    }
+    return payload;
 }
 
 // A stored response replayed: the same JSON, no cost, flagged as cached.
@@ -1641,6 +1765,7 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
 
     // Stage 4: aggregate.
     const agreed = mergePasses(passMaps[0], passMaps[1]);
+    const passComparison = comparePasses(passMaps[0], passMaps[1], agreed);
     const byAuthor = aggregateByAuthor(agreed, commentsById);
     const rows = orientRows(rankRows(computeRows(axes, byAuthor, agreed)));
     if (cacheWriteFailures > 0) {
@@ -1659,7 +1784,7 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
             authors: new Set(comments.map(comment => comment.author)).size,
             cachedCalls,
             cacheWriteFailures,
-            classifiedPairs: new Set([...passMaps[0].keys(), ...passMaps[1].keys()]).size,
+            ...passComparison,
             agreedStances: agreed.size,
         },
     };
@@ -1674,11 +1799,12 @@ if (typeof module !== 'undefined' && module.exports) {
         buildExtractMessages, buildConsolidateMessages, buildScoreMessages,
         parseExtractResponse, parseConsolidateResponse, parseScoreResponse,
         parseStanceKey, flipStance,
-        mergePasses, aggregateByAuthor, computeRows, orientRows, rankRows, proportionShares,
-        axisMetaText, formatDuration, formatElapsed, formatProgress, formatRunCost, formatRunSummary,
+        mergePasses, comparePasses, aggregateByAuthor, computeRows, orientRows, rankRows, proportionShares,
+        axisMetaText, formatDuration, formatElapsed, formatClockDuration, formatProgress, formatRunCost, formatRunSummary,
         runPool, callOpenRouter, makeOpenRouterCallChat, runPipeline, TruncationError, InvalidResponseError,
-        requestCacheKey, makeCachedCallChat, probeCache, formatCacheProbe, formatNextRun,
+        requestCacheKey, parseCacheExport, makeCachedCallChat, probeCache, formatCacheProbe, formatNextRun,
         makePkceVerifier, pkceChallenge, openRouterAuthUrl, exchangeOpenRouterCode,
+        runResultCacheKey, makeRunPageUrl, parseRunPageUrl,
     };
 }
 </script>
@@ -1737,8 +1863,10 @@ const cacheStore = makePrefixedStore(CONSTANTS.CACHE_KEY_PREFIX);
 // change every prompt and miss the result cache.
 const snapshotStore = makePrefixedStore(CONSTANTS.THREAD_KEY_PREFIX);
 
-// The OpenRouter key is held in this variable, gone on reload, unless "Remember in this browser" was
-// ticked when it was obtained, in which case it is in localStorage. Never both.
+// Completed runs keyed by every URL parameter, including the snapshot capture time.
+const resultStore = makePrefixedStore(CONSTANTS.RESULT_KEY_PREFIX);
+
+// A pasted OpenRouter key can be held here until reload. OAuth keys are remembered in localStorage.
 let memoryApiKey = null;
 
 // Where the key lives, shown after "OpenRouter key" while one is held.
@@ -1757,7 +1885,7 @@ function keyScopeText() {
     return rememberedApiKey() !== null ? KEY_SCOPE_REMEMBERED : KEY_SCOPE_MEMORY;
 }
 
-// Takes a newly obtained key into localStorage or into memory, as the remember choice says.
+// Takes a newly obtained key into localStorage or into memory.
 function holdApiKey(key, remember) {
     if (remember) {
         localStorage.setItem(CONSTANTS.STORAGE_KEY_OPENROUTER, key);
@@ -1795,6 +1923,9 @@ const elements = {
     run: document.getElementById('run'),
     cancel: document.getElementById('cancel'),
     storageInfo: document.getElementById('storage-info'),
+    exportCache: document.getElementById('export-cache'),
+    importCache: document.getElementById('import-cache'),
+    importCacheFile: document.getElementById('import-cache-file'),
     deleteCached: document.getElementById('delete-cached'),
     threadInfo: document.getElementById('thread-info'),
     threadTitle: document.getElementById('thread-title'),
@@ -1805,6 +1936,10 @@ const elements = {
 
 let activeController = null;
 let loadedThread = null;
+let loadedSnapshotAt = null;
+
+const APP_TITLE = 'HN Split - For and Against on Hacker News';
+const RESULT_CACHE_VERSION = 2;
 
 function setStatus(text, isError) {
     elements.status.textContent = text;
@@ -1854,6 +1989,25 @@ function keyAvailable() {
 function selectedRunConfig() {
     const { volumeKey, consolidationKey } = selectedModelKeys();
     return { ...buildStageConfig(volumeKey, consolidationKey), budgetUsd: maxCostInBox() };
+}
+
+function selectedRunUrlParameters() {
+    if (loadedThread === null || loadedSnapshotAt === null) {
+        return null;
+    }
+    const { volumeKey, consolidationKey } = selectedModelKeys();
+    return {
+        article: String(loadedThread.id),
+        snapshot: loadedSnapshotAt,
+        share: sharePercent(),
+        volume: volumeKey,
+        consolidation: consolidationKey,
+        budget: maxCostInBox(),
+    };
+}
+
+function showRunUrl(selection) {
+    history.pushState(null, '', makeRunPageUrl(location.href, selection));
 }
 
 function selectedCostRate() {
@@ -2010,14 +2164,82 @@ function setRunning() {
     elements.cancel.hidden = !isRunning;
     elements.loadThread.disabled = isRunning;
     elements.refreshThread.disabled = isRunning;
+    elements.exportCache.disabled = isRunning || cacheStore.count() + snapshotStore.count() + resultStore.count() === 0;
+    elements.importCache.disabled = isRunning;
+    elements.deleteCached.disabled = isRunning;
     refreshRunButton();
 }
 
 function refreshStorageInfo() {
     const cachedCalls = cacheStore.count();
     const storedThreads = snapshotStore.count();
-    elements.storageInfo.textContent = `Cached in this browser: ${cachedCalls} model calls, ${storedThreads} threads.`;
-    elements.deleteCached.hidden = cachedCalls === 0 && storedThreads === 0;
+    const storedResults = resultStore.count();
+    elements.storageInfo.textContent = `Cached in this browser: ${cachedCalls} model calls, ${storedThreads} threads, ${storedResults} completed results.`;
+    elements.exportCache.disabled = activeController !== null || cachedCalls + storedThreads + storedResults === 0;
+    elements.deleteCached.hidden = cachedCalls === 0 && storedThreads === 0 && storedResults === 0;
+}
+
+function cacheExportPayload() {
+    const entries = {};
+    for (let index = 0; index < localStorage.length; index += 1) {
+        const key = localStorage.key(index);
+        if (CACHE_EXPORT_PREFIXES.some(prefix => key.startsWith(prefix))) {
+            entries[key] = JSON.parse(localStorage.getItem(key));
+        }
+    }
+    return {
+        exportedAt: new Date().toISOString(),
+        origin: location.origin,
+        entries,
+    };
+}
+
+function downloadCacheExport() {
+    const payload = cacheExportPayload();
+    const timestamp = payload.exportedAt.replace(/[:.]/g, '-');
+    const url = URL.createObjectURL(new Blob([JSON.stringify(payload)], { type: 'application/json' }));
+    const link = makeElement('a');
+    link.href = url;
+    link.download = `hn-split-cache-${timestamp}.json`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function importCacheEntries(entries) {
+    const previous = new Map();
+    let overwritten = 0;
+    try {
+        for (const [key, value] of Object.entries(entries)) {
+            const oldValue = localStorage.getItem(key);
+            previous.set(key, oldValue);
+            if (oldValue !== null) {
+                overwritten += 1;
+            }
+            localStorage.setItem(key, JSON.stringify(value));
+        }
+    } catch (error) {
+        for (const [key, oldValue] of previous) {
+            if (oldValue === null) {
+                localStorage.removeItem(key);
+            }
+        }
+        for (const [key, oldValue] of previous) {
+            if (oldValue !== null) {
+                localStorage.setItem(key, oldValue);
+            }
+        }
+        throw new Error(`Cache import could not be stored: ${error.message}`);
+    }
+    return { imported: previous.size, overwritten };
+}
+
+async function importCacheFile(file) {
+    const payload = parseCacheExport(await file.text());
+    const counts = importCacheEntries(payload.entries);
+    flattenedThreads.clear();
+    invalidateResultCache();
+    await afterStoreChange();
+    setStatus(`Imported ${counts.imported} cache entries from ${file.name}; ${counts.overwritten} existing entries were replaced. The OpenRouter key was not changed.`);
 }
 
 // Cheap enough to run on every keystroke in the thread box: existence checks only.
@@ -2245,8 +2467,10 @@ function clearResults() {
     elements.warnings.hidden = true;
 }
 
-async function loadThreadFromPage(threadId) {
+async function loadThreadFromPage(threadId, { share, cachedResult, cachedComments, runSelection } = {}) {
     loadedThread = null;
+    loadedSnapshotAt = null;
+    document.title = APP_TITLE;
     clearResults();
     updateEstimate();
     try {
@@ -2261,23 +2485,41 @@ async function loadThreadFromPage(threadId) {
             setStatus('');
         }
         loadedThread = flattenedThreads.get(threadId) ?? flattenThread(snapshot.item);
+        loadedSnapshotAt = snapshot.fetchedAt;
         if (stored) {
             flattenedThreads.set(threadId, loadedThread);
         }
-        applyMaxCostToShare();
+        if (share === undefined) {
+            applyMaxCostToShare();
+        } else {
+            elements.share.value = share;
+        }
         elements.threadId.value = '';
         closeList();
         elements.threadTitle.textContent = loadedThread.title;
         elements.threadInfo.textContent = `${loadedThread.comments.length} comments, posted ${storyDate(loadedThread)}, id ${loadedThread.id}, fetched ${new Date(snapshot.fetchedAt).toLocaleString()}${stored ? '' : ', not stored'}`;
+        document.title = `${loadedThread.title} - HN Split`;
     } catch (error) {
         elements.threadTitle.textContent = '';
         elements.threadInfo.textContent = '';
         setStatus(`Error: ${error.message}`, true);
     }
-    // A load that turns out fully cached runs by itself: the result is free and instant.
     const probe = await afterStoreChange();
+    if (loadedThread === null) {
+        return;
+    }
+    if (cachedResult !== undefined) {
+        renderResults(cachedResult, cachedComments);
+        setStatus(`Loaded completed result for snapshot ${runSelection === undefined ? loadedSnapshotAt : runSelection.snapshot} from this browser.`);
+        return;
+    }
+    if (runSelection !== undefined && loadedSnapshotAt !== runSelection.snapshot) {
+        setStatus(`This URL names snapshot ${runSelection.snapshot}, but that snapshot and its completed result are not cached in this browser.`, true);
+        return;
+    }
+    // A load that turns out fully cached runs by itself: the result is free and instant.
     if (probe !== null && probe.complete && activeController === null) {
-        runFromPage();
+        runFromPage({ runSelection });
     }
 }
 
@@ -2299,29 +2541,87 @@ function renderProportionBar(row) {
 
 // The vote counts sit flanking the bar, one on each side, rather than inline with the statements; the
 // axis totals follow on the same line.
-function renderProportionRow(row) {
+function renderProportionRow(row, evidence) {
     const wrapper = makeElement('div', { className: 'proportion-row' });
     wrapper.appendChild(makeElement('span', { className: 'count side1', text: String(row.countA) }));
     wrapper.appendChild(renderProportionBar(row));
     wrapper.appendChild(makeElement('span', { className: 'count side2', text: String(row.countB) }));
-    wrapper.appendChild(makeElement('span', { className: 'meta', text: axisMetaText(row) }));
+    const meta = makeElement('span', { className: 'meta' });
+    const toggle = makeElement('button', { className: 'comments-toggle', text: `${row.comments} comments` });
+    toggle.type = 'button';
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.setAttribute('aria-controls', evidence.id);
+    toggle.addEventListener('click', () => {
+        evidence.hidden = !evidence.hidden;
+        toggle.setAttribute('aria-expanded', String(!evidence.hidden));
+    });
+    meta.appendChild(toggle);
+    meta.appendChild(document.createTextNode(`, ${row.authors} commenters${row.countM === 0 ? '' : `, ${row.countM} middle`}`));
+    wrapper.appendChild(meta);
     return wrapper;
 }
 
-function renderAxis(row) {
+function renderEvidenceGroup(sideClass, label, commentIds, commentsById) {
+    if (commentIds.length === 0) {
+        return null;
+    }
+    const group = makeElement('section', { className: `evidence-group ${sideClass}` });
+    group.appendChild(makeElement('h3', { text: `${label} (${commentIds.length})` }));
+    for (const commentId of commentIds) {
+        const comment = commentsById.get(commentId);
+        const article = makeElement('article', { className: 'evidence-comment' });
+        const header = makeElement('header');
+        const link = makeElement('a', { text: comment === undefined || !comment.author ? `comment ${commentId}` : `${comment.author} · comment ${commentId}` });
+        link.href = CONSTANTS.HN_ITEM_PAGE_URL + commentId;
+        link.target = '_blank';
+        link.rel = 'noopener';
+        header.appendChild(link);
+        article.appendChild(header);
+        article.appendChild(makeElement('p', { text: comment === undefined ? 'Comment text is unavailable in this cached result.' : comment.text }));
+        group.appendChild(article);
+    }
+    return group;
+}
+
+function renderAxisEvidence(row, commentsById) {
+    const evidence = makeElement('div', { className: 'evidence' });
+    evidence.id = `axis-comments-${row.axisId}`;
+    evidence.hidden = true;
+    const groups = [
+        renderEvidenceGroup('side1', 'Blue', row.commentIdsA || [], commentsById),
+        renderEvidenceGroup('mid', 'Middle', row.commentIdsM || [], commentsById),
+        renderEvidenceGroup('side2', 'Orange', row.commentIdsB || [], commentsById),
+    ].filter(group => group !== null);
+    evidence.replaceChildren(...groups);
+    return evidence;
+}
+
+function renderAxis(row, commentsById) {
     const block = makeElement('div', { className: 'axis' });
+    const evidence = renderAxisEvidence(row, commentsById);
     block.appendChild(renderStatement('side1', row.statementA));
-    block.appendChild(renderProportionRow(row));
+    block.appendChild(renderProportionRow(row, evidence));
     block.appendChild(renderStatement('side2', row.statementB));
+    block.appendChild(evidence);
     return block;
 }
 
-function renderResults(result) {
+function commentsReferencedByResult(result, comments) {
+    const ids = new Set(result.rows.flatMap(row => [
+        ...(row.commentIdsA || []),
+        ...(row.commentIdsM || []),
+        ...(row.commentIdsB || []),
+    ]));
+    return comments.filter(comment => ids.has(comment.id));
+}
+
+function renderResults(result, comments) {
+    const commentsById = indexCommentsById(comments);
     const warningList = elements.warnings.querySelector('ul');
     warningList.replaceChildren(...result.warnings.map(text => makeElement('li', { text })));
     elements.warnings.querySelector('summary').textContent = `${result.warnings.length} warnings`;
     elements.warnings.hidden = result.warnings.length === 0;
-    elements.results.replaceChildren(...result.rows.map(renderAxis));
+    elements.results.replaceChildren(...result.rows.map(row => renderAxis(row, commentsById)));
 }
 
 // PKCE sign-in needs an http(s) page with a stable URL as the callback and a secure context for
@@ -2334,11 +2634,9 @@ function pageCallbackUrl() {
     return location.origin + location.pathname;
 }
 
-// The remember choice rides along in sessionStorage with the verifier, since the page is left and re-entered.
 async function startOpenRouterSignIn() {
     const verifier = makePkceVerifier();
     sessionStorage.setItem(CONSTANTS.PKCE_VERIFIER_STORAGE_KEY, verifier);
-    sessionStorage.setItem(CONSTANTS.PKCE_REMEMBER_STORAGE_KEY, String(elements.rememberKey.checked));
     location.assign(openRouterAuthUrl(pageCallbackUrl(), await pkceChallenge(verifier)));
 }
 
@@ -2351,18 +2649,16 @@ async function finishOpenRouterSignIn() {
         return;
     }
     const verifier = sessionStorage.getItem(CONSTANTS.PKCE_VERIFIER_STORAGE_KEY);
-    const remember = sessionStorage.getItem(CONSTANTS.PKCE_REMEMBER_STORAGE_KEY) === 'true';
     sessionStorage.removeItem(CONSTANTS.PKCE_VERIFIER_STORAGE_KEY);
-    sessionStorage.removeItem(CONSTANTS.PKCE_REMEMBER_STORAGE_KEY);
     history.replaceState(null, '', pageCallbackUrl());
     if (verifier === null) {
         setStatus('OpenRouter sign-in returned a code, but this browser has no matching sign-in in progress. Start the sign-in again from this page.', true);
         return;
     }
     try {
-        holdApiKey(await exchangeOpenRouterCode({ code, verifier }), remember);
+        holdApiKey(await exchangeOpenRouterCode({ code, verifier }), true);
         updateEstimate();
-        setStatus(`Signed in with OpenRouter; the key is ${keyScopeText()}.`);
+        setStatus('Signed in with OpenRouter; the key is remembered in this browser.');
     } catch (error) {
         setStatus(`OpenRouter sign-in failed: ${error.message}`, true);
     }
@@ -2408,7 +2704,7 @@ function startElapsedCounter() {
 }
 
 // A run the latest probe reports as fully cached needs no key; any other run resolves one first.
-async function runFromPage() {
+async function runFromPage({ recordUrl = false, runSelection } = {}) {
     if (loadedThread === null) {
         setStatus('Load a thread first.', true);
         return;
@@ -2423,6 +2719,13 @@ async function runFromPage() {
     if (apiKey === null && !fullyCached) {
         return;
     }
+    const selection = recordUrl ? selectedRunUrlParameters() : runSelection;
+    if (recordUrl) {
+        showRunUrl(selection);
+    }
+    const estimate = estimateRunCost(thread.comments, selectedCostRate());
+    const { volumeKey, consolidationKey } = selectedModelKeys();
+    const expectedSeconds = estimateRunSeconds(estimate.chars, volumeKey, consolidationKey);
     let calledModel = true;
     activeController = new AbortController();
     const signal = activeController.signal;
@@ -2439,8 +2742,18 @@ async function runFromPage() {
         });
         counter.stop();
         calledModel = result.calls !== result.stats.cachedCalls;
-        renderResults(result);
-        setStatus(`Done in ${counter.elapsed()}, ${formatRunCost(result)}. ${formatRunSummary(result).join(' ')}`);
+        const referencedComments = commentsReferencedByResult(result, thread.comments);
+        if (selection !== undefined && selection !== null
+            && !resultStore.set(runResultCacheKey(selection), {
+                version: RESULT_CACHE_VERSION,
+                selection,
+                result,
+                comments: referencedComments,
+            })) {
+            result.warnings.push('Completed result could not be stored in this browser (storage full or result too large).');
+        }
+        renderResults(result, referencedComments);
+        setStatus(`Done in ${counter.elapsed()} (expected ${formatClockDuration(expectedSeconds)}), ${formatRunCost(result, estimate.usd)}. ${formatRunSummary(result).join(' ')}`);
     } catch (error) {
         counter.stop();
         setStatus(signal.aborted ? `Cancelled after ${counter.elapsed()}.` : `Error after ${counter.elapsed()}: ${error.message}`, !signal.aborted);
@@ -2455,10 +2768,19 @@ async function runFromPage() {
     }
 }
 
-elements.run.addEventListener('click', runFromPage);
+elements.run.addEventListener('click', () => runFromPage({ recordUrl: true }));
 elements.cancel.addEventListener('click', () => {
     if (activeController) {
         activeController.abort();
+    }
+});
+elements.exportCache.addEventListener('click', downloadCacheExport);
+elements.importCache.addEventListener('click', () => elements.importCacheFile.click());
+elements.importCacheFile.addEventListener('change', () => {
+    const [file] = elements.importCacheFile.files;
+    elements.importCacheFile.value = '';
+    if (file !== undefined) {
+        importCacheFile(file).catch(error => setStatus(`Cache import failed: ${error.message}`, true));
     }
 });
 elements.wipeKey.addEventListener('click', () => {
@@ -2469,12 +2791,14 @@ elements.wipeKey.addEventListener('click', () => {
 elements.deleteCached.addEventListener('click', () => {
     const removedCalls = cacheStore.count();
     const removedSnapshots = snapshotStore.count();
+    const removedResults = resultStore.count();
     cacheStore.clear();
     snapshotStore.clear();
+    resultStore.clear();
     flattenedThreads.clear();
     invalidateResultCache();
     afterStoreChange();
-    setStatus(`Deleted from this browser: ${removedCalls} cached model calls and ${removedSnapshots} threads. The OpenRouter key is kept.`);
+    setStatus(`Deleted from this browser: ${removedCalls} cached model calls, ${removedSnapshots} threads, and ${removedResults} completed results. The OpenRouter key is kept.`);
 });
 elements.loadThread.addEventListener('click', loadThreadFromBox);
 // The list opens on focus, click, or typing; arrows move the highlight, Enter picks it (or loads a typed
@@ -2526,6 +2850,15 @@ elements.refreshThread.addEventListener('click', () => {
     loadThreadFromPage(threadId);
 });
 elements.maxCost.value = DEFAULT_MAX_COST_USD;
+fillModelOptions(elements.volumeModel, VOLUME_MODELS, DEFAULT_VOLUME_KEY);
+fillModelOptions(elements.consolidationModel, CONSOLIDATION_MODELS, DEFAULT_CONSOLIDATION_KEY);
+const initialRunSelection = parseRunPageUrl(location.href);
+if (initialRunSelection !== null) {
+    elements.maxCost.value = initialRunSelection.budget;
+    elements.share.value = initialRunSelection.share;
+    elements.volumeModel.value = initialRunSelection.volume;
+    elements.consolidationModel.value = initialRunSelection.consolidation;
+}
 function refitShareAndEstimate() {
     elements.maxCost.value = maxCostInBox();
     applyMaxCostToShare();
@@ -2542,13 +2875,23 @@ elements.connectOpenRouter.addEventListener('click', () => {
 });
 finishOpenRouterSignIn();
 
-fillModelOptions(elements.volumeModel, VOLUME_MODELS, DEFAULT_VOLUME_KEY);
-fillModelOptions(elements.consolidationModel, CONSOLIDATION_MODELS, DEFAULT_CONSOLIDATION_KEY);
 refreshKeyState();
 updateEstimate();
 refreshThreadButtons();
 refreshStorageInfo();
 populateFrontPage();
+if (initialRunSelection !== null) {
+    const cachedRecord = resultStore.get(runResultCacheKey(initialRunSelection));
+    const options = { share: initialRunSelection.share, runSelection: initialRunSelection };
+    if (cachedRecord !== null
+        && cachedRecord.version === RESULT_CACHE_VERSION
+        && cachedRecord.result !== undefined
+        && Array.isArray(cachedRecord.comments)) {
+        options.cachedResult = cachedRecord.result;
+        options.cachedComments = cachedRecord.comments;
+    }
+    loadThreadFromPage(initialRunSelection.article, options);
+}
 </script>
 </body>
 </html>
