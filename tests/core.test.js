@@ -39,7 +39,7 @@ const TOY_THREAD = {
 };
 
 // Small batches so the toy thread exercises batching, splitting, and concurrency.
-const TOY_CONFIG = { extractBatchTokens: 200, scoreBatchComments: 5, concurrency: 2 };
+const TOY_CONFIG = { extractBatchChars: 800, scoreBatchComments: 5, concurrency: 2 };
 
 const TOY_AXES = [
     { id: 1, statementA: 'Portions are adequate for the price', statementB: 'Portions are too small for the price' },
@@ -102,36 +102,29 @@ test('flattenThread walks depth-first, skips deleted comments, keeps their child
 // Batching
 // ---------------------------------------------------------------------------
 
-function fakeComment(id, depth, tokenCount) {
-    return { id, author: 'u' + id, parentId: 0, depth, text: 'x'.repeat(tokenCount * core.CONSTANTS.CHARS_PER_TOKEN) };
+function fakeComment(id, depth, textChars) {
+    return { id, author: 'u' + id, parentId: 0, depth, text: 'x'.repeat(textChars) };
 }
 
-test('estimateTokens rounds characters up by CHARS_PER_TOKEN', () => {
-    const charsPerToken = core.CONSTANTS.CHARS_PER_TOKEN;
-    assert.equal(core.estimateTokens('x'.repeat(charsPerToken * 3)), 3);
-    assert.equal(core.estimateTokens('x'.repeat(charsPerToken * 3 + 1)), 4);
-    assert.equal(core.estimateTokens(''), 0);
-});
-
 test('makeExtractBatches keeps subtrees together, splits oversized subtrees, isolates oversized comments', () => {
-    const frame = core.CONSTANTS.COMMENT_FRAME_TOKENS;
-    const budget = 100;
-    // Each comment costs text tokens + frame. Text sizes are chosen so that:
-    //   S1: three comments of 32 tokens each -> 96 total, fits alone.
-    //   S2: two comments of 32 -> 64, does not fit with S1.
-    //   S3: five comments of 42 -> 210, oversized -> split 2, 2, 1.
-    //   S4: one comment of 32 -> joins the last S3 chunk (42 + 32 = 74).
-    //   S5: one comment of 162 -> alone, exceeds the budget by itself.
-    const textTokens32 = 32 - frame;
-    const textTokens42 = 42 - frame;
-    const textTokens162 = 162 - frame;
-    assert.ok(textTokens32 > 0, 'frame must be below 32 tokens for this fixture');
+    const frame = core.CONSTANTS.COMMENT_FRAME_CHARS;
+    const budget = 400;
+    // Each comment costs text characters + frame. Text sizes are chosen so that:
+    //   S1: three comments of 128 characters each -> 384 total, fits alone.
+    //   S2: two comments of 128 -> 256, does not fit with S1.
+    //   S3: five comments of 168 -> 840, oversized -> split 2, 2, 1.
+    //   S4: one comment of 128 -> joins the last S3 chunk (168 + 128 = 296).
+    //   S5: one comment of 648 -> alone, exceeds the budget by itself.
+    const textChars128 = 128 - frame;
+    const textChars168 = 168 - frame;
+    const textChars648 = 648 - frame;
+    assert.ok(textChars128 > 0, 'frame must be below 128 characters for this fixture');
     const comments = [
-        fakeComment(1, 0, textTokens32), fakeComment(2, 1, textTokens32), fakeComment(3, 2, textTokens32),
-        fakeComment(4, 0, textTokens32), fakeComment(5, 1, textTokens32),
-        fakeComment(6, 0, textTokens42), fakeComment(7, 1, textTokens42), fakeComment(8, 1, textTokens42), fakeComment(9, 2, textTokens42), fakeComment(10, 1, textTokens42),
-        fakeComment(11, 0, textTokens32),
-        fakeComment(12, 0, textTokens162),
+        fakeComment(1, 0, textChars128), fakeComment(2, 1, textChars128), fakeComment(3, 2, textChars128),
+        fakeComment(4, 0, textChars128), fakeComment(5, 1, textChars128),
+        fakeComment(6, 0, textChars168), fakeComment(7, 1, textChars168), fakeComment(8, 1, textChars168), fakeComment(9, 2, textChars168), fakeComment(10, 1, textChars168),
+        fakeComment(11, 0, textChars128),
+        fakeComment(12, 0, textChars648),
     ];
     const batches = core.makeExtractBatches(comments, budget);
     assert.deepEqual(batches.map(batch => batch.map(comment => comment.id)), [
@@ -397,16 +390,9 @@ test('computeRows produces per-commenter counts and the comment count for the to
     assert.equal(opening.comments, 1);
 });
 
-test('barCells splits a fixed number of cells by largest remainder so they always sum exactly', () => {
-    assert.deepEqual(core.barCells(9, 1, 14, 20), [7, 1, 12]);
-    assert.deepEqual(core.barCells(21, 19, 0, 20), [11, 9, 0], 'half-way ties go to the earlier side');
-    assert.deepEqual(core.barCells(0, 0, 0, 20), [0, 0, 0]);
-    assert.deepEqual(core.barCells(3, 0, 0, 20), [20, 0, 0]);
-});
-
-test('splitBar draws < for side 1, - for middle, > for side 2', () => {
-    assert.equal(core.splitBar({ countA: 9, countM: 1, countB: 14 }, 20), '<<<<<<<->>>>>>>>>>>>');
-    assert.equal(core.splitBar({ countA: 0, countM: 0, countB: 0 }, 20), ' '.repeat(20));
+test('axisMetaText names the agreed comments and commenters, and the middle count only when above zero', () => {
+    assert.equal(core.axisMetaText({ comments: 77, authors: 70, countM: 2 }), '77 comments, 70 commenters, 2 middle');
+    assert.equal(core.axisMetaText({ comments: 3, authors: 3, countM: 0 }), '3 comments, 3 commenters');
 });
 
 test('proportionShares splits the bar among side 1, middle, and side 2', () => {
@@ -763,20 +749,20 @@ test('runPipeline passes per-stage sampling and reasoning settings to the model 
 // Presets, comment share, cost estimate, front page
 // ---------------------------------------------------------------------------
 
-test('model choices exist per role with labels, config fragments, and per-token rates', () => {
+test('model choices exist per role with labels, config fragments, and per-character rates', () => {
     assert.equal(core.DEFAULT_VOLUME_KEY, 'lunaLow');
     assert.equal(core.DEFAULT_CONSOLIDATION_KEY, 'sonnet5');
     for (const [key, choice] of Object.entries(core.VOLUME_MODELS)) {
         assert.ok(choice.label.length > 0, key + ' has a label');
         assert.ok(choice.config.modelExtract && choice.config.modelScore, key + ' names the extraction and scoring model');
         assert.equal(choice.config.modelConsolidate, undefined, key + ' does not set the consolidation model');
-        assert.equal(typeof choice.costPerThousandTokensUsd, 'number');
+        assert.equal(typeof choice.usdPerMillionChars, 'number');
     }
     for (const [key, choice] of Object.entries(core.CONSOLIDATION_MODELS)) {
         assert.ok(choice.label.length > 0, key + ' has a label');
         assert.ok(choice.config.modelConsolidate, key + ' names the consolidation model');
         assert.equal(choice.config.modelScore, undefined, key + ' does not set the scoring model');
-        assert.equal(typeof choice.costPerThousandTokensUsd, 'number');
+        assert.equal(typeof choice.usdPerMillionChars, 'number');
     }
     assert.equal(core.CONSOLIDATION_MODELS.glm53.config.maxTokensConsolidate, 128000);
 });
@@ -795,32 +781,32 @@ test('buildStageConfig merges one volume choice with one consolidation choice', 
 
 test('option labels are built from the entry constants and quality record', () => {
     const haiku = core.VOLUME_MODELS.haiku;
-    const usd = (haiku.costPerThousandTokensUsd * core.TOKENS_PER_COMMENT).toFixed(2);
-    assert.equal(haiku.label, `Claude Haiku 4.5: $${usd} and ${core.formatDuration(haiku.secondsPerThousandTokens * core.TOKENS_PER_COMMENT)} per 1000 comments. 0.5 stances per comment; 3 to 4 two-sided rows per 100 comments; 59% of stances held under blind review, 12% wrong; clean output.`);
+    const usd = (haiku.usdPerMillionChars * core.CHARS_PER_COMMENT / 1000).toFixed(2);
+    assert.equal(haiku.label, `Claude Haiku 4.5: $${usd} and ${core.formatDuration(haiku.secondsPerMillionChars * core.CHARS_PER_COMMENT / 1000)} per 1000 comments. 0.5 stances per comment; 3 to 4 two-sided rows per 100 comments; 59% of stances held under blind review, 12% wrong; clean output.`);
     const sonnet = core.CONSOLIDATION_MODELS.sonnet5;
-    assert.equal(sonnet.label, `Claude Sonnet 5: $${(sonnet.costPerThousandTokensUsd * core.TOKENS_PER_COMMENT).toFixed(2)} and 3 minutes per 1000 comments. 61% to 74% of axes two-sided across three runs.`);
+    assert.equal(sonnet.label, `Claude Sonnet 5: $${(sonnet.usdPerMillionChars * core.CHARS_PER_COMMENT / 1000).toFixed(2)} and 3 minutes per 1000 comments. 61% to 74% of axes two-sided across three runs.`);
     assert.equal(core.CONSOLIDATION_MODELS.lunaMax.label.endsWith('. 56% of axes two-sided.'), true, 'no note, no runs');
 });
 
 test('combinedRate scales the consolidation rate by the volume model\'s candidate factor', () => {
     const opus = core.VOLUME_MODELS.opus5;
     const sonnet = core.CONSOLIDATION_MODELS.sonnet5;
-    assertClose(core.combinedRate('opus5', 'sonnet5', 'costPerThousandTokensUsd'), opus.costPerThousandTokensUsd + sonnet.costPerThousandTokensUsd * opus.candidateFactor, 'opus factor applied');
+    assertClose(core.combinedRate('opus5', 'sonnet5', 'usdPerMillionChars'), opus.usdPerMillionChars + sonnet.usdPerMillionChars * opus.candidateFactor, 'opus factor applied');
     assert.equal(core.VOLUME_MODELS.haiku.candidateFactor, 1, 'Haiku is the reference');
     for (const choice of Object.values(core.VOLUME_MODELS)) {
         assert.ok(choice.candidateFactor > 0);
     }
 });
 
-test('combinedRate sums the per-token rates and estimateRunSeconds never goes below the stage latency floor', () => {
-    const expected = core.VOLUME_MODELS.haiku.costPerThousandTokensUsd + core.CONSOLIDATION_MODELS.sonnet5.costPerThousandTokensUsd;
-    assertClose(core.combinedRate('haiku', 'sonnet5', 'costPerThousandTokensUsd'), expected, 'combined rate');
-    const seconds = core.estimateRunSeconds(104000, 'haiku', 'sonnet5');
-    assertClose(seconds, (core.VOLUME_MODELS.haiku.secondsPerThousandTokens + core.CONSOLIDATION_MODELS.sonnet5.secondsPerThousandTokens) * 104, 'seconds for a large thread');
+test('combinedRate sums the per-character rates and estimateRunSeconds never goes below the stage latency floor', () => {
+    const expected = core.VOLUME_MODELS.haiku.usdPerMillionChars + core.CONSOLIDATION_MODELS.sonnet5.usdPerMillionChars;
+    assertClose(core.combinedRate('haiku', 'sonnet5', 'usdPerMillionChars'), expected, 'combined rate');
+    const seconds = core.estimateRunSeconds(416000, 'haiku', 'sonnet5');
+    assertClose(seconds, (core.VOLUME_MODELS.haiku.secondsPerMillionChars + core.CONSOLIDATION_MODELS.sonnet5.secondsPerMillionChars) * 0.416, 'seconds for a large thread');
     // Three stages in sequence: extraction and scoring each take at least one volume call, consolidation one consolidation call.
     const floor = 2 * core.VOLUME_MODELS.haiku.minimumSeconds + core.CONSOLIDATION_MODELS.sonnet5.minimumSeconds;
     assert.equal(core.estimateRunSeconds(0, 'haiku', 'sonnet5'), floor);
-    assert.equal(core.estimateRunSeconds(2000, 'haiku', 'sonnet5'), floor, 'a small thread is bounded by latency');
+    assert.equal(core.estimateRunSeconds(8000, 'haiku', 'sonnet5'), floor, 'a small thread is bounded by latency');
     assert.ok(floor >= 20 && floor <= 40, 'the Claude pair took 28 seconds on the 38-comment smoke test');
     for (const choice of Object.values(core.VOLUME_MODELS).concat(Object.values(core.CONSOLIDATION_MODELS))) {
         assert.ok(choice.minimumSeconds > 0);
@@ -829,7 +815,7 @@ test('combinedRate sums the per-token rates and estimateRunSeconds never goes be
 
 test('largestShareWithinBudget returns the biggest share whose forecast fits, and 0 when nothing fits', () => {
     const comments = Array.from({ length: 10 }, (_, index) => fakeComment(index + 1, 0, 1));
-    const rate = 1000 / (1 + core.CONSTANTS.COMMENT_FRAME_TOKENS); // $1 per comment: one text token plus the frame
+    const rate = 1000000 / (1 + core.CONSTANTS.COMMENT_FRAME_CHARS); // $1 per comment: one character of text plus the frame
     assert.equal(core.largestShareWithinBudget(comments, rate, 10), 100);
     assert.equal(core.largestShareWithinBudget(comments, rate, 4.5), 40);
     assert.equal(core.largestShareWithinBudget(comments, rate, 0.5), 0);
@@ -855,12 +841,12 @@ test('selectCommentShare keeps the first share of the comments in thread order, 
     assert.throws(() => core.selectCommentShare(comments, 101), /percent/);
 });
 
-test('estimateRunCost applies a per-thousand-token rate to the selected comments', () => {
+test('estimateRunCost applies a per-million-character rate to the selected comments', () => {
     const comments = [fakeComment(1, 0, 1000), fakeComment(2, 0, 1000)];
-    const estimate = core.estimateRunCost(comments, 0.01);
-    assert.equal(estimate.tokens, 2000 + 2 * core.CONSTANTS.COMMENT_FRAME_TOKENS);
-    assertClose(estimate.usd, 0.01 * (estimate.tokens / 1000), 'estimate');
-    assert.equal(core.estimateRunCost([], 0.01).usd, 0, 'nothing selected costs nothing');
+    const estimate = core.estimateRunCost(comments, 10);
+    assert.equal(estimate.chars, 2000 + 2 * core.CONSTANTS.COMMENT_FRAME_CHARS);
+    assertClose(estimate.usd, 10 * (estimate.chars / 1000000), 'estimate');
+    assert.equal(core.estimateRunCost([], 10).usd, 0, 'nothing selected costs nothing');
 });
 
 test('storySearchUrl builds an Algolia story search for the encoded query', () => {
@@ -1057,7 +1043,7 @@ test('probeCache on an empty store reports only the extraction stage, with no hi
     const { api } = mapStore();
     const thread = core.flattenThread(TOY_THREAD);
     const probe = await core.probeCache({ thread, store: api, config: TOY_CONFIG });
-    const batches = core.makeExtractBatches(thread.comments, TOY_CONFIG.extractBatchTokens).length;
+    const batches = core.makeExtractBatches(thread.comments, TOY_CONFIG.extractBatchChars).length;
     assert.deepEqual(probe, { stages: [{ stage: 'extract', hits: 0, total: batches }], complete: false });
 });
 

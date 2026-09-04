@@ -103,13 +103,12 @@ async function loadThreadItem(threadId, threadFile) {
     return item;
 }
 
-// Each axis prints as three lines: statement 1, statement 2, then the split bar and counts.
+// Each axis prints as three lines: statement 1, statement 2, then the counts.
 function formatRow(row) {
-    const metrics = `mid ${row.countM}  authors ${row.authors}  comments ${row.comments}`;
     return [
         `#${String(row.rank).padStart(RANK_DIGITS)} ${row.statementA}`,
         `${STATEMENT_INDENT}${row.statementB}`,
-        `${STATEMENT_INDENT}${core.formatSplit(row)}  ${metrics}`,
+        `${STATEMENT_INDENT}${row.countA} on statement 1, ${row.countB} on statement 2; ${core.axisMetaText(row)}`,
     ].join('\n');
 }
 
