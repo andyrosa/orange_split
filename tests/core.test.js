@@ -345,6 +345,15 @@ test('mergePasses keeps only the stances both passes agree on', () => {
     assert.equal(agreed.size, 13);
 });
 
+test('collectUnverifiedComments separates conflicts and one-pass classifications by axis', () => {
+    const byAxis = core.collectUnverifiedComments(TOY_PASS1, TOY_PASS2);
+    assert.deepEqual(byAxis.get(2), [
+        { commentId: 7, pass1: 'M', pass2: 'B' },
+        { commentId: 12, pass1: 'B', pass2: null },
+    ]);
+    assert.equal(byAxis.has(1), false);
+});
+
 test('aggregateByAuthor takes the majority stance per author and M on ties', () => {
     const commentsById = new Map([
         [1, { id: 1, author: 'p' }], [2, { id: 2, author: 'p' }],
@@ -382,6 +391,7 @@ test('computeRows produces per-commenter counts and the comment count for the to
         commentIdsA: [2, 3],
         commentIdsB: [1],
         commentIdsM: [],
+        unverifiedComments: [],
     });
     const service = byId.get(5);
     assert.equal(service.countA, 2);
@@ -415,13 +425,14 @@ test('proportionShares splits the bar among side 1, middle, and side 2', () => {
 
 test('orientRows puts the larger side and its evidence on statement 1, keeping ties as they are', () => {
     const rows = [
-        { axisId: 1, statementA: 'p', statementB: 'q', countA: 2, countB: 5, countM: 1, commentIdsA: [1], commentIdsB: [2, 3] },
+        { axisId: 1, statementA: 'p', statementB: 'q', countA: 2, countB: 5, countM: 1, commentIdsA: [1], commentIdsB: [2, 3], unverifiedComments: [{ commentId: 4, pass1: 'A', pass2: null }] },
         { axisId: 2, statementA: 'r', statementB: 's', countA: 3, countB: 3, countM: 0 },
         { axisId: 3, statementA: 't', statementB: 'u', countA: 4, countB: 0, countM: 0 },
     ];
     const oriented = core.orientRows(rows);
     assert.deepEqual(oriented.map(row => [row.statementA, row.statementB, row.countA, row.countB]), [['q', 'p', 5, 2], ['r', 's', 3, 3], ['t', 'u', 4, 0]]);
     assert.deepEqual([oriented[0].commentIdsA, oriented[0].commentIdsB], [[2, 3], [1]]);
+    assert.deepEqual(oriented[0].unverifiedComments, [{ commentId: 4, pass1: 'B', pass2: null }]);
     assert.equal(rows[0].statementA, 'p');
 });
 
@@ -677,6 +688,15 @@ test('formatRunCost and formatRunSummary describe a run in plain words', () => {
     ]);
 });
 
+test('formatRunSummary reports unverified axes separately from verified rows', () => {
+    const result = {
+        rows: [1, 2],
+        unverifiedAxes: [{ id: 3 }],
+        stats: { comments: 32, authors: 20, agreedStances: 10, classifiedPairs: 17 },
+    };
+    assert.equal(core.formatRunSummary(result)[0], '2 verified rows and 1 unverified axis from 32 comments by 20 commenters.');
+});
+
 test('runPipeline distinguishes scoring conflicts from single-pass classifications', async () => {
     const thread = core.flattenThread(TOY_THREAD);
     const result = await core.runPipeline({ thread, callChat: makeFakeCallChat([]), onProgress: () => {}, config: TOY_CONFIG });
@@ -685,6 +705,7 @@ test('runPipeline distinguishes scoring conflicts from single-pass classificatio
     assert.equal(result.stats.conflictingStances, 1);
     assert.equal(result.stats.singlePassStances, 1);
     assert.equal(result.stats.agreedStances, 13);
+    assert.deepEqual(result.unverifiedAxes, []);
 });
 
 test('runPipeline reports calls in flight, never more than the concurrency', async () => {
@@ -803,8 +824,44 @@ test('option labels are built from the entry constants and quality record', () =
     const usd = (haiku.usdPerMillionChars * core.CHARS_PER_COMMENT / 1000).toFixed(2);
     assert.equal(haiku.label, `Claude Haiku 4.5: $${usd} and ${core.formatDuration(haiku.secondsPerMillionChars * core.CHARS_PER_COMMENT / 1000)} per 1000 comments. 0.5 stances per comment; 3 to 4 two-sided rows per 100 comments; 59% of stances held under blind review, 12% wrong; clean output.`);
     const sonnet = core.CONSOLIDATION_MODELS.sonnet5;
-    assert.equal(sonnet.label, `Claude Sonnet 5: $${(sonnet.usdPerMillionChars * core.CHARS_PER_COMMENT / 1000).toFixed(2)} and 3 minutes per 1000 comments. 61% to 74% of axes two-sided across three runs.`);
+    assert.equal(sonnet.label, `Claude Sonnet 5: $${(sonnet.usdPerMillionChars * core.CHARS_PER_COMMENT / 1000).toFixed(2)} and 3 minutes per 1000 comments. 61% to 74% of axes two-sided across 3 runs.`);
     assert.equal(core.CONSOLIDATION_MODELS.lunaMax.label.endsWith('. 56% of axes two-sided.'), true, 'no note, no runs');
+});
+
+test('extraction model metrics have clear columns and measured values', () => {
+    assert.deepEqual(core.VOLUME_METRIC_COLUMNS.map(([, label]) => label), [
+        'Model', 'Reasoning effort', 'Estimated cost / 1k comments', 'Estimated time / 1k comments',
+        'Stances found / comment', 'Two-sided rows / 100 comments',
+        'Stances held in blind review', 'Stances wrong in blind review',
+    ]);
+    assert.deepEqual(core.volumeMetrics(core.VOLUME_MODELS.lunaLow), {
+        model: 'GPT-5.6 Luna',
+        reasoning: 'low',
+        cost: '$0.26',
+        time: '2 minutes',
+        stances: '0.5',
+        rows: '6',
+        consistency: '80%',
+        wrong: '6%',
+    });
+    assert.equal(core.VOLUME_MODELS.opus5.effort, 'adaptive');
+});
+
+test('consolidation model metrics use role-specific columns', () => {
+    assert.deepEqual(core.CONSOLIDATION_METRIC_COLUMNS.map(([, label]) => label), [
+        'Model', 'Reasoning effort', 'Estimated cost / 1k comments', 'Estimated time / 1k comments',
+        'Axes with both sides', 'Measured across', 'Notes',
+    ]);
+    assert.deepEqual(core.consolidationMetrics(core.CONSOLIDATION_MODELS.sonnet5), {
+        model: 'Claude Sonnet 5',
+        reasoning: 'adaptive',
+        cost: '$0.23',
+        time: '3 minutes',
+        twoSided: '61% to 74%',
+        measurement: '3 runs',
+        notes: '',
+    });
+    assert.equal(core.CONSOLIDATION_MODELS.glm53.effort, 'high');
 });
 
 test('combinedRate scales the consolidation rate by the volume model\'s candidate factor', () => {
@@ -890,15 +947,21 @@ test('parseFrontPage maps Algolia hits to id, title, comment count and date, ski
 });
 
 test('storyLabel shows title, comment count, posting date and id; sortStoriesNewestFirst orders by date descending', () => {
-    const older = { id: 1, title: 'Older', numComments: 5, createdAt: '2026-08-30T10:00:00.000Z' };
-    const newer = { id: 2, title: 'Newer', numComments: 7, createdAt: '2026-09-02T09:00:00.000Z' };
+    const older = { id: 1, title: 'Older', numComments: 5, createdAt: '2026-08-30T10:00:00' };
+    const newer = { id: 2, title: 'Newer', numComments: 7, createdAt: '2026-09-02T09:05:00' };
     const undated = { id: 3, title: 'Undated', numComments: 0, createdAt: null };
-    assert.equal(core.storyLabel(newer), 'Newer (7 comments, 2026-09-02, 2)');
-    assert.equal(core.storyDetails(newer), '(7 comments, 2026-09-02, 2)');
-    assert.equal(core.storyDate(newer), '2026-09-02');
+    assert.equal(core.storyLabel(newer), 'Newer (7 comments, 2026-09-02 09:05 AM, 2)');
+    assert.equal(core.storyDetails(newer), '(7 comments, 2026-09-02 09:05 AM, 2)');
+    assert.equal(core.storyDate(newer), '2026-09-02 09:05 AM');
     assert.equal(core.storyDate(undated), 'unknown date');
     assert.equal(core.storyLabel(undated), 'Undated (0 comments, unknown date, 3)');
     assert.deepEqual(core.sortStoriesNewestFirst([older, undated, newer]).map(story => story.id), [2, 1, 3]);
+});
+
+test('formatLocalDateTime uses a zero-padded local 12-hour clock without seconds', () => {
+    assert.equal(core.formatLocalDateTime('2026-09-02T00:05:59'), '2026-09-02 12:05 AM');
+    assert.equal(core.formatLocalDateTime('2026-09-02T13:07:59'), '2026-09-02 01:07 PM');
+    assert.equal(core.formatLocalDateTime('not a date'), 'unknown date');
 });
 
 // ---------------------------------------------------------------------------

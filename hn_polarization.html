@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-lvnsYm5vQvnTQtYbhQWoeFkFTwvHUvxFAZBlUuAWSBY=' 'sha256-gdj2MvWcVxfZEeYKScpMrvn+R5Gp9rCDf0YdbaOodRw='; style-src 'sha256-vgvNBHFfAOfiG7aHY18+3zq34nFVciGzoazr5UMnL2g='; connect-src https://openrouter.ai https://hn.algolia.com; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-OhZVDVJPjfK/Tgf7O6/p34fzzIvzCTCtrR0lYPUGgr0=' 'sha256-vtE0TxrLYFMzK4BCmJiWABp3ceP1TmY+Z5ovT5MFvFA='; style-src 'sha256-WbU2DoxuifT5cyifDwEbDGJP+JoELzf6v1ddfnwwiwo='; connect-src https://openrouter.ai https://hn.algolia.com; img-src data:; base-uri 'none'; form-action 'none'">
 <title>HN Split - For and Against on Hacker News</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EHN:s%3C/text%3E%3C/svg%3E">
 <style>
@@ -21,7 +21,25 @@ input[type="number"] { width: 5em; }
 #story-list li.active { background: #cde; }
 #story-list li.cached { font-weight: bold; }
 input[type="range"] { width: 8rem; vertical-align: middle; }
-select.model { display: block; width: 100%; max-width: 70rem; margin-top: 0.25rem; }
+select.model { display: block; width: 100%; max-width: 86rem; margin-top: 0.25rem; }
+.model-choice { margin: 1em 0; }
+.model-picker { position: relative; width: 100%; max-width: 86rem; margin-top: 0.3rem; }
+.model-grid { display: grid; align-items: stretch; }
+.volume-grid { grid-template-columns: minmax(11rem, 2fr) minmax(6rem, 0.75fr) minmax(7rem, 0.9fr) minmax(7rem, 0.9fr) minmax(6rem, 0.8fr) minmax(8rem, 1fr) minmax(8rem, 1fr) minmax(7rem, 0.9fr); }
+.consolidation-grid { grid-template-columns: minmax(11rem, 1.6fr) minmax(6rem, 0.7fr) minmax(8rem, 0.9fr) minmax(8rem, 0.9fr) minmax(8rem, 0.9fr) minmax(6rem, 0.7fr) minmax(13rem, 1.8fr); }
+.model-grid-header { padding: 0 2.2rem 0.3rem 0.75rem; color: #555; font-size: 11px; line-height: 1.15; }
+.model-cell { display: flex; align-items: center; min-width: 0; padding: 0 0.55rem; }
+.model-cell:first-child { padding-left: 0; }
+.model-cell + .model-cell { border-left: 1px solid #ddd; }
+.model-grid .metric { text-align: right; font-variant-numeric: tabular-nums; }
+.model-grid .metric { justify-content: flex-end; }
+.model-trigger { position: relative; width: 100%; margin: 0; padding: 0.5rem 2.2rem 0.5rem 0.75rem; border: 1px solid #777; border-radius: 3px; background: #fff; color: #111; text-align: left; }
+.model-trigger::after { content: "v"; position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); }
+.model-trigger:focus { outline: 2px solid #2b6cb0; outline-offset: 1px; }
+.model-options { position: absolute; z-index: 3; top: 100%; left: 0; right: 0; max-height: 24rem; overflow-y: auto; border: 1px solid #777; border-top: 0; background: #fff; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); }
+.model-option { width: 100%; margin: 0; padding: 0.55rem 2.2rem 0.55rem 0.75rem; border: 0; border-top: 1px solid #eee; border-radius: 0; background: #fff; color: #111; text-align: left; }
+.model-option:hover, .model-option:focus { background: #e8f2fb; outline: none; }
+.model-option[aria-selected="true"] { background: #d8eaf8; font-weight: 600; }
 button { margin-right: 0.5rem; }
 #status { margin: 0.5rem 0; white-space: pre-wrap; }
 #status.error { color: #b00020; }
@@ -34,6 +52,7 @@ button { margin-right: 0.5rem; }
 .axis .count { font-size: 11px; color: #666; font-variant-numeric: tabular-nums; }
 .axis .count.side1 { margin-right: 0.4rem; }
 .axis .count.side2 { margin-left: 0.4rem; }
+.axis .middle-count { margin-left: 0.3rem; }
 .axis .proportion { display: flex; height: 6px; width: 24rem; background: #eee; }
 .axis .proportion span { display: block; height: 100%; flex: var(--share); }
 .axis .proportion .side1 { background: #2b6cb0; }
@@ -47,10 +66,17 @@ button { margin-right: 0.5rem; }
 .axis .evidence-group.side1 h3 { color: #2b6cb0; }
 .axis .evidence-group.mid h3 { color: #666; }
 .axis .evidence-group.side2 h3 { color: #c05621; }
+.axis .evidence-group.unverified h3 { color: #b00020; }
 .axis .evidence-comment { margin: 0.5rem 0; max-width: 70rem; }
 .axis .evidence-comment header { font-size: 11px; color: #666; }
 .axis .evidence-comment p { font-size: 13px; line-height: 1.35; margin: 0.15rem 0; white-space: pre-wrap; }
 #warnings ul { margin: 0; padding-left: 1.5rem; }
+#unverified-axes { margin: 1rem 0; color: #666; }
+#unverified-axes > p { font-size: 13px; margin: 0.5rem 0; }
+.unverified-axis { max-width: 70rem; margin: 0.75rem 0; padding-left: 0.75rem; border-left: 3px solid #b00020; }
+.unverified-axis p { margin: 0.15rem 0; }
+.unverified-axis .label { font-size: 11px; color: #b00020; }
+.unverified-axis ul { margin: 0.3rem 0; padding-left: 1.5rem; font-size: 12px; }
 </style>
 </head>
 <body>
@@ -71,14 +97,24 @@ button { margin-right: 0.5rem; }
 <span id="thread-info"></span>
 <button id="refresh-thread" type="button" hidden>Refetch</button>
 </p>
-<p>
-<label for="volume-model">Extraction and scoring model</label>
-<select id="volume-model" class="model"></select>
-</p>
-<p>
-<label for="consolidation-model">Consolidation model</label>
-<select id="consolidation-model" class="model"></select>
-</p>
+<div class="model-choice">
+<label for="volume-model-button">Extraction and scoring model</label>
+<div id="volume-model-picker" class="model-picker">
+<div id="volume-model-header" class="model-grid volume-grid model-grid-header" aria-hidden="true"></div>
+<button id="volume-model-button" class="model-grid volume-grid model-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="volume-model-options"></button>
+<div id="volume-model-options" class="model-options" role="listbox" aria-labelledby="volume-model-button" hidden></div>
+<select id="volume-model" hidden aria-hidden="true" tabindex="-1"></select>
+</div>
+</div>
+<div class="model-choice">
+<label for="consolidation-model-button">Consolidation model</label>
+<div id="consolidation-model-picker" class="model-picker">
+<div id="consolidation-model-header" class="model-grid consolidation-grid model-grid-header" aria-hidden="true"></div>
+<button id="consolidation-model-button" class="model-grid consolidation-grid model-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="consolidation-model-options"></button>
+<div id="consolidation-model-options" class="model-options" role="listbox" aria-labelledby="consolidation-model-button" hidden></div>
+<select id="consolidation-model" hidden aria-hidden="true" tabindex="-1"></select>
+</div>
+</div>
 <p id="share-row" hidden>
 <label for="max-cost">Max cost $</label> <input id="max-cost" type="number" min="0" step="1">
 <label for="share">% of top comments to analyze</label> <input id="share" type="range" min="0" max="100" value="100">
@@ -98,6 +134,11 @@ button { margin-right: 0.5rem; }
 <div id="status"></div>
 <details id="warnings" hidden><summary></summary><ul></ul></details>
 <div id="results"></div>
+<details id="unverified-axes" hidden>
+<summary></summary>
+<p>Consolidation proposed these axes, but no comment stance matched between both scoring passes. They are diagnostic output, not counted results.</p>
+<div></div>
+</details>
 
 <script id="core">
 // Core pipeline: no DOM access. Shared by the page script and by Node (tests, scripts/run_node.js).
@@ -181,6 +222,7 @@ const consolidationEntry = entry => optionEntry('consolidation', consolidationLa
 const VOLUME_MODELS = Object.freeze({
     haiku: volumeEntry({
         name: 'Claude Haiku 4.5',
+        effort: 'none',
         quality: { stancesPerComment: [0.5], twoSidedPer100Comments: [3, 4], reviewHeldPercent: 59, reviewWrongPercent: 12, note: 'clean output' },
         model: 'anthropic/claude-haiku-4.5', sampling: SAMPLING_TEMPERATURE, reasoning: null,
         maxTokens: { extract: 16000, score: 8000 },
@@ -191,6 +233,7 @@ const VOLUME_MODELS = Object.freeze({
     }),
     glmFlash: volumeEntry({
         name: 'GLM 5.3 Flash',
+        effort: 'low',
         quality: { stancesPerComment: [0.5, 0.6], twoSidedPer100Comments: [3.5, 4], note: 'the most coverage; some nonstandard output shapes, which the page accepts' },
         model: 'z-ai/glm-5.3-flash', sampling: SAMPLING_TEMPERATURE_AND_SEED, reasoning: { effort: 'low' },
         maxTokens: { extract: 64000, score: 32000 },
@@ -201,6 +244,7 @@ const VOLUME_MODELS = Object.freeze({
     }),
     geminiFlash: volumeEntry({
         name: 'Gemini 3.8 Flash',
+        effort: 'none',
         quality: { stancesPerComment: [0.3], twoSidedPer100Comments: [3], note: 'the least coverage; the most stable ranking between runs' },
         model: 'google/gemini-3.8-flash', sampling: SAMPLING_TEMPERATURE_AND_SEED, reasoning: null,
         maxTokens: { extract: 16000, score: 16000 },
@@ -211,6 +255,7 @@ const VOLUME_MODELS = Object.freeze({
     }),
     opus5: volumeEntry({
         name: 'Claude Opus 5',
+        effort: 'adaptive',
         quality: { stancesPerComment: [0.7], twoSidedPer100Comments: [13], reviewHeldPercent: 74, reviewWrongPercent: 0 },
         model: 'anthropic/claude-opus-5', sampling: null, reasoning: null,
         maxTokens: { extract: 16000, score: 8000 },
@@ -220,7 +265,8 @@ const VOLUME_MODELS = Object.freeze({
         candidateFactor: 2.1, // 134 candidates against 64
     }),
     lunaLow: volumeEntry({
-        name: 'GPT-5.6 Luna, reasoning low',
+        name: 'GPT-5.6 Luna',
+        effort: 'low',
         quality: { stancesPerComment: [0.5], twoSidedPer100Comments: [6], reviewHeldPercent: 80, reviewWrongPercent: 6 },
         model: 'openai/gpt-5.6-luna', sampling: SAMPLING_SEED_ONLY, reasoning: { effort: 'low' },
         maxTokens: { extract: 32000, score: 16000 },
@@ -234,7 +280,8 @@ const VOLUME_MODELS = Object.freeze({
 const CONSOLIDATION_MODELS = Object.freeze({
     sonnet5: consolidationEntry({
         name: 'Claude Sonnet 5',
-        quality: { twoSidedPercent: [61, 74], runs: 'three runs' },
+        effort: 'adaptive',
+        quality: { twoSidedPercent: [61, 74], runs: '3 runs' },
         model: 'anthropic/claude-sonnet-5', sampling: null, reasoning: null, maxTokens: { consolidate: CONSOLIDATION_MAX_TOKENS },
         usdPerMillionChars: 0.725,
         secondsPerMillionChars: 600,
@@ -242,7 +289,8 @@ const CONSOLIDATION_MODELS = Object.freeze({
     }),
     glm53: consolidationEntry({
         name: 'GLM 5.3',
-        quality: { twoSidedPercent: [79, 88], runs: 'two runs' },
+        effort: 'high',
+        quality: { twoSidedPercent: [79, 88], runs: '2 runs' },
         model: 'z-ai/glm-5.3', sampling: SAMPLING_TEMPERATURE_AND_SEED, reasoning: { effort: 'high' }, maxTokens: { consolidate: CONSOLIDATION_MAX_TOKENS },
         usdPerMillionChars: 0.45,
         secondsPerMillionChars: 1150,
@@ -250,6 +298,7 @@ const CONSOLIDATION_MODELS = Object.freeze({
     }),
     geminiFlash: consolidationEntry({
         name: 'Gemini 3.8 Flash',
+        effort: 'none',
         quality: { twoSidedPercent: [93], note: 'measured with the same model scoring' },
         model: 'google/gemini-3.8-flash', sampling: SAMPLING_TEMPERATURE_AND_SEED, reasoning: null, maxTokens: { consolidate: 65536 },
         usdPerMillionChars: 0.075,
@@ -258,6 +307,7 @@ const CONSOLIDATION_MODELS = Object.freeze({
     }),
     opus5: consolidationEntry({
         name: 'Claude Opus 5',
+        effort: 'adaptive',
         quality: { twoSidedPercent: [58], note: 'fine-grained axes' },
         model: 'anthropic/claude-opus-5', sampling: null, reasoning: null, maxTokens: { consolidate: CONSOLIDATION_MAX_TOKENS },
         usdPerMillionChars: 0.825,
@@ -265,7 +315,8 @@ const CONSOLIDATION_MODELS = Object.freeze({
         minimumSeconds: 10,
     }),
     solLow: consolidationEntry({
-        name: 'GPT-5.6 Sol, reasoning low',
+        name: 'GPT-5.6 Sol',
+        effort: 'low',
         quality: { twoSidedPercent: [38], note: '55% one-arm' },
         model: 'openai/gpt-5.6-sol', sampling: SAMPLING_SEED_ONLY, reasoning: { effort: 'low' }, maxTokens: { consolidate: CONSOLIDATION_MAX_TOKENS },
         usdPerMillionChars: 0.25,
@@ -273,7 +324,8 @@ const CONSOLIDATION_MODELS = Object.freeze({
         minimumSeconds: 8,
     }),
     lunaMax: consolidationEntry({
-        name: 'GPT-5.6 Luna, reasoning max',
+        name: 'GPT-5.6 Luna',
+        effort: 'max',
         quality: { twoSidedPercent: [56] },
         model: 'openai/gpt-5.6-luna', sampling: SAMPLING_SEED_ONLY, reasoning: { effort: 'max' }, maxTokens: { consolidate: CONSOLIDATION_MAX_TOKENS },
         usdPerMillionChars: 0.625,
@@ -281,7 +333,8 @@ const CONSOLIDATION_MODELS = Object.freeze({
         minimumSeconds: 190,
     }),
     fableLow: consolidationEntry({
-        name: 'Claude Fable 5.1, reasoning low',
+        name: 'Claude Fable 5.1',
+        effort: 'low',
         quality: { twoSidedPercent: [59] },
         model: 'anthropic/claude-fable-5.1', sampling: null, reasoning: { effort: 'low' }, maxTokens: { consolidate: CONSOLIDATION_MAX_TOKENS },
         usdPerMillionChars: 2.4,
@@ -342,6 +395,55 @@ function volumeLabel(choice) {
         parts.push(`${quality.reviewHeldPercent}% of stances held under blind review, ${quality.reviewWrongPercent}% wrong`);
     }
     return optionLabel(choice, parts);
+}
+
+const VOLUME_METRIC_COLUMNS = Object.freeze([
+    ['model', 'Model'],
+    ['reasoning', 'Reasoning effort'],
+    ['cost', 'Estimated cost / 1k comments'],
+    ['time', 'Estimated time / 1k comments'],
+    ['stances', 'Stances found / comment'],
+    ['rows', 'Two-sided rows / 100 comments'],
+    ['consistency', 'Stances held in blind review'],
+    ['wrong', 'Stances wrong in blind review'],
+]);
+
+function volumeMetrics(choice) {
+    const chars = CHARS_PER_COMMENT * COMMENTS_PER_LABEL;
+    const quality = choice.quality;
+    return {
+        model: choice.name,
+        reasoning: choice.effort,
+        cost: `$${((choice.usdPerMillionChars * chars) / RATE_UNIT_CHARS).toFixed(2)}`,
+        time: formatDuration((choice.secondsPerMillionChars * chars) / RATE_UNIT_CHARS),
+        stances: rangeText(quality.stancesPerComment, ''),
+        rows: rangeText(quality.twoSidedPer100Comments, ''),
+        consistency: quality.reviewHeldPercent === undefined ? 'not measured' : `${quality.reviewHeldPercent}%`,
+        wrong: quality.reviewWrongPercent === undefined ? 'not measured' : `${quality.reviewWrongPercent}%`,
+    };
+}
+
+const CONSOLIDATION_METRIC_COLUMNS = Object.freeze([
+    ['model', 'Model'],
+    ['reasoning', 'Reasoning effort'],
+    ['cost', 'Estimated cost / 1k comments'],
+    ['time', 'Estimated time / 1k comments'],
+    ['twoSided', 'Axes with both sides'],
+    ['measurement', 'Measured across'],
+    ['notes', 'Notes'],
+]);
+
+function consolidationMetrics(choice) {
+    const chars = CHARS_PER_COMMENT * COMMENTS_PER_LABEL;
+    return {
+        model: choice.name,
+        reasoning: choice.effort,
+        cost: `$${((choice.usdPerMillionChars * chars) / RATE_UNIT_CHARS).toFixed(2)}`,
+        time: formatDuration((choice.secondsPerMillionChars * chars) / RATE_UNIT_CHARS),
+        twoSided: rangeText(choice.quality.twoSidedPercent, '%'),
+        measurement: choice.quality.runs || '1 run',
+        notes: choice.quality.note || '',
+    };
 }
 
 // Consolidation: the share of axes two-sided, the run count when a range, then a note.
@@ -591,11 +693,24 @@ function parseFrontPage(json) {
     return stories;
 }
 
-const DATE_ONLY_LENGTH = 'YYYY-MM-DD'.length;
+function formatLocalDateTime(value) {
+    if (!value) {
+        return 'unknown date';
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        return 'unknown date';
+    }
+    const pad = number => String(number).padStart(2, '0');
+    const hour = date.getHours();
+    const hour12 = hour % 12 || 12;
+    const datePart = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    return `${datePart} ${pad(hour12)}:${pad(date.getMinutes())} ${hour < 12 ? 'AM' : 'PM'}`;
+}
 
-// The facts that tell stories apart: comment count, posting date, id. Shown after the title in the list.
+// The facts that tell stories apart: comment count, posting time, id. Shown after the title in the list.
 function storyDate(story) {
-    return story.createdAt ? story.createdAt.slice(0, DATE_ONLY_LENGTH) : 'unknown date';
+    return formatLocalDateTime(story.createdAt);
 }
 
 function storyDetails(story) {
@@ -1043,6 +1158,30 @@ function comparePasses(pass1, pass2, agreed) {
     };
 }
 
+function collectUnverifiedComments(pass1, pass2) {
+    const byAxis = new Map();
+    for (const key of new Set([...pass1.keys(), ...pass2.keys()])) {
+        const first = pass1.get(key);
+        const second = pass2.get(key);
+        if (first === second) {
+            continue;
+        }
+        const { commentId, axisId } = parseStanceKey(key);
+        if (!byAxis.has(axisId)) {
+            byAxis.set(axisId, []);
+        }
+        byAxis.get(axisId).push({
+            commentId,
+            pass1: first ?? null,
+            pass2: second ?? null,
+        });
+    }
+    for (const comments of byAxis.values()) {
+        comments.sort((left, right) => left.commentId - right.commentId);
+    }
+    return byAxis;
+}
+
 function majorityStance(tally) {
     const best = Math.max(tally[STANCE_A], tally[STANCE_B], tally[STANCE_M]);
     const winners = [STANCE_A, STANCE_B, STANCE_M].filter(stance => tally[stance] === best);
@@ -1079,7 +1218,7 @@ function aggregateByAuthor(agreed, commentsById) {
 
 // One row per axis with at least one agreed stance: commenters on each statement and in the middle,
 // plus agreed comment ids by stance.
-function computeRows(axes, byAuthor, agreed) {
+function computeRows(axes, byAuthor, agreed, unverifiedByAxis = new Map()) {
     const commentIds = new Map();
     for (const [key, stance] of agreed) {
         const { commentId, axisId } = parseStanceKey(key);
@@ -1111,6 +1250,7 @@ function computeRows(axes, byAuthor, agreed) {
             commentIdsA: ids[STANCE_A],
             commentIdsB: ids[STANCE_B],
             commentIdsM: ids[STANCE_M],
+            unverifiedComments: unverifiedByAxis.get(axis.id) || [],
         };
     }).filter(row => row.comments > 0);
 }
@@ -1171,8 +1311,12 @@ function formatRunSummary(result) {
     const reviewSummary = Number.isInteger(stats.reviewedPairs)
         ? `${stats.agreedStances} stances passed blind review. Of ${stats.reviewedPairs} comment-axis pairs classified by both passes, ${stats.agreedStances} agreed (${agreementPercent}%); ${stats.conflictingStances} conflicts and ${stats.singlePassStances} single-pass classifications were excluded.`
         : `${stats.agreedStances} of ${stats.classifiedPairs} classifications matched between the two scoring passes; only matching ones count.`;
+    const unverifiedCount = Array.isArray(result.unverifiedAxes) ? result.unverifiedAxes.length : 0;
+    const rowSummary = unverifiedCount === 0
+        ? `${result.rows.length} rows from ${stats.comments} comments by ${stats.authors} commenters.`
+        : `${result.rows.length} verified rows and ${unverifiedCount} unverified ${unverifiedCount === 1 ? 'axis' : 'axes'} from ${stats.comments} comments by ${stats.authors} commenters.`;
     return [
-        `${result.rows.length} rows from ${stats.comments} comments by ${stats.authors} commenters.`,
+        rowSummary,
         reviewSummary,
     ];
 }
@@ -1188,6 +1332,11 @@ function orientRows(rows) {
             countB: row.countA,
             commentIdsA: row.commentIdsB,
             commentIdsB: row.commentIdsA,
+            unverifiedComments: (row.unverifiedComments || []).map(comment => ({
+                ...comment,
+                pass1: comment.pass1 === null ? null : flipStance(comment.pass1),
+                pass2: comment.pass2 === null ? null : flipStance(comment.pass2),
+            })),
         }
         : row));
 }
@@ -1766,14 +1915,20 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
     // Stage 4: aggregate.
     const agreed = mergePasses(passMaps[0], passMaps[1]);
     const passComparison = comparePasses(passMaps[0], passMaps[1], agreed);
+    const unverifiedByAxis = collectUnverifiedComments(passMaps[0], passMaps[1]);
     const byAuthor = aggregateByAuthor(agreed, commentsById);
-    const rows = orientRows(rankRows(computeRows(axes, byAuthor, agreed)));
+    const rows = orientRows(rankRows(computeRows(axes, byAuthor, agreed, unverifiedByAxis)));
+    const verifiedAxisIds = new Set(rows.map(row => row.axisId));
+    const unverifiedAxes = axes
+        .filter(axis => !verifiedAxisIds.has(axis.id))
+        .map(axis => ({ ...axis, unverifiedComments: unverifiedByAxis.get(axis.id) || [] }));
     if (cacheWriteFailures > 0) {
         warnings.push(`${cacheWriteFailures} cache writes failed (browser storage full); those calls will be repeated on a rerun`);
     }
     report('done', 1, 1);
     return {
         rows,
+        unverifiedAxes,
         axes,
         candidates,
         cost,
@@ -1792,14 +1947,14 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        CONSTANTS, DEFAULT_CONFIG, VOLUME_MODELS, CONSOLIDATION_MODELS, DEFAULT_VOLUME_KEY, DEFAULT_CONSOLIDATION_KEY, volumeLabel, consolidationLabel, CHARS_PER_COMMENT,
+        CONSTANTS, DEFAULT_CONFIG, VOLUME_MODELS, CONSOLIDATION_MODELS, DEFAULT_VOLUME_KEY, DEFAULT_CONSOLIDATION_KEY, volumeLabel, VOLUME_METRIC_COLUMNS, volumeMetrics, CONSOLIDATION_METRIC_COLUMNS, consolidationMetrics, consolidationLabel, CHARS_PER_COMMENT,
         roleChoice, buildStageConfig, combinedRate, estimateRunSeconds, applyToAllStages,
         stripHtml, flattenThread, makeExtractBatches, makeScoreBatches, seededShuffle,
-        selectCommentShare, threadShare, indexCommentsById, estimateRunCost, largestShareWithinBudget, parseFrontPage, storyDate, storyDetails, storyLabel, sortStoriesNewestFirst, storySearchUrl, isThreadId, fetchThreadItem, fetchStories,
+        selectCommentShare, threadShare, indexCommentsById, estimateRunCost, largestShareWithinBudget, parseFrontPage, formatLocalDateTime, storyDate, storyDetails, storyLabel, sortStoriesNewestFirst, storySearchUrl, isThreadId, fetchThreadItem, fetchStories,
         buildExtractMessages, buildConsolidateMessages, buildScoreMessages,
         parseExtractResponse, parseConsolidateResponse, parseScoreResponse,
         parseStanceKey, flipStance,
-        mergePasses, comparePasses, aggregateByAuthor, computeRows, orientRows, rankRows, proportionShares,
+        mergePasses, comparePasses, collectUnverifiedComments, aggregateByAuthor, computeRows, orientRows, rankRows, proportionShares,
         axisMetaText, formatDuration, formatElapsed, formatClockDuration, formatProgress, formatRunCost, formatRunSummary,
         runPool, callOpenRouter, makeOpenRouterCallChat, runPipeline, TruncationError, InvalidResponseError,
         requestCacheKey, parseCacheExport, makeCachedCallChat, probeCache, formatCacheProbe, formatNextRun,
@@ -1911,7 +2066,15 @@ const elements = {
     share: document.getElementById('share'),
     maxCost: document.getElementById('max-cost'),
     volumeModel: document.getElementById('volume-model'),
+    volumeModelHeader: document.getElementById('volume-model-header'),
+    volumeModelPicker: document.getElementById('volume-model-picker'),
+    volumeModelButton: document.getElementById('volume-model-button'),
+    volumeModelOptions: document.getElementById('volume-model-options'),
     consolidationModel: document.getElementById('consolidation-model'),
+    consolidationModelHeader: document.getElementById('consolidation-model-header'),
+    consolidationModelPicker: document.getElementById('consolidation-model-picker'),
+    consolidationModelButton: document.getElementById('consolidation-model-button'),
+    consolidationModelOptions: document.getElementById('consolidation-model-options'),
     estimate: document.getElementById('estimate'),
     keyEntry: document.getElementById('key-entry'),
     connectOpenRouter: document.getElementById('connect-openrouter'),
@@ -1932,14 +2095,42 @@ const elements = {
     status: document.getElementById('status'),
     warnings: document.getElementById('warnings'),
     results: document.getElementById('results'),
+    unverifiedAxes: document.getElementById('unverified-axes'),
 };
+
+const modelPickers = [
+    {
+        choices: VOLUME_MODELS,
+        columns: VOLUME_METRIC_COLUMNS,
+        metrics: volumeMetrics,
+        gridClass: 'volume-grid',
+        metricKeys: new Set(['cost', 'time', 'stances', 'rows', 'consistency', 'wrong']),
+        root: elements.volumeModelPicker,
+        select: elements.volumeModel,
+        header: elements.volumeModelHeader,
+        button: elements.volumeModelButton,
+        options: elements.volumeModelOptions,
+    },
+    {
+        choices: CONSOLIDATION_MODELS,
+        columns: CONSOLIDATION_METRIC_COLUMNS,
+        metrics: consolidationMetrics,
+        gridClass: 'consolidation-grid',
+        metricKeys: new Set(['cost', 'time', 'twoSided']),
+        root: elements.consolidationModelPicker,
+        select: elements.consolidationModel,
+        header: elements.consolidationModelHeader,
+        button: elements.consolidationModelButton,
+        options: elements.consolidationModelOptions,
+    },
+];
 
 let activeController = null;
 let loadedThread = null;
 let loadedSnapshotAt = null;
 
 const APP_TITLE = 'HN Split - For and Against on Hacker News';
-const RESULT_CACHE_VERSION = 2;
+const RESULT_CACHE_VERSION = 4;
 
 function setStatus(text, isError) {
     elements.status.textContent = text;
@@ -2258,13 +2449,113 @@ function refreshKeyState() {
     elements.keyScope.textContent = keyScopeText();
 }
 
-function fillModelOptions(select, choices, defaultKey) {
+function fillModelOptions(select, choices, defaultKey, labelForChoice = choice => choice.label) {
     for (const [key, choice] of Object.entries(choices)) {
-        const option = makeElement('option', { text: choice.label });
+        const option = makeElement('option', { text: labelForChoice(choice) });
         option.value = key;
+        option.title = choice.label;
         select.appendChild(option);
     }
     select.value = defaultKey;
+    select.title = choices[defaultKey].label;
+}
+
+function renderModelGrid(picker, container, values) {
+    container.replaceChildren(...picker.columns.map(([key]) => {
+        const metricClass = picker.metricKeys.has(key) ? ' metric' : '';
+        return makeElement('span', { className: `model-cell${metricClass}`, text: values[key] });
+    }));
+}
+
+function closeModelOptions(picker, { restoreFocus = false } = {}) {
+    picker.options.hidden = true;
+    picker.button.setAttribute('aria-expanded', 'false');
+    if (restoreFocus) {
+        picker.button.focus();
+    }
+}
+
+function modelOptionButtons(picker) {
+    return [...picker.options.querySelectorAll('.model-option')];
+}
+
+function focusModelOption(picker, offset) {
+    const options = modelOptionButtons(picker);
+    const current = options.indexOf(document.activeElement);
+    const selected = options.findIndex(option => option.getAttribute('aria-selected') === 'true');
+    const start = current >= 0 ? current : selected;
+    options[(start + offset + options.length) % options.length].focus();
+}
+
+function syncModelPicker(picker) {
+    const selected = picker.choices[picker.select.value];
+    renderModelGrid(picker, picker.button, picker.metrics(selected));
+    picker.button.title = selected.label;
+    for (const option of modelOptionButtons(picker)) {
+        option.setAttribute('aria-selected', String(option.dataset.key === picker.select.value));
+    }
+}
+
+function initializeModelPicker(picker) {
+    renderModelGrid(
+        picker,
+        picker.header,
+        Object.fromEntries(picker.columns.map(([key, label]) => [key, label])),
+    );
+    const options = Object.entries(picker.choices).map(([key, choice]) => {
+        const option = makeElement('button', { className: `model-grid ${picker.gridClass} model-option` });
+        option.type = 'button';
+        option.setAttribute('role', 'option');
+        option.dataset.key = key;
+        option.title = choice.label;
+        renderModelGrid(picker, option, picker.metrics(choice));
+        option.addEventListener('click', () => {
+            picker.select.value = key;
+            picker.select.dispatchEvent(new Event('change', { bubbles: true }));
+            closeModelOptions(picker, { restoreFocus: true });
+        });
+        option.addEventListener('keydown', event => {
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault();
+                focusModelOption(picker, event.key === 'ArrowDown' ? 1 : -1);
+            } else if (event.key === 'Home' || event.key === 'End') {
+                event.preventDefault();
+                const buttons = modelOptionButtons(picker);
+                buttons[event.key === 'Home' ? 0 : buttons.length - 1].focus();
+            } else if (event.key === 'Escape') {
+                event.preventDefault();
+                closeModelOptions(picker, { restoreFocus: true });
+            } else if (event.key === 'Tab') {
+                closeModelOptions(picker);
+            }
+        });
+        return option;
+    });
+    picker.options.replaceChildren(...options);
+    syncModelPicker(picker);
+    picker.button.addEventListener('click', () => {
+        const opening = picker.options.hidden;
+        for (const other of modelPickers) {
+            if (other !== picker) {
+                closeModelOptions(other);
+            }
+        }
+        picker.options.hidden = !opening;
+        picker.button.setAttribute('aria-expanded', String(opening));
+        if (opening) {
+            focusModelOption(picker, 0);
+        }
+    });
+    picker.button.addEventListener('keydown', event => {
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault();
+            picker.options.hidden = false;
+            picker.button.setAttribute('aria-expanded', 'true');
+            focusModelOption(picker, event.key === 'ArrowDown' ? 0 : -1);
+        } else if (event.key === 'Escape') {
+            closeModelOptions(picker);
+        }
+    });
 }
 
 // The thread box holds a numeric id typed by hand, or search text that drives the list under it; picking a
@@ -2497,7 +2788,7 @@ async function loadThreadFromPage(threadId, { share, cachedResult, cachedComment
         elements.threadId.value = '';
         closeList();
         elements.threadTitle.textContent = loadedThread.title;
-        elements.threadInfo.textContent = `${loadedThread.comments.length} comments, posted ${storyDate(loadedThread)}, id ${loadedThread.id}, fetched ${new Date(snapshot.fetchedAt).toLocaleString()}${stored ? '' : ', not stored'}`;
+        elements.threadInfo.textContent = `${loadedThread.comments.length} comments, posted ${storyDate(loadedThread)}, id ${loadedThread.id}, fetched ${formatLocalDateTime(snapshot.fetchedAt)}${stored ? '' : ', not stored'}`;
         document.title = `${loadedThread.title} - HN Split`;
     } catch (error) {
         elements.threadTitle.textContent = '';
@@ -2546,8 +2837,16 @@ function renderProportionRow(row, evidence) {
     wrapper.appendChild(makeElement('span', { className: 'count side1', text: String(row.countA) }));
     wrapper.appendChild(renderProportionBar(row));
     wrapper.appendChild(makeElement('span', { className: 'count side2', text: String(row.countB) }));
+    if (row.countM > 0) {
+        wrapper.appendChild(makeElement('span', { className: 'count middle-count', text: `(${row.countM} middle)` }));
+    }
     const meta = makeElement('span', { className: 'meta' });
-    const toggle = makeElement('button', { className: 'comments-toggle', text: `${row.comments} comments` });
+    const verifiedNoun = row.comments === 1 ? 'comment' : 'comments';
+    const unverifiedCount = (row.unverifiedComments || []).length;
+    const unverifiedPart = unverifiedCount === 0
+        ? ''
+        : `, ${unverifiedCount} unverified ${unverifiedCount === 1 ? 'comment' : 'comments'}`;
+    const toggle = makeElement('button', { className: 'comments-toggle', text: `${row.comments} verified ${verifiedNoun}${unverifiedPart}` });
     toggle.type = 'button';
     toggle.setAttribute('aria-expanded', 'false');
     toggle.setAttribute('aria-controls', evidence.id);
@@ -2556,7 +2855,7 @@ function renderProportionRow(row, evidence) {
         toggle.setAttribute('aria-expanded', String(!evidence.hidden));
     });
     meta.appendChild(toggle);
-    meta.appendChild(document.createTextNode(`, ${row.authors} commenters${row.countM === 0 ? '' : `, ${row.countM} middle`}`));
+    meta.appendChild(document.createTextNode(`, ${row.authors} commenters`));
     wrapper.appendChild(meta);
     return wrapper;
 }
@@ -2583,6 +2882,41 @@ function renderEvidenceGroup(sideClass, label, commentIds, commentsById) {
     return group;
 }
 
+function stanceLabel(stance) {
+    if (stance === STANCE_A) return 'Blue';
+    if (stance === STANCE_B) return 'Orange';
+    if (stance === STANCE_M) return 'Middle';
+    return 'not addressed';
+}
+
+function commentLink(commentId, commentsById) {
+    const comment = commentsById.get(commentId);
+    const link = makeElement('a', { text: comment === undefined || !comment.author ? `comment ${commentId}` : `${comment.author} · comment ${commentId}` });
+    link.href = CONSTANTS.HN_ITEM_PAGE_URL + commentId;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    return link;
+}
+
+function renderUnverifiedEvidence(comments, commentsById) {
+    if (comments.length === 0) {
+        return null;
+    }
+    const group = makeElement('section', { className: 'evidence-group unverified' });
+    group.appendChild(makeElement('h3', { text: `Unverified (${comments.length})` }));
+    for (const item of comments) {
+        const comment = commentsById.get(item.commentId);
+        const article = makeElement('article', { className: 'evidence-comment' });
+        const header = makeElement('header');
+        header.appendChild(commentLink(item.commentId, commentsById));
+        header.appendChild(document.createTextNode(` · pass 1: ${stanceLabel(item.pass1)}; pass 2: ${stanceLabel(item.pass2)}`));
+        article.appendChild(header);
+        article.appendChild(makeElement('p', { text: comment === undefined ? 'Comment text is unavailable in this cached result.' : comment.text }));
+        group.appendChild(article);
+    }
+    return group;
+}
+
 function renderAxisEvidence(row, commentsById) {
     const evidence = makeElement('div', { className: 'evidence' });
     evidence.id = `axis-comments-${row.axisId}`;
@@ -2591,6 +2925,7 @@ function renderAxisEvidence(row, commentsById) {
         renderEvidenceGroup('side1', 'Blue', row.commentIdsA || [], commentsById),
         renderEvidenceGroup('mid', 'Middle', row.commentIdsM || [], commentsById),
         renderEvidenceGroup('side2', 'Orange', row.commentIdsB || [], commentsById),
+        renderUnverifiedEvidence(row.unverifiedComments || [], commentsById),
     ].filter(group => group !== null);
     evidence.replaceChildren(...groups);
     return evidence;
@@ -2606,11 +2941,37 @@ function renderAxis(row, commentsById) {
     return block;
 }
 
+function renderUnverifiedAxes(axes, commentsById) {
+    const container = elements.unverifiedAxes.querySelector('div');
+    container.replaceChildren(...axes.map(axis => {
+        const block = makeElement('article', { className: 'unverified-axis' });
+        block.appendChild(makeElement('p', { text: axis.statementA }));
+        block.appendChild(makeElement('p', { text: axis.statementB }));
+        const comments = axis.unverifiedComments || [];
+        block.appendChild(makeElement('p', { className: 'label', text: `0 verified comments; ${comments.length} unverified ${comments.length === 1 ? 'comment' : 'comments'} - failed blind review` }));
+        if (comments.length > 0) {
+            const list = makeElement('ul');
+            for (const item of comments) {
+                const entry = makeElement('li');
+                entry.appendChild(commentLink(item.commentId, commentsById));
+                entry.appendChild(document.createTextNode(` - pass 1: ${stanceLabel(item.pass1)}; pass 2: ${stanceLabel(item.pass2)}`));
+                list.appendChild(entry);
+            }
+            block.appendChild(list);
+        }
+        return block;
+    }));
+    elements.unverifiedAxes.querySelector('summary').textContent = `${axes.length} unverified ${axes.length === 1 ? 'axis' : 'axes'}`;
+    elements.unverifiedAxes.hidden = axes.length === 0;
+}
+
 function commentsReferencedByResult(result, comments) {
-    const ids = new Set(result.rows.flatMap(row => [
+    const axes = [...result.rows, ...(result.unverifiedAxes || [])];
+    const ids = new Set(axes.flatMap(row => [
         ...(row.commentIdsA || []),
         ...(row.commentIdsM || []),
         ...(row.commentIdsB || []),
+        ...(row.unverifiedComments || []).map(item => item.commentId),
     ]));
     return comments.filter(comment => ids.has(comment.id));
 }
@@ -2622,6 +2983,7 @@ function renderResults(result, comments) {
     elements.warnings.querySelector('summary').textContent = `${result.warnings.length} warnings`;
     elements.warnings.hidden = result.warnings.length === 0;
     elements.results.replaceChildren(...result.rows.map(row => renderAxis(row, commentsById)));
+    renderUnverifiedAxes(result.unverifiedAxes || [], commentsById);
 }
 
 // PKCE sign-in needs an http(s) page with a stable URL as the callback and a secure context for
@@ -2859,6 +3221,9 @@ if (initialRunSelection !== null) {
     elements.volumeModel.value = initialRunSelection.volume;
     elements.consolidationModel.value = initialRunSelection.consolidation;
 }
+for (const picker of modelPickers) {
+    initializeModelPicker(picker);
+}
 function refitShareAndEstimate() {
     elements.maxCost.value = maxCostInBox();
     applyMaxCostToShare();
@@ -2866,8 +3231,21 @@ function refitShareAndEstimate() {
 }
 elements.share.addEventListener('input', updateEstimate);
 elements.maxCost.addEventListener('change', refitShareAndEstimate);
-elements.volumeModel.addEventListener('change', refitShareAndEstimate);
-elements.consolidationModel.addEventListener('change', refitShareAndEstimate);
+elements.volumeModel.addEventListener('change', () => {
+    syncModelPicker(modelPickers[0]);
+    refitShareAndEstimate();
+});
+elements.consolidationModel.addEventListener('change', () => {
+    syncModelPicker(modelPickers[1]);
+    refitShareAndEstimate();
+});
+document.addEventListener('mousedown', event => {
+    for (const picker of modelPickers) {
+        if (!picker.root.contains(event.target)) {
+            closeModelOptions(picker);
+        }
+    }
+});
 elements.apiKey.addEventListener('input', refreshRunButton);
 elements.connectOpenRouter.hidden = !pkceAvailable();
 elements.connectOpenRouter.addEventListener('click', () => {
