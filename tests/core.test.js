@@ -802,6 +802,15 @@ test('buildStageConfig merges one volume choice with one consolidation choice', 
     assert.deepEqual(core.buildStageConfig(core.DEFAULT_VOLUME_KEY, core.DEFAULT_CONSOLIDATION_KEY).modelConsolidate, core.DEFAULT_CONFIG.modelConsolidate);
 });
 
+test('option labels are built from the entry constants and quality record', () => {
+    const haiku = core.VOLUME_MODELS.haiku;
+    const usd = (haiku.costPerThousandTokensUsd * core.TOKENS_PER_COMMENT).toFixed(2);
+    assert.equal(haiku.label, `Claude Haiku 4.5: $${usd} and ${core.formatDuration(haiku.secondsPerThousandTokens * core.TOKENS_PER_COMMENT)} per 1000 comments. 0.5 stances per comment; 3 to 4 two-sided rows per 100 comments; 59% of stances held under blind review, 12% wrong; clean output.`);
+    const sonnet = core.CONSOLIDATION_MODELS.sonnet5;
+    assert.equal(sonnet.label, `Claude Sonnet 5: $${(sonnet.costPerThousandTokensUsd * core.TOKENS_PER_COMMENT).toFixed(2)} and 3 minutes per 1000 comments. 61% to 74% of axes two-sided across three runs.`);
+    assert.equal(core.CONSOLIDATION_MODELS.lunaMax.label.endsWith('. 56% of axes two-sided.'), true, 'no note, no runs');
+});
+
 test('combinedRate scales the consolidation rate by the volume model\'s candidate factor', () => {
     const opus = core.VOLUME_MODELS.opus5;
     const sonnet = core.CONSOLIDATION_MODELS.sonnet5;
