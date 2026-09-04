@@ -92,6 +92,7 @@ test('flattenThread walks depth-first, skips deleted comments, keeps their child
     assert.equal(thread.id, 1);
     assert.equal(thread.title, 'T');
     assert.equal(thread.createdAt, '2026-09-01T00:00:00.000Z');
+    assert.equal(thread.commentCount, 5);
     assert.deepEqual(thread.comments.map(comment => comment.id), [10, 11, 13, 20]);
     assert.deepEqual(thread.comments.map(comment => comment.parentId), [1, 10, 12, 1]);
     assert.deepEqual(thread.comments.map(comment => comment.depth), [0, 1, 3, 0]);
@@ -929,6 +930,7 @@ test('storySearchUrl builds an Algolia story search for the encoded query', () =
     const url = core.storySearchUrl('GoDaddy & SOPA');
     assert.ok(url.startsWith('https://hn.algolia.com/api/v1/search?'));
     assert.ok(url.includes('tags=story'));
+    assert.equal(new URL(url).searchParams.get('hitsPerPage'), '30');
     assert.ok(url.includes('query=GoDaddy%20%26%20SOPA'));
 });
 
@@ -944,6 +946,12 @@ test('parseFrontPage maps Algolia hits to id, title, comment count and date, ski
         { id: 1, title: 'No count or date', numComments: 0, createdAt: null },
     ]);
     assert.throws(() => core.parseFrontPage({ nope: [] }), /hits/);
+});
+
+test('parseCurrentCommentCount reads and validates the live Hacker News descendants count', () => {
+    assert.equal(core.parseCurrentCommentCount({ descendants: 1717 }, 49554643), 1717);
+    assert.throws(() => core.parseCurrentCommentCount({}, 49554643), /no valid descendants count/);
+    assert.throws(() => core.parseCurrentCommentCount({ descendants: -1 }, 49554643), /no valid descendants count/);
 });
 
 test('storyLabel shows title, comment count, posting date and id; sortStoriesNewestFirst orders by date descending', () => {

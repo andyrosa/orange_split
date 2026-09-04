@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-OhZVDVJPjfK/Tgf7O6/p34fzzIvzCTCtrR0lYPUGgr0=' 'sha256-vtE0TxrLYFMzK4BCmJiWABp3ceP1TmY+Z5ovT5MFvFA='; style-src 'sha256-WbU2DoxuifT5cyifDwEbDGJP+JoELzf6v1ddfnwwiwo='; connect-src https://openrouter.ai https://hn.algolia.com; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-6pyHkMdRIaWZ0WlNcpdLTPHZqKDZt659CE6AeA1tfUs=' 'sha256-41tcHL1TXjNawnS0EYJjj3FtA+lqR1XO5QKiauZyiJE='; style-src 'sha256-vu6d6XBhx6/vZXbgkxQZijkjHpUFFE75d7P1DeDSGhU='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
 <title>HN Split - For and Against on Hacker News</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EHN:s%3C/text%3E%3C/svg%3E">
 <style>
@@ -13,13 +13,27 @@ label { display: inline-block; margin-right: 1rem; }
 input[type="password"] { width: 22rem; }
 #thread-id { width: 16rem; }
 input[type="number"] { width: 5em; }
+#min-comments { width: 3.5em; }
 .row { margin: 1em 0; }
+.thread-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; }
+.thread-controls label, .thread-controls .story-scope { margin-right: 0; }
+.story-scope { display: inline-flex; margin-right: 1rem; vertical-align: middle; }
+.story-scope button { margin: 0; border: 1px solid #777; background: #fff; }
+.story-scope button:first-child { border-radius: 3px 0 0 3px; }
+.story-scope button:last-child { border-left: 0; border-radius: 0 3px 3px 0; }
+.story-scope button[aria-pressed="true"] { background: #333; color: #fff; }
 #thread-picker { position: relative; display: inline-block; vertical-align: middle; }
 #story-list { position: absolute; left: 0; top: 100%; z-index: 1; margin: 0; padding: 0; list-style: none; min-width: 100%; max-height: 24rem; overflow-y: auto; background: #fff; border: 1px solid #999; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2); }
 #story-list li { padding: 0.25rem 0.5rem; cursor: pointer; white-space: nowrap; }
 #story-list li.header { color: #666; font-size: 0.9em; cursor: default; background: #eee; }
 #story-list li.active { background: #cde; }
 #story-list li.cached { font-weight: bold; }
+#cached-threads-toggle { border: 0; background: none; color: #0645ad; cursor: pointer; font: inherit; margin: 0; padding: 0; text-decoration: underline; }
+#cached-threads-toggle:disabled { color: #666; cursor: default; text-decoration: none; }
+#cached-threads-list { margin: -0.5rem 0 1rem; padding-left: 1.5rem; }
+#cached-threads-list li { margin: 0.25rem 0; }
+#cached-threads-list button { border: 0; background: none; color: #0645ad; cursor: pointer; font: inherit; margin: 0; padding: 0; text-align: left; text-decoration: underline; }
+#cached-threads-list button:disabled { color: #666; cursor: default; }
 input[type="range"] { width: 8rem; vertical-align: middle; }
 select.model { display: block; width: 100%; max-width: 86rem; margin-top: 0.25rem; }
 .model-choice { margin: 1em 0; }
@@ -53,13 +67,15 @@ button { margin-right: 0.5rem; }
 .axis .count.side1 { margin-right: 0.4rem; }
 .axis .count.side2 { margin-left: 0.4rem; }
 .axis .middle-count { margin-left: 0.3rem; }
+.axis .count-toggle { border: 0; background: none; cursor: pointer; padding: 0; text-decoration: underline; }
+.axis .count-toggle.side1 { color: #2b6cb0; }
+.axis .count-toggle.side2 { color: #c05621; }
+.axis .count-toggle.unverified { color: #b00020; margin-left: 0.4rem; }
 .axis .proportion { display: flex; height: 6px; width: 24rem; background: #eee; }
 .axis .proportion span { display: block; height: 100%; flex: var(--share); }
 .axis .proportion .side1 { background: #2b6cb0; }
 .axis .proportion .mid { background: #cfcfcf; }
 .axis .proportion .side2 { background: #c05621; }
-.axis .meta { font-size: 11px; color: #666; margin-left: 0.75rem; }
-.axis .comments-toggle { border: 0; background: none; color: #0645ad; cursor: pointer; font: inherit; margin: 0; padding: 0; text-decoration: underline; }
 .axis .evidence { margin: 0.5rem 0 0.25rem; padding-left: 1rem; border-left: 3px solid #ddd; }
 .axis .evidence-group { margin: 0.6rem 0; }
 .axis .evidence-group h3 { font-size: 13px; margin: 0 0 0.3rem; }
@@ -81,11 +97,15 @@ button { margin-right: 0.5rem; }
 </head>
 <body>
 <h1>HN Split</h1>
-<div class="row">
+<div class="row thread-controls">
 <label for="min-comments">Min comments</label> <input id="min-comments" type="number" min="0" step="10">
+<span class="story-scope" role="group" aria-label="Story source">
+<button id="front-page-scope" type="button" aria-pressed="true">Front page</button>
+<button id="search-all-scope" type="button" aria-pressed="false">Search all</button>
+</span>
 <label for="thread-id">Thread</label>
 <div id="thread-picker">
-<input id="thread-id" type="text" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="story-list" placeholder="id, or search">
+<input id="thread-id" type="text" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="story-list" placeholder="filter front page, or id">
 <ul id="story-list" role="listbox" hidden></ul>
 </div>
 <button id="load-thread" type="button" hidden>Load thread</button>
@@ -124,13 +144,14 @@ button { margin-right: 0.5rem; }
 <label>OpenRouter key <input id="api-key" type="password" autocomplete="off"></label> <label><input id="remember-key" type="checkbox"> Remember pasted key</label> <button id="connect-openrouter" type="button" hidden>Sign in with OpenRouter instead</button>
 </p>
 <p>
-<span id="storage-info"></span>
+<span id="storage-info">Cached in this browser: <button id="cached-threads-toggle" type="button" aria-expanded="false" aria-controls="cached-threads-list"></button>, <span id="cached-call-count"></span>, <span id="cached-result-count" title="Finished runs stored for immediate page restoration"></span>.</span>
 <button id="export-cache" type="button">Export</button>
 <button id="import-cache" type="button">Import</button>
 <input id="import-cache-file" type="file" accept=".json,application/json" hidden>
 <button id="delete-cached" type="button" hidden>Delete</button>
 <span id="key-stored" hidden>OpenRouter key <span id="key-scope"></span> <button id="wipe-key" type="button">Delete</button></span>
 </p>
+<ul id="cached-threads-list" hidden></ul>
 <div id="status"></div>
 <details id="warnings" hidden><summary></summary><ul></ul></details>
 <div id="results"></div>
@@ -145,9 +166,10 @@ button { margin-right: 0.5rem; }
 
 const CONSTANTS = Object.freeze({
     HN_ITEM_URL: 'https://hn.algolia.com/api/v1/items/',
+    HN_CURRENT_ITEM_URL: 'https://hacker-news.firebaseio.com/v0/item/',
     HN_ITEM_PAGE_URL: 'https://news.ycombinator.com/item?id=',
     HN_FRONT_PAGE_URL: 'https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=30',
-    HN_STORY_SEARCH_URL: 'https://hn.algolia.com/api/v1/search?tags=story&hitsPerPage=20&query=',
+    HN_STORY_SEARCH_URL: 'https://hn.algolia.com/api/v1/search?tags=story&hitsPerPage=30&query=',
     OPENROUTER_URL: 'https://openrouter.ai/api/v1/chat/completions',
     OPENROUTER_AUTH_URL: 'https://openrouter.ai/auth',
     OPENROUTER_KEY_EXCHANGE_URL: 'https://openrouter.ai/api/v1/auth/keys',
@@ -532,11 +554,13 @@ function stripHtml(html) {
 
 function flattenThread(item) {
     const comments = [];
+    let commentCount = 0;
     function walk(node, depth) {
         for (const child of node.children || []) {
             if (child.type !== 'comment') {
                 continue;
             }
+            commentCount += 1;
             if (typeof child.text === 'string' && child.text.length > 0) {
                 comments.push({
                     id: child.id,
@@ -550,7 +574,7 @@ function flattenThread(item) {
         }
     }
     walk(item, 0);
-    return { id: item.id, title: item.title || '', url: item.url || '', createdAt: item.created_at || null, comments };
+    return { id: item.id, title: item.title || '', url: item.url || '', createdAt: item.created_at || null, commentCount, comments };
 }
 
 // ---------------------------------------------------------------------------
@@ -666,6 +690,19 @@ async function fetchHnJson(url, what) {
 
 function fetchThreadItem(threadId) {
     return fetchHnJson(CONSTANTS.HN_ITEM_URL + threadId, `thread ${threadId}`);
+}
+
+function parseCurrentCommentCount(json, threadId) {
+    const count = Number(json && json.descendants);
+    if (!Number.isInteger(count) || count < 0) {
+        throw new Error(`Hacker News metadata for thread ${threadId} has no valid descendants count`);
+    }
+    return count;
+}
+
+async function fetchCurrentCommentCount(threadId) {
+    const json = await fetchHnJson(`${CONSTANTS.HN_CURRENT_ITEM_URL}${threadId}.json`, `current comment count for thread ${threadId}`);
+    return parseCurrentCommentCount(json, threadId);
 }
 
 async function fetchStories(url, what) {
@@ -1950,7 +1987,7 @@ if (typeof module !== 'undefined' && module.exports) {
         CONSTANTS, DEFAULT_CONFIG, VOLUME_MODELS, CONSOLIDATION_MODELS, DEFAULT_VOLUME_KEY, DEFAULT_CONSOLIDATION_KEY, volumeLabel, VOLUME_METRIC_COLUMNS, volumeMetrics, CONSOLIDATION_METRIC_COLUMNS, consolidationMetrics, consolidationLabel, CHARS_PER_COMMENT,
         roleChoice, buildStageConfig, combinedRate, estimateRunSeconds, applyToAllStages,
         stripHtml, flattenThread, makeExtractBatches, makeScoreBatches, seededShuffle,
-        selectCommentShare, threadShare, indexCommentsById, estimateRunCost, largestShareWithinBudget, parseFrontPage, formatLocalDateTime, storyDate, storyDetails, storyLabel, sortStoriesNewestFirst, storySearchUrl, isThreadId, fetchThreadItem, fetchStories,
+        selectCommentShare, threadShare, indexCommentsById, estimateRunCost, largestShareWithinBudget, parseFrontPage, parseCurrentCommentCount, formatLocalDateTime, storyDate, storyDetails, storyLabel, sortStoriesNewestFirst, storySearchUrl, isThreadId, fetchThreadItem, fetchCurrentCommentCount, fetchStories,
         buildExtractMessages, buildConsolidateMessages, buildScoreMessages,
         parseExtractResponse, parseConsolidateResponse, parseScoreResponse,
         parseStanceKey, flipStance,
@@ -2060,6 +2097,8 @@ const elements = {
     storyList: document.getElementById('story-list'),
     threadId: document.getElementById('thread-id'),
     minComments: document.getElementById('min-comments'),
+    frontPageScope: document.getElementById('front-page-scope'),
+    searchAllScope: document.getElementById('search-all-scope'),
     loadThread: document.getElementById('load-thread'),
     refreshThread: document.getElementById('refresh-thread'),
     shareRow: document.getElementById('share-row'),
@@ -2086,6 +2125,10 @@ const elements = {
     run: document.getElementById('run'),
     cancel: document.getElementById('cancel'),
     storageInfo: document.getElementById('storage-info'),
+    cachedCallCount: document.getElementById('cached-call-count'),
+    cachedThreadsToggle: document.getElementById('cached-threads-toggle'),
+    cachedThreadsList: document.getElementById('cached-threads-list'),
+    cachedResultCount: document.getElementById('cached-result-count'),
     exportCache: document.getElementById('export-cache'),
     importCache: document.getElementById('import-cache'),
     importCacheFile: document.getElementById('import-cache-file'),
@@ -2358,14 +2401,62 @@ function setRunning() {
     elements.exportCache.disabled = isRunning || cacheStore.count() + snapshotStore.count() + resultStore.count() === 0;
     elements.importCache.disabled = isRunning;
     elements.deleteCached.disabled = isRunning;
+    for (const button of elements.cachedThreadsList.querySelectorAll('button')) {
+        button.disabled = isRunning;
+    }
     refreshRunButton();
+}
+
+function counted(count, singular) {
+    return `${count} ${singular}${count === 1 ? '' : 's'}`;
+}
+
+function closeCachedThreads() {
+    elements.cachedThreadsList.hidden = true;
+    elements.cachedThreadsToggle.setAttribute('aria-expanded', 'false');
+}
+
+// Stored snapshots are listed newest first. Choosing one follows the normal cached-thread load path.
+function renderCachedThreads() {
+    const records = snapshotStore.keys().map(key => {
+        const threadId = key.slice(CONSTANTS.THREAD_KEY_PREFIX.length);
+        const snapshot = snapshotStore.get(threadId);
+        const thread = storedThread(threadId);
+        return {
+            threadId,
+            title: thread.title,
+            comments: thread.commentCount,
+            fetchedAt: snapshot.fetchedAt,
+        };
+    }).sort((left, right) => right.fetchedAt.localeCompare(left.fetchedAt));
+    const rows = records.map(record => {
+        const item = makeElement('li');
+        const label = `${record.title} (${counted(record.comments, 'comment')}, fetched ${formatLocalDateTime(record.fetchedAt)}, id ${record.threadId})`;
+        const button = makeElement('button', { text: label });
+        button.type = 'button';
+        button.disabled = activeController !== null;
+        button.addEventListener('click', () => {
+            closeCachedThreads();
+            loadThreadFromPage(record.threadId);
+        });
+        item.appendChild(button);
+        return item;
+    });
+    elements.cachedThreadsList.replaceChildren(...rows);
+    elements.cachedThreadsToggle.disabled = records.length === 0;
+    if (records.length === 0) {
+        closeCachedThreads();
+    }
 }
 
 function refreshStorageInfo() {
     const cachedCalls = cacheStore.count();
     const storedThreads = snapshotStore.count();
     const storedResults = resultStore.count();
-    elements.storageInfo.textContent = `Cached in this browser: ${cachedCalls} model calls, ${storedThreads} threads, ${storedResults} completed results.`;
+    elements.cachedCallCount.textContent = counted(cachedCalls, 'model call');
+    elements.cachedThreadsToggle.textContent = counted(storedThreads, 'thread');
+    elements.cachedResultCount.textContent = counted(storedResults, 'saved result');
+    renderCachedThreads();
     elements.exportCache.disabled = activeController !== null || cachedCalls + storedThreads + storedResults === 0;
     elements.deleteCached.hidden = cachedCalls === 0 && storedThreads === 0 && storedResults === 0;
 }
@@ -2585,20 +2676,21 @@ function threadIdInBox() {
 // The list under the box is drawn by the page (a combobox with a listbox): a header row says what the
 // list holds and story rows follow. The browser's own datalist could not show a header, filtered the rows
 // by the box text itself, and could not be opened or closed from the page.
-const HEADER_HOME_PAGE = 'Home page';
+const HEADER_HOME_PAGE = 'Front page';
+const HEADER_SEARCH_PROMPT = `Type ${SEARCH_MIN_CHARS} characters to search all stories`;
 const HEADER_SEARCHING = 'Searching sorted by date';
-const HEADER_MATCHES = 'Matches sorted by date';
 const HEADER_NO_MATCHES = 'No matches';
 const HEADER_LOADING_HOME_PAGE = 'Loading the home page';
 const HEADER_HOME_PAGE_UNAVAILABLE = 'Home page unavailable';
 const HEADER_SEARCH_FAILED = 'Search failed';
-const searchHeader = rows => (rows.length === 0 ? HEADER_NO_MATCHES : HEADER_MATCHES);
+const searchHeader = rows => (rows.length === 0 ? HEADER_NO_MATCHES : `${rows.length} matches sorted by date`);
 
 let homePageStories = null;
 let homePageHeader = HEADER_LOADING_HOME_PAGE;
 let lastSearch = null;
 let listStories = [];
 let activeIndex = -1;
+let storyScope = 'front';
 
 // Bolds the rows whose run would be served entirely from the cache at the current share and models,
 // so picking them gives the result at once. It runs after the list is painted, yielding before each
@@ -2679,29 +2771,48 @@ function pickStory(story) {
     loadThreadFromPage(String(story.id));
 }
 
-// Shows what fits the box text: the home page while the text is short (filtered by it), the search
-// results once it is long enough; a numeric id needs no list.
+// Shows only the chosen source: a local filter of the current front page, or a capped Algolia search
+// after enough text has been entered. A numeric id needs no list in either mode.
 function refreshList() {
     const text = elements.threadId.value.trim();
     if (isThreadId(text)) {
         closeList();
         return;
     }
-    if (text.length >= SEARCH_MIN_CHARS) {
-        if (lastSearch !== null && lastSearch.text === text) {
-            showList(lastSearch.stories, searchHeader);
-        } else {
-            scheduleStorySearch(text);
+    if (storyScope === 'front') {
+        searchLatest.cancel();
+        if (homePageStories === null) {
+            showList([], () => homePageHeader);
+            return;
         }
+        const needle = text.toLowerCase();
+        showList(homePageStories.filter(story => story.title.toLowerCase().includes(needle)), () => HEADER_HOME_PAGE);
         return;
     }
+    if (text.length < SEARCH_MIN_CHARS) {
+        searchLatest.cancel();
+        showList([], () => HEADER_SEARCH_PROMPT);
+        return;
+    }
+    if (lastSearch !== null && lastSearch.text === text) {
+        showList(lastSearch.stories, searchHeader);
+    } else {
+        scheduleStorySearch(text);
+    }
+}
+
+function selectStoryScope(scope, { focus = true } = {}) {
+    storyScope = scope;
+    const frontPage = scope === 'front';
+    elements.frontPageScope.setAttribute('aria-pressed', String(frontPage));
+    elements.searchAllScope.setAttribute('aria-pressed', String(!frontPage));
+    elements.threadId.placeholder = frontPage ? 'filter front page, or id' : 'search all stories, or id';
     searchLatest.cancel();
-    if (homePageStories === null) {
-        showList([], () => homePageHeader);
-        return;
+    closeList();
+    if (focus) {
+        elements.threadId.focus();
+        refreshList();
     }
-    const needle = text.toLowerCase();
-    showList(homePageStories.filter(story => story.title.toLowerCase().includes(needle)), () => HEADER_HOME_PAGE);
 }
 
 async function populateFrontPage() {
@@ -2720,7 +2831,7 @@ async function populateFrontPage() {
 // events; the search waits for a pause. A result for a search that is no longer the latest, or that
 // arrives after the list was closed, is dropped.
 async function scheduleStorySearch(text) {
-    showList(listStories, () => HEADER_SEARCHING);
+    showList(lastSearch === null ? [] : lastSearch.stories, () => HEADER_SEARCHING);
     const isCurrent = searchLatest.start();
     await defaultSleep(SEARCH_DEBOUNCE_MS);
     if (!isCurrent()) {
@@ -2749,6 +2860,26 @@ function loadThreadFromBox() {
         return;
     }
     loadThreadFromPage(threadId);
+}
+
+function renderThreadInfo(thread, snapshot, stored, currentCommentCount, currentCountError) {
+    const currentCountKnown = currentCountError === null;
+    const displayedCount = currentCountKnown ? currentCommentCount : thread.commentCount;
+    const fetchedCountDiffers = currentCountKnown && currentCommentCount !== thread.commentCount;
+    const parts = [
+        document.createTextNode(`${counted(displayedCount, 'comment')}${currentCountKnown ? '' : ' when fetched'}, posted ${storyDate(thread)}, id ${thread.id}, fetched `),
+    ];
+    if (fetchedCountDiffers) {
+        parts.push(makeElement('strong', { text: String(thread.commentCount) }));
+        parts.push(document.createTextNode(' comments '));
+    } else {
+        parts.push(document.createTextNode('comments '));
+    }
+    parts.push(document.createTextNode(`on ${formatLocalDateTime(snapshot.fetchedAt)}${stored ? '' : ', not stored'}`));
+    if (!currentCountKnown) {
+        parts.push(document.createTextNode(`; current count unavailable: ${currentCountError.message}`));
+    }
+    elements.threadInfo.replaceChildren(...parts);
 }
 
 // Loads the thread from the stored copy or from the API, then shows its size and the estimate.
@@ -2788,7 +2919,14 @@ async function loadThreadFromPage(threadId, { share, cachedResult, cachedComment
         elements.threadId.value = '';
         closeList();
         elements.threadTitle.textContent = loadedThread.title;
-        elements.threadInfo.textContent = `${loadedThread.comments.length} comments, posted ${storyDate(loadedThread)}, id ${loadedThread.id}, fetched ${formatLocalDateTime(snapshot.fetchedAt)}${stored ? '' : ', not stored'}`;
+        let currentCommentCount = null;
+        let currentCountError = null;
+        try {
+            currentCommentCount = await fetchCurrentCommentCount(threadId);
+        } catch (error) {
+            currentCountError = error;
+        }
+        renderThreadInfo(loadedThread, snapshot, stored, currentCommentCount, currentCountError);
         document.title = `${loadedThread.title} - HN Split`;
     } catch (error) {
         elements.threadTitle.textContent = '';
@@ -2801,11 +2939,12 @@ async function loadThreadFromPage(threadId, { share, cachedResult, cachedComment
     }
     if (cachedResult !== undefined) {
         renderResults(cachedResult, cachedComments);
-        setStatus(`Loaded completed result for snapshot ${runSelection === undefined ? loadedSnapshotAt : runSelection.snapshot} from this browser.`);
+        const resultSnapshot = runSelection === undefined ? loadedSnapshotAt : runSelection.snapshot;
+        setStatus(`Loaded completed result captured ${formatLocalDateTime(resultSnapshot)} from this browser.`);
         return;
     }
     if (runSelection !== undefined && loadedSnapshotAt !== runSelection.snapshot) {
-        setStatus(`This URL names snapshot ${runSelection.snapshot}, but that snapshot and its completed result are not cached in this browser.`, true);
+        setStatus(`This URL names a snapshot captured ${formatLocalDateTime(runSelection.snapshot)}, but that snapshot and its completed result are not cached in this browser.`, true);
         return;
     }
     // A load that turns out fully cached runs by itself: the result is free and instant.
@@ -2830,33 +2969,70 @@ function renderProportionBar(row) {
     return bar;
 }
 
-// The vote counts sit flanking the bar, one on each side, rather than inline with the statements; the
-// axis totals follow on the same line.
-function renderProportionRow(row, evidence) {
-    const wrapper = makeElement('div', { className: 'proportion-row' });
-    wrapper.appendChild(makeElement('span', { className: 'count side1', text: String(row.countA) }));
-    wrapper.appendChild(renderProportionBar(row));
-    wrapper.appendChild(makeElement('span', { className: 'count side2', text: String(row.countB) }));
-    if (row.countM > 0) {
-        wrapper.appendChild(makeElement('span', { className: 'count middle-count', text: `(${row.countM} middle)` }));
-    }
-    const meta = makeElement('span', { className: 'meta' });
-    const verifiedNoun = row.comments === 1 ? 'comment' : 'comments';
-    const unverifiedCount = (row.unverifiedComments || []).length;
-    const unverifiedPart = unverifiedCount === 0
-        ? ''
-        : `, ${unverifiedCount} unverified ${unverifiedCount === 1 ? 'comment' : 'comments'}`;
-    const toggle = makeElement('button', { className: 'comments-toggle', text: `${row.comments} verified ${verifiedNoun}${unverifiedPart}` });
+function evidenceToggle(text, className, kind, label, evidence, toggles) {
+    const toggle = makeElement('button', { className: `count count-toggle ${className}`, text });
     toggle.type = 'button';
+    toggle.setAttribute('aria-label', label);
     toggle.setAttribute('aria-expanded', 'false');
     toggle.setAttribute('aria-controls', evidence.id);
+    toggle.dataset.evidenceKind = kind;
     toggle.addEventListener('click', () => {
-        evidence.hidden = !evidence.hidden;
-        toggle.setAttribute('aria-expanded', String(!evidence.hidden));
+        const opening = evidence.hidden || evidence.dataset.openKind !== kind;
+        evidence.hidden = !opening;
+        evidence.dataset.openKind = opening ? kind : '';
+        for (const group of evidence.querySelectorAll('.evidence-group')) {
+            group.hidden = !opening || group.dataset.evidenceKind !== kind;
+        }
+        for (const button of toggles) {
+            button.setAttribute('aria-expanded', String(opening && button === toggle));
+        }
     });
-    meta.appendChild(toggle);
-    meta.appendChild(document.createTextNode(`, ${row.authors} commenters`));
-    wrapper.appendChild(meta);
+    toggles.push(toggle);
+    return toggle;
+}
+
+// Each visible count opens only its corresponding comment evidence.
+function renderProportionRow(row, evidence) {
+    const wrapper = makeElement('div', { className: 'proportion-row' });
+    const toggles = [];
+    wrapper.appendChild(evidenceToggle(
+        String(row.countA),
+        'side1',
+        'side1',
+        `${row.countA} Blue commenters; show ${row.commentIdsA.length} verified comments`,
+        evidence,
+        toggles,
+    ));
+    wrapper.appendChild(renderProportionBar(row));
+    wrapper.appendChild(evidenceToggle(
+        String(row.countB),
+        'side2',
+        'side2',
+        `${row.countB} Orange commenters; show ${row.commentIdsB.length} verified comments`,
+        evidence,
+        toggles,
+    ));
+    if (row.countM > 0) {
+        wrapper.appendChild(evidenceToggle(
+            `(${row.countM} middle)`,
+            'middle-count',
+            'mid',
+            `${row.countM} middle commenters; show ${row.commentIdsM.length} verified comments`,
+            evidence,
+            toggles,
+        ));
+    }
+    const unverifiedCount = (row.unverifiedComments || []).length;
+    if (unverifiedCount > 0) {
+        wrapper.appendChild(evidenceToggle(
+            `${unverifiedCount} unverified`,
+            'unverified',
+            'unverified',
+            `Show ${unverifiedCount} unverified comments`,
+            evidence,
+            toggles,
+        ));
+    }
     return wrapper;
 }
 
@@ -2865,6 +3041,7 @@ function renderEvidenceGroup(sideClass, label, commentIds, commentsById) {
         return null;
     }
     const group = makeElement('section', { className: `evidence-group ${sideClass}` });
+    group.dataset.evidenceKind = sideClass;
     group.appendChild(makeElement('h3', { text: `${label} (${commentIds.length})` }));
     for (const commentId of commentIds) {
         const comment = commentsById.get(commentId);
@@ -2903,6 +3080,7 @@ function renderUnverifiedEvidence(comments, commentsById) {
         return null;
     }
     const group = makeElement('section', { className: 'evidence-group unverified' });
+    group.dataset.evidenceKind = 'unverified';
     group.appendChild(makeElement('h3', { text: `Unverified (${comments.length})` }));
     for (const item of comments) {
         const comment = commentsById.get(item.commentId);
@@ -3081,7 +3259,7 @@ async function runFromPage({ recordUrl = false, runSelection } = {}) {
     if (apiKey === null && !fullyCached) {
         return;
     }
-    const selection = recordUrl ? selectedRunUrlParameters() : runSelection;
+    const selection = recordUrl || runSelection === undefined ? selectedRunUrlParameters() : runSelection;
     if (recordUrl) {
         showRunUrl(selection);
     }
@@ -3163,10 +3341,18 @@ elements.deleteCached.addEventListener('click', () => {
     setStatus(`Deleted from this browser: ${removedCalls} cached model calls, ${removedSnapshots} threads, and ${removedResults} completed results. The OpenRouter key is kept.`);
 });
 elements.loadThread.addEventListener('click', loadThreadFromBox);
+elements.cachedThreadsToggle.addEventListener('click', () => {
+    const opening = elements.cachedThreadsList.hidden;
+    elements.cachedThreadsList.hidden = !opening;
+    elements.cachedThreadsToggle.setAttribute('aria-expanded', String(opening));
+});
+elements.frontPageScope.addEventListener('click', () => selectStoryScope('front'));
+elements.searchAllScope.addEventListener('click', () => selectStoryScope('search'));
 // The list opens on focus, click, or typing; arrows move the highlight, Enter picks it (or loads a typed
 // id), Escape closes; leaving the box closes it too. A press inside the list keeps the focus in the box.
 // Editing the box moves focus off the thread box, which closes the list; the filter applies when the list is next drawn.
 elements.minComments.value = DEFAULT_MIN_COMMENTS;
+selectStoryScope('front', { focus: false });
 elements.threadId.addEventListener('focus', refreshList);
 elements.threadId.addEventListener('click', () => {
     if (!listIsOpen()) {

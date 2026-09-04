@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HN Split story picker proposals</title>
+<style>
+:root {
+    color-scheme: light;
+    font-family: system-ui, sans-serif;
+    color: #202124;
+    background: #f5f5f3;
+}
+body { margin: 0; }
+main { max-width: 1180px; margin: 0 auto; padding: 28px; }
+h1 { margin: 0 0 6px; font-size: 28px; }
+h2 { margin: 0; font-size: 20px; }
+p { line-height: 1.45; }
+.intro { color: #555; margin: 0 0 24px; }
+.proposal { margin: 22px 0; padding: 20px; background: #fff; border: 1px solid #d8d8d4; border-radius: 8px; }
+.proposal.recommended { border: 2px solid #2b6cb0; }
+.heading { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+.recommendation { color: #2b6cb0; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.description { margin: 0 0 14px; color: #666; }
+.picker { border: 1px solid #999; border-radius: 4px; overflow: hidden; background: #fff; box-shadow: 0 5px 16px rgba(0, 0, 0, 0.12); }
+.picker-header { padding: 8px 12px; background: #eee; color: #555; font-size: 13px; }
+.option { width: 100%; border: 0; border-top: 1px solid #e6e6e6; background: #fff; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.option:hover { background: #edf5fb; }
+.option-title { display: block; font-weight: 650; }
+.option-meta { margin-top: 3px; color: #666; font-size: 12px; }
+.badges { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 6px; }
+.badge { display: inline-block; padding: 2px 7px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.ready { background: #dff3e4; color: #176b35; }
+.partial { background: #e5edf8; color: #24588f; }
+.snapshot { background: #eee; color: #555; }
+.new { background: #fff0cf; color: #8a5400; }
+.saved { background: #eee7fa; color: #604092; }
+
+/* A: two-line rows with outcome badges. */
+.badge-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 12px; }
+
+/* B: dense table. */
+.table-grid { display: grid; grid-template-columns: minmax(260px, 2fr) 80px 90px 70px 130px 90px; align-items: stretch; }
+.table-grid > span { padding: 8px 10px; min-width: 0; border-left: 1px solid #e4e4e4; }
+.table-grid > span:first-child { border-left: 0; }
+.table-head { background: #eee; color: #555; font-size: 11px; font-weight: 700; }
+.table-option { padding: 0; }
+.table-option .table-grid > span:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+.table-option .table-grid > span:last-child { text-align: left; }
+.delta { color: #8a5400; font-weight: 700; }
+
+/* C: grouped by outcome. */
+.group-title { padding: 7px 12px; border-top: 1px solid #ccc; background: #f3f3f1; color: #555; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.group-title:first-child { border-top: 0; }
+.group-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; padding: 8px 12px; }
+.group-detail { color: #666; font-size: 12px; }
+
+/* D: restrained typography plus progress. */
+.signal-row { display: grid; grid-template-columns: 5px minmax(0, 1fr) 160px; gap: 10px; align-items: center; padding: 9px 12px 9px 0; }
+.signal { align-self: stretch; background: #bbb; }
+.signal.complete { background: #2f855a; }
+.signal.incomplete { background: #4c78a8; }
+.signal.none { background: #bbb; }
+.signal-row.has-saved .option-title { font-weight: 800; }
+.progress-wrap { text-align: right; }
+.progress { height: 5px; margin-top: 5px; background: #e1e1e1; }
+.progress span { display: block; height: 100%; background: #4c78a8; }
+.progress.complete span { background: #2f855a; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 12px 0 0; color: #666; font-size: 12px; }
+.dot { display: inline-block; width: 9px; height: 9px; margin-right: 4px; border-radius: 50%; }
+.dot.green { background: #2f855a; }
+.dot.blue { background: #4c78a8; }
+.dot.gray { background: #bbb; }
+@media (max-width: 800px) {
+    main { padding: 14px; }
+    .badges { justify-content: flex-start; }
+    .badge-row, .group-row { grid-template-columns: 1fr; }
+    .table-grid { grid-template-columns: minmax(220px, 2fr) 70px 80px 60px 110px 80px; min-width: 720px; }
+    .table-scroll { overflow-x: auto; }
+    .signal-row { grid-template-columns: 5px minmax(0, 1fr); }
+    .progress-wrap { grid-column: 2; text-align: left; }
+}
+</style>
+</head>
+<body>
+<main>
+<h1>Story picker proposals</h1>
+<p class="intro">Real metadata from the nine stored threads. “Ready” means the current 100% Luna/Sonnet run can open without a model request. Freshness is shown independently because it answers a different question.</p>
+
+<section class="proposal recommended">
+<div class="heading"><h2>A. Outcome badges</h2><span class="recommendation">Recommended</span></div>
+<p class="description">Lead with what happens after selection. Keep freshness and the underlying cache reason visible but secondary.</p>
+<div class="picker">
+<div class="picker-header">9 cached threads · current models and 100% share</div>
+<div id="badge-options"></div>
+</div>
+</section>
+
+<section class="proposal">
+<div class="heading"><h2>B. Metadata table</h2></div>
+<p class="description">Best for comparison and precision. It matches the model-picker treatment, but needs more horizontal space.</p>
+<div class="picker table-scroll">
+<div class="table-grid table-head">
+<span>Thread</span><span>Current</span><span>Snapshot</span><span>New</span><span>Cache</span><span>Result</span>
+</div>
+<div id="table-options"></div>
+</div>
+</section>
+
+<section class="proposal">
+<div class="heading"><h2>C. Group by readiness</h2></div>
+<p class="description">Makes the fastest choices easiest to scan. The tradeoff is that stories move between groups as settings change.</p>
+<div class="picker" id="grouped-options"></div>
+</section>
+
+<section class="proposal">
+<div class="heading"><h2>D. Minimal signals</h2></div>
+<p class="description">Uses a colored edge and cache progress instead of several pills. Bold is reserved strictly for an exact saved result.</p>
+<div class="picker">
+<div class="picker-header">Title styling and progress carry separate meanings</div>
+<div id="signal-options"></div>
+</div>
+<div class="legend">
+<span><span class="dot green"></span>all calls cached</span>
+<span><span class="dot blue"></span>partial calls cached</span>
+<span><span class="dot gray"></span>snapshot only</span>
+<span><strong>Bold title</strong> exact saved result</span>
+</div>
+</section>
+</main>
+
+<script>
+const threads = [
+    { id: 44163063, title: 'My AI skeptic friends are all nuts', current: 2826, snapshot: 2689, fetched: '2026-09-04 10:15 AM', cached: 381, calls: 402, saved: false },
+    { id: 49554273, title: 'OpenAI begins rolling out GPT-6 Astra', current: 251, snapshot: 249, fetched: '2026-09-04 10:12 AM', cached: 35, calls: 35, saved: true },
+    { id: 49563355, title: 'Discovery of a new OpenAI agent message board', current: 437, snapshot: 292, fetched: '2026-09-04 09:36 AM', cached: 41, calls: 41, saved: true },
+    { id: 49550375, title: 'Porting my 1993 Amiga game to Godot, with an LLM reading the 68000 assembly', current: 115, snapshot: 114, fetched: '2026-09-04 09:34 AM', cached: 0, calls: 4, saved: false },
+    { id: 49548600, title: 'Ask HN: Who is using MCP in production?', current: 147, snapshot: 134, fetched: '2026-09-04 09:00 AM', cached: 20, calls: 20, saved: false },
+    { id: 49554520, title: 'Qwen 3.8 27B available on Cerebras at 1500 tokens/s', current: 208, snapshot: 196, fetched: '2026-09-04 08:59 AM', cached: 26, calls: 26, saved: false },
+    { id: 49525378, title: 'Claude Fable 5.1 and Claude Mythos 5.1', current: 1377, snapshot: 1361, fetched: '2026-09-04 08:58 AM', cached: 180, calls: 180, saved: false },
+    { id: 49296740, title: 'Why does Opus 5 feel worse to work with?', current: 873, snapshot: 871, fetched: '2026-09-04 08:57 AM', cached: 120, calls: 120, saved: true },
+    { id: 49554643, title: 'GPT-6 Astra', current: 1830, snapshot: 1717, fetched: '2026-09-04 07:49 AM', cached: 224, calls: 224, saved: true },
+];
+
+function state(thread) {
+    if (thread.cached === thread.calls) return 'ready';
+    if (thread.cached > 0) return 'partial';
+    return 'snapshot';
+}
+
+function stateLabel(thread) {
+    if (state(thread) === 'ready') return 'Ready';
+    if (state(thread) === 'partial') return 'Partial';
+    return 'Snapshot only';
+}
+
+function reasonLabel(thread) {
+    if (thread.saved) return 'saved result';
+    if (state(thread) === 'ready') return 'calls cached';
+    return `${thread.cached}/${thread.calls} calls`;
+}
+
+function newCount(thread) {
+    return thread.current - thread.snapshot;
+}
+
+function optionButton(className) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `option ${className}`;
+    return button;
+}
+
+for (const thread of threads) {
+    const button = optionButton('badge-row');
+    const text = document.createElement('span');
+    text.innerHTML = `<span class="option-title">${thread.title}</span><span class="option-meta">${thread.current} comments · snapshot ${thread.snapshot} at ${thread.fetched} · id ${thread.id}</span>`;
+    const badges = document.createElement('span');
+    badges.className = 'badges';
+    badges.innerHTML = `<span class="badge ${state(thread)}">${stateLabel(thread)}</span><span class="badge ${thread.saved ? 'saved' : 'snapshot'}">${reasonLabel(thread)}</span><span class="badge new">+${newCount(thread)} new</span>`;
+    button.append(text, badges);
+    document.getElementById('badge-options').append(button);
+}
+
+for (const thread of threads) {
+    const button = optionButton('table-option');
+    const row = document.createElement('span');
+    row.className = 'table-grid';
+    row.innerHTML = `<span><span class="option-title">${thread.title}</span><span class="option-meta">id ${thread.id} · fetched ${thread.fetched}</span></span><span>${thread.current}</span><span>${thread.snapshot}</span><span class="delta">+${newCount(thread)}</span><span>${thread.cached}/${thread.calls} calls</span><span>${thread.saved ? 'saved' : '—'}</span>`;
+    button.append(row);
+    document.getElementById('table-options').append(button);
+}
+
+const groups = [
+    ['Ready now', threads.filter(thread => state(thread) === 'ready')],
+    ['Partially cached', threads.filter(thread => state(thread) === 'partial')],
+    ['Snapshot only', threads.filter(thread => state(thread) === 'snapshot')],
+];
+for (const [label, items] of groups) {
+    const heading = document.createElement('div');
+    heading.className = 'group-title';
+    heading.textContent = `${label} · ${items.length}`;
+    document.getElementById('grouped-options').append(heading);
+    for (const thread of items) {
+        const button = optionButton('group-row');
+        button.innerHTML = `<span><span class="option-title">${thread.title}</span><span class="option-meta">${thread.current} comments · +${newCount(thread)} since snapshot · id ${thread.id}</span></span><span class="group-detail">${reasonLabel(thread)}</span>`;
+        document.getElementById('grouped-options').append(button);
+    }
+}
+
+for (const thread of threads) {
+    const button = optionButton(`signal-row${thread.saved ? ' has-saved' : ''}`);
+    const status = state(thread);
+    const percent = Math.round((thread.cached / thread.calls) * 100);
+    button.innerHTML = `<span class="signal ${status === 'ready' ? 'complete' : status === 'partial' ? 'incomplete' : 'none'}"></span><span><span class="option-title">${thread.title}</span><span class="option-meta">${thread.current} comments · +${newCount(thread)} new · snapshot ${thread.snapshot} · id ${thread.id}</span></span><span class="progress-wrap">${reasonLabel(thread)}<span class="progress ${status === 'ready' ? 'complete' : ''}"><span style="width:${percent}%"></span></span></span>`;
+    document.getElementById('signal-options').append(button);
+}
+</script>
+</body>
+</html>
