@@ -1,3 +1,4 @@
-# The Content-Security-Policy hashes in hn_polarization.html cover its inline blocks byte for byte;
-# a CRLF checkout would change them and the browser would refuse to run the page's scripts.
-hn_polarization.html text eol=lf
+# Every text file is LF in the index and in the working tree, whatever core.autocrlf says. The
+# Content-Security-Policy hashes in hn_polarization.html cover its inline blocks byte for byte; a CRLF
+# checkout would change them and the browser would refuse to run the page's scripts.
+* text=auto eol=lf
