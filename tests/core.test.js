@@ -61,8 +61,8 @@ const TOY_PASS2 = new Map(TOY_PASS1);
 TOY_PASS2.delete('12|2');
 TOY_PASS2.set('7|2', 'B');
 
-// Order by agreed comments, then commenters, then axis id: axes 1 and 5 have 3 comments by 3 commenters each.
-const TOY_EXPECTED_ORDER = [1, 5, 4, 3, 2, 6];
+// Order by side A + side B people; middle does not contribute to rank.
+const TOY_EXPECTED_ORDER = [1, 4, 5, 3, 2, 6];
 
 // ---------------------------------------------------------------------------
 // Stage 0: thread parsing
@@ -355,7 +355,7 @@ test('collectUnverifiedComments separates conflicts and one-pass classifications
     assert.equal(byAxis.has(1), false);
 });
 
-test('aggregateByAuthor takes the majority stance per author and M on ties', () => {
+test('aggregateByAuthor detects opposing sides before majority and middle ties', () => {
     const commentsById = new Map([
         [1, { id: 1, author: 'p' }], [2, { id: 2, author: 'p' }],
         [3, { id: 3, author: 'q' }], [4, { id: 4, author: 'q' }],
@@ -364,7 +364,7 @@ test('aggregateByAuthor takes the majority stance per author and M on ties', () 
     const agreed = new Map(Object.entries({ '1|1': 'A', '2|1': 'A', '3|1': 'A', '4|1': 'B', '5|1': 'A', '6|1': 'M', '7|1': 'M' }));
     const byAuthor = core.aggregateByAuthor(agreed, commentsById);
     assert.equal(byAuthor.get(1).get('p'), 'A');
-    assert.equal(byAuthor.get(1).get('q'), 'M');
+    assert.equal(byAuthor.get(1).get('q'), 'C');
     assert.equal(byAuthor.get(1).get('r'), 'M');
 });
 
@@ -376,7 +376,7 @@ function toyRows() {
     return core.computeRows(TOY_AXES, byAuthor, agreed);
 }
 
-test('computeRows produces per-commenter counts and the comment count for the toy thread', () => {
+test('computeRows produces verified comment counts for the toy thread', () => {
     const rows = toyRows();
     const byId = new Map(rows.map(row => [row.axisId, row]));
     const portions = byId.get(1);
@@ -387,6 +387,7 @@ test('computeRows produces per-commenter counts and the comment count for the to
         countA: 2,
         countB: 1,
         countM: 0,
+        countC: 0,
         authors: 3,
         comments: 3,
         commentIdsA: [2, 3],
@@ -420,8 +421,9 @@ test('axisMetaText names the agreed comments and commenters, and the middle coun
 });
 
 test('proportionShares splits the bar among side 1, middle, and side 2', () => {
-    assert.deepEqual(core.proportionShares({ countA: 6, countM: 2, countB: 2 }), [0.6, 0.2, 0.2]);
-    assert.deepEqual(core.proportionShares({ countA: 0, countM: 0, countB: 0 }), [0, 0, 0]);
+    assert.deepEqual(core.proportionShares({ countA: 6, countM: 2, countB: 2 }), [0.6, 0.2, 0.2, 0]);
+    assert.deepEqual(core.proportionShares({ countA: 0, countM: 0, countB: 0 }), [0, 0, 0, 0]);
+    assert.deepEqual(core.proportionShares({ countA: 1, countM: 1, countB: 1, countC: 1 }), [0.25, 0.25, 0.25, 0.25]);
 });
 
 test('orientRows puts the larger side and its evidence on statement 1, keeping ties as they are', () => {
@@ -437,10 +439,37 @@ test('orientRows puts the larger side and its evidence on statement 1, keeping t
     assert.equal(rows[0].statementA, 'p');
 });
 
-test('rankRows orders by agreed comments, then commenters, then statement text, and numbers the rows', () => {
+test('rankRows orders by polarized people, then statement text, and numbers the rows', () => {
     const ranked = core.rankRows(toyRows());
     assert.deepEqual(ranked.map(row => row.axisId), TOY_EXPECTED_ORDER);
     assert.deepEqual(ranked.map(row => row.rank), [1, 2, 3, 4, 5, 6]);
+});
+
+test('opposing verified comments by one author count once as self contradiction', () => {
+    const agreed = new Map([['1|1', 'A'], ['2|1', 'A'], ['3|1', 'B'], ['4|1', 'B'], ['5|1', 'M']]);
+    const commentsById = new Map([1, 2, 3, 4, 5].map(id => [id, { id, author: 'same-author' }]));
+    const rows = core.computeRows([TOY_AXES[0]], core.aggregateByAuthor(agreed, commentsById), agreed);
+    assert.deepEqual([rows[0].countA, rows[0].countB, rows[0].countM, rows[0].countC, rows[0].authors], [0, 0, 0, 1, 1]);
+    const repeated = new Map(Array.from({ length: 10 }, (_, index) => [`${index + 1}|1`, 'A']));
+    const repeatedComments = new Map(Array.from({ length: 10 }, (_, index) => [index + 1, { author: 'same' }]));
+    assert.equal(core.computeRows([TOY_AXES[0]], core.aggregateByAuthor(repeated, repeatedComments), repeated)[0].countA, 1);
+    repeated.set('11|1', 'B');
+    repeatedComments.set(11, { author: 'same' });
+    assert.equal(core.computeRows([TOY_AXES[0]], core.aggregateByAuthor(repeated, repeatedComments), repeated)[0].countC, 1);
+});
+
+test('saved rows rebuild person counts and separate self contradiction evidence', () => {
+    const saved = { axisId: 1, countA: 3, countB: 2, countM: 1, comments: 6, commentIdsA: [1, 2, 3, 4], commentIdsB: [5, 6, 7, 8], commentIdsM: [9] };
+    const comments = new Map(Array.from({ length: 9 }, (_, index) => [index + 1, { author: index === 4 ? 'person1' : `person${index + 1}` }]));
+    const row = core.withAuthorCounts(saved, comments);
+    assert.deepEqual([row.countA, row.countB, row.countM, row.countC, row.authors], [3, 3, 1, 1, 8]);
+    assert.deepEqual(row.evidenceIds.C, [1, 5]);
+    assert.deepEqual(row.evidenceIds.A, [2, 3, 4]);
+    assert.equal(saved.countA, 3);
+    const smaller = { ...row, countA: 3, countB: 2, countM: 100, countC: 100, comments: 300, authors: 205, statementA: 'A' };
+    const larger = { ...row, countA: 4, countB: 4, countM: 1, countC: 0, comments: 9, authors: 9, statementA: 'B' };
+    assert.equal(core.rankRows([smaller, larger])[0].statementA, 'B');
+    assert.equal(core.rankRows([{ ...larger, countA: 3, countB: 2 }, smaller])[0].statementA, 'A');
 });
 
 // ---------------------------------------------------------------------------

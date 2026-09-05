@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-6pyHkMdRIaWZ0WlNcpdLTPHZqKDZt659CE6AeA1tfUs=' 'sha256-BCcF8EJsyzan9F38i5MZcK1ZjBR6YutbpIXspH+9eyE='; style-src 'sha256-kOivQOGbCoRViFWTB6UttqyfgAJJzWsMRARDwefXFFM='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-VINCVzu6RLptIesHOFtx8/xBxrcRnoiYxZaW/oSFKT4=' 'sha256-hkqoxB3l2cBesTMsbvDlCwQI+jfDb3XwALPLzSe8c1I='; style-src 'sha256-EANlHxSR9ZQ+w1jxeKeZSMSCYmCvofoILKDPhabM5Q0='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
 <title>HN Split - For and Against on Hacker News</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EHN:s%3C/text%3E%3C/svg%3E">
 <style>
@@ -86,6 +86,7 @@ button { margin-right: 0.5rem; }
 .axis .proportion span { display: block; height: 100%; flex: var(--share); }
 .axis .proportion .side1 { background: #2b6cb0; }
 .axis .proportion .mid { background: #cfcfcf; }
+.axis .proportion .contradiction { background: #805ad5; }
 .axis .proportion .side2 { background: #c05621; }
 .axis .evidence { margin: 0.5rem 0 0.25rem; padding-left: 1rem; border-left: 3px solid #ddd; }
 .axis .evidence-group { margin: 0.6rem 0; }
@@ -1232,6 +1233,7 @@ function collectUnverifiedComments(pass1, pass2) {
 }
 
 function majorityStance(tally) {
+    if (tally[STANCE_A] > 0 && tally[STANCE_B] > 0) return 'C';
     const best = Math.max(tally[STANCE_A], tally[STANCE_B], tally[STANCE_M]);
     const winners = [STANCE_A, STANCE_B, STANCE_M].filter(stance => tally[stance] === best);
     return winners.length === 1 ? winners[0] : STANCE_M;
@@ -1265,7 +1267,7 @@ function aggregateByAuthor(agreed, commentsById) {
     return byAuthor;
 }
 
-// One row per axis with at least one agreed stance: commenters on each statement and in the middle,
+// One row per axis with at least one agreed stance: comments on each statement and in the middle,
 // plus agreed comment ids by stance.
 function computeRows(axes, byAuthor, agreed, unverifiedByAxis = new Map()) {
     const commentIds = new Map();
@@ -1279,22 +1281,12 @@ function computeRows(axes, byAuthor, agreed, unverifiedByAxis = new Map()) {
     return axes.map(axis => {
         const authorStances = byAuthor.get(axis.id) || new Map();
         const ids = commentIds.get(axis.id) || { [STANCE_A]: [], [STANCE_B]: [], [STANCE_M]: [] };
-        let countA = 0;
-        let countB = 0;
-        let countM = 0;
-        for (const stance of authorStances.values()) {
-            if (stance === STANCE_A) countA += 1;
-            else if (stance === STANCE_B) countB += 1;
-            else countM += 1;
-        }
         return {
             axisId: axis.id,
             statementA: axis.statementA,
             statementB: axis.statementB,
-            countA,
-            countB,
-            countM,
-            authors: countA + countB + countM,
+            authors: authorStances.size,
+            ...authorCounts(authorStances),
             comments: ids[STANCE_A].length + ids[STANCE_B].length + ids[STANCE_M].length,
             commentIdsA: ids[STANCE_A],
             commentIdsB: ids[STANCE_B],
@@ -1304,10 +1296,34 @@ function computeRows(axes, byAuthor, agreed, unverifiedByAxis = new Map()) {
     }).filter(row => row.comments > 0);
 }
 
-// Shares of side 1, middle, and side 2 among all commenters on the axis; all zero when there are none.
+function authorCounts(stances) {
+    const counts = { countA: 0, countB: 0, countM: 0, countC: 0 };
+    for (const stance of stances.values()) counts[`count${stance}`] += 1;
+    return counts;
+}
+
+// Recompute saved results from their evidence without repeating model calls.
+function withAuthorCounts(row, commentsById) {
+    const agreed = new Map();
+    for (const stance of [STANCE_A, STANCE_B, STANCE_M]) {
+        for (const id of row[`commentIds${stance}`]) agreed.set(`${id}|${row.axisId}`, stance);
+    }
+    const stances = aggregateByAuthor(agreed, commentsById).get(row.axisId) || new Map();
+    const evidenceIds = { A: [], B: [], M: [], C: [] };
+    for (const key of agreed.keys()) {
+        const { commentId } = parseStanceKey(key);
+        const comment = commentsById.get(commentId);
+        if (comment === undefined) throw new Error(`Missing comment ${commentId} in saved axis evidence`);
+        evidenceIds[stances.get(comment.author)].push(commentId);
+    }
+    return { ...row, ...authorCounts(stances), authors: stances.size, comments: agreed.size, evidenceIds };
+}
+
+// Shares of people in the two sides, middle, and self contradiction.
 function proportionShares(row) {
-    const total = row.countA + row.countM + row.countB;
-    return total === 0 ? [0, 0, 0] : [row.countA / total, row.countM / total, row.countB / total];
+    const counts = [row.countA, row.countM, row.countB, row.countC || 0];
+    const total = counts.reduce((sum, count) => sum + count, 0);
+    return counts.map(count => total === 0 ? 0 : count / total);
 }
 
 // Display helpers shared by the page and the headless runner. All return plain strings.
@@ -1318,7 +1334,7 @@ const SECONDS_PER_MINUTE = 60;
 // An axis's totals: agreed comment classifications, commenters, and the middle count when above zero.
 function axisMetaText(row) {
     const middlePart = row.countM === 0 ? '' : `, ${row.countM} middle`;
-    return `${row.comments} comments, ${row.authors} commenters${middlePart}`;
+    return `${row.comments} comments, ${row.authors} commenters${middlePart}${row.countC ? `, ${row.countC} self contradiction` : ''}`;
 }
 
 function formatDuration(seconds) {
@@ -1370,7 +1386,7 @@ function formatRunSummary(result) {
     ];
 }
 
-// The side with more commenters is always statement 1, so the larger arm of the split is on the left.
+// The side with more people is always statement 1.
 function orientRows(rows) {
     return rows.map(row => (row.countB > row.countA
         ? {
@@ -1381,6 +1397,7 @@ function orientRows(rows) {
             countB: row.countA,
             commentIdsA: row.commentIdsB,
             commentIdsB: row.commentIdsA,
+            ...(row.evidenceIds ? { evidenceIds: { ...row.evidenceIds, A: row.evidenceIds.B, B: row.evidenceIds.A } } : {}),
             unverifiedComments: (row.unverifiedComments || []).map(comment => ({
                 ...comment,
                 pass1: comment.pass1 === null ? null : flipStance(comment.pass1),
@@ -1390,12 +1407,10 @@ function orientRows(rows) {
         : row));
 }
 
-// Biggest axes first: by agreed comments, then commenters, then axis id.
-// Ties on both counts fall back to the statement text, so the consolidator's output order never decides a rank.
+// Most polarized people first, excluding middle and self contradiction.
 function rankRows(rows) {
     const sorted = rows.slice().sort((left, right) =>
-        right.comments - left.comments
-        || right.authors - left.authors
+        (right.countA + right.countB) - (left.countA + left.countB)
         || left.statementA.localeCompare(right.statementA));
     return sorted.map((row, index) => ({ ...row, rank: index + 1 }));
 }
@@ -2003,7 +2018,7 @@ if (typeof module !== 'undefined' && module.exports) {
         buildExtractMessages, buildConsolidateMessages, buildScoreMessages,
         parseExtractResponse, parseConsolidateResponse, parseScoreResponse,
         parseStanceKey, flipStance,
-        mergePasses, comparePasses, collectUnverifiedComments, aggregateByAuthor, computeRows, orientRows, rankRows, proportionShares,
+        mergePasses, comparePasses, collectUnverifiedComments, aggregateByAuthor, computeRows, withAuthorCounts, orientRows, rankRows, proportionShares,
         axisMetaText, formatDuration, formatElapsed, formatClockDuration, formatProgress, formatRunCost, formatRunSummary,
         runPool, callOpenRouter, makeOpenRouterCallChat, runPipeline, TruncationError, InvalidResponseError,
         requestCacheKey, parseCacheExport, makeCachedCallChat, probeCache, formatCacheProbe, formatNextRun,
@@ -2016,7 +2031,7 @@ if (typeof module !== 'undefined' && module.exports) {
 <script id="page">
 // Page glue: DOM only. All computation lives in the core script above.
 
-// Rows are shown biggest first (agreed comments, then commenters), one block per axis: statement 1 above,
+// Rows are shown biggest first (polarized people), one block per axis: statement 1 above,
 // statement 2 below, with a proportion bar between them flanked by each side's vote count.
 
 // A JSON store over localStorage keys sharing one prefix. get returns null when absent; set returns
@@ -2182,6 +2197,7 @@ const modelPickers = [
 ];
 
 let activeController = null;
+let importActive = false;
 let loadedThread = null;
 let loadedSnapshotAt = null;
 
@@ -2449,6 +2465,9 @@ function runHintText() {
     if (activeController !== null) {
         return '';
     }
+    if (importActive) {
+        return 'Importing cache…';
+    }
     if (loadedThread === null) {
         return 'Load a thread to run.';
     }
@@ -2462,24 +2481,32 @@ function runHintText() {
 }
 
 function refreshRunButton() {
-    elements.run.disabled = activeController !== null || loadedThread === null || selectedComments().length === 0
+    elements.run.disabled = activeController !== null || importActive || loadedThread === null || selectedComments().length === 0
         || (!keyAvailable() && !runIsFullyCached());
     elements.runHint.textContent = runHintText();
 }
 
 function setRunning() {
     const isRunning = activeController !== null;
+    const isBusy = isRunning || importActive;
     elements.run.hidden = isRunning;
     elements.cancel.hidden = !isRunning;
-    elements.loadThread.disabled = isRunning;
-    elements.refreshThread.disabled = isRunning;
-    elements.exportCache.disabled = isRunning || cacheStore.count() + snapshotStore.count() + resultStore.count() === 0;
-    elements.importCache.disabled = isRunning;
-    elements.deleteCached.disabled = isRunning;
+    elements.loadThread.disabled = isBusy;
+    elements.refreshThread.disabled = isBusy;
+    elements.exportCache.disabled = isBusy || cacheStore.count() + snapshotStore.count() + resultStore.count() === 0;
+    elements.importCache.disabled = isBusy;
+    elements.deleteCached.disabled = isBusy;
     for (const button of elements.cachedThreadsList.querySelectorAll('button')) {
-        button.disabled = isRunning;
+        button.disabled = isBusy;
     }
     refreshRunButton();
+}
+
+function setImporting(active) {
+    importActive = active;
+    elements.importCache.textContent = active ? 'Importing…' : 'Import';
+    elements.importCache.setAttribute('aria-busy', String(active));
+    setRunning();
 }
 
 function counted(count, singular) {
@@ -2532,7 +2559,7 @@ function refreshStorageInfo() {
     elements.cachedThreadsToggle.textContent = counted(storedThreads, 'thread');
     elements.cachedResultCount.textContent = counted(storedResults, 'saved result');
     renderCachedThreads();
-    elements.exportCache.disabled = activeController !== null || cachedCalls + storedThreads + storedResults === 0;
+    elements.exportCache.disabled = activeController !== null || importActive || cachedCalls + storedThreads + storedResults === 0;
     elements.deleteCached.hidden = cachedCalls === 0 && storedThreads === 0 && storedResults === 0;
 }
 
@@ -2591,12 +2618,19 @@ function importCacheEntries(entries) {
 }
 
 async function importCacheFile(file) {
-    const payload = parseCacheExport(await file.text());
-    const counts = importCacheEntries(payload.entries);
-    flattenedThreads.clear();
-    invalidateResultCache();
-    await afterStoreChange();
-    setStatus(`Imported ${counts.imported} cache entries from ${file.name}; ${counts.overwritten} existing entries were replaced. The OpenRouter key was not changed.`);
+    setImporting(true);
+    setStatus(`Importing cache entries from ${file.name}…`);
+    await defaultSleep(0);
+    try {
+        const payload = parseCacheExport(await file.text());
+        const counts = importCacheEntries(payload.entries);
+        flattenedThreads.clear();
+        invalidateResultCache();
+        await afterStoreChange();
+        setStatus(`Imported ${counts.imported} cache entries from ${file.name}; ${counts.overwritten} existing entries were replaced. The OpenRouter key was not changed.`);
+    } finally {
+        setImporting(false);
+    }
 }
 
 // Cheap enough to run on every keystroke in the thread box: existence checks only.
@@ -2861,10 +2895,10 @@ function showList(stories, headerFor) {
         });
         title.append(link);
         const detail = makeElement('span', { className: 'story-detail' });
-        detail.append(document.createTextNode(` — ${counted(story.numComments, 'comment')}, posted ${storyDate(story)}, id ${story.id}`));
+        detail.append(document.createTextNode(` — ${counted(story.numComments, 'comment')} reported by Algolia, posted ${storyDate(story)}, id ${story.id}`));
         if (thread !== null) {
             const difference = story.numComments - thread.commentCount;
-            detail.append(document.createTextNode(`; ${thread.commentCount} fetched`));
+            detail.append(document.createTextNode(`; ${thread.commentCount} fetched from Algolia`));
             if (difference !== 0) {
                 const direction = difference > 0 ? `+${difference} new` : `${Math.abs(difference)} fewer now`;
                 detail.append(document.createTextNode(' ('), makeElement('span', { className: 'new', text: direction }), document.createTextNode(')'));
@@ -3008,15 +3042,14 @@ function renderThreadInfo(thread, snapshot, stored, currentCommentCount, current
     const displayedCount = currentCountKnown ? currentCommentCount : thread.commentCount;
     const fetchedCountDiffers = currentCountKnown && currentCommentCount !== thread.commentCount;
     const parts = [
-        document.createTextNode(`${counted(displayedCount, 'comment')}${currentCountKnown ? '' : ' when fetched'}, posted ${storyDate(thread)}, id ${thread.id}, fetched `),
+        document.createTextNode(`id ${thread.id}, posted ${storyDate(thread)}, ${counted(displayedCount, 'comment')}${currentCountKnown ? '' : ' when fetched from Algolia'}, fetched `),
     ];
     if (fetchedCountDiffers) {
         parts.push(makeElement('strong', { text: String(thread.commentCount) }));
-        parts.push(document.createTextNode(' comments '));
     } else {
-        parts.push(document.createTextNode('comments '));
+        parts.push(document.createTextNode(String(thread.commentCount)));
     }
-    parts.push(document.createTextNode(`on ${formatLocalDateTime(snapshot.fetchedAt)}${stored ? '' : ', not stored'}`));
+    parts.push(document.createTextNode(` from Algolia (can lag) on ${formatLocalDateTime(snapshot.fetchedAt)}${stored ? '' : ', not stored'}`));
     if (!currentCountKnown) {
         parts.push(document.createTextNode(`; current count unavailable: ${currentCountError.message}`));
     }
@@ -3104,11 +3137,11 @@ function renderStatement(sideClass, text) {
     return makeElement('p', { className: `statement ${sideClass}`, text });
 }
 
-// Three segments sized by share of all commenters on the axis; the bar itself has a fixed width.
+// Four segments sized by share of people on the axis; the bar itself has a fixed width.
 function renderProportionBar(row) {
     const bar = makeElement('div', { className: 'proportion' });
     const shares = proportionShares(row);
-    ['side1', 'mid', 'side2'].forEach((segmentClass, index) => {
+    ['side1', 'mid', 'side2', 'contradiction'].forEach((segmentClass, index) => {
         const segment = makeElement('span', { className: segmentClass });
         segment.style.setProperty('--share', shares[index]);
         bar.appendChild(segment);
@@ -3146,7 +3179,7 @@ function renderProportionRow(row, evidence) {
         String(row.countA),
         'side1',
         'side1',
-        `${row.countA} Blue commenters; show ${row.commentIdsA.length} verified comments`,
+        `${row.countA} Blue people; show their verified comments`,
         evidence,
         toggles,
     ));
@@ -3155,7 +3188,7 @@ function renderProportionRow(row, evidence) {
         String(row.countB),
         'side2',
         'side2',
-        `${row.countB} Orange commenters; show ${row.commentIdsB.length} verified comments`,
+        `${row.countB} Orange people; show their verified comments`,
         evidence,
         toggles,
     ));
@@ -3164,9 +3197,16 @@ function renderProportionRow(row, evidence) {
             `(${row.countM} middle)`,
             'middle-count',
             'mid',
-            `${row.countM} middle commenters; show ${row.commentIdsM.length} verified comments`,
+            `${row.countM} middle people; show their verified comments`,
             evidence,
             toggles,
+        ));
+    }
+    if (row.countC > 0) {
+        wrapper.appendChild(evidenceToggle(
+            `${row.countC} self contradiction`, 'contradiction', 'contradiction',
+            `${row.countC} people with verified comments on both sides; show their comments`,
+            evidence, toggles,
         ));
     }
     const unverifiedCount = (row.unverifiedComments || []).length;
@@ -3247,9 +3287,10 @@ function renderAxisEvidence(row, commentsById) {
     evidence.id = `axis-comments-${row.axisId}`;
     evidence.hidden = true;
     const groups = [
-        renderEvidenceGroup('side1', 'Blue', row.commentIdsA || [], commentsById),
-        renderEvidenceGroup('mid', 'Middle', row.commentIdsM || [], commentsById),
-        renderEvidenceGroup('side2', 'Orange', row.commentIdsB || [], commentsById),
+        renderEvidenceGroup('side1', 'Blue', row.evidenceIds.A, commentsById),
+        renderEvidenceGroup('mid', 'Middle', row.evidenceIds.M, commentsById),
+        renderEvidenceGroup('side2', 'Orange', row.evidenceIds.B, commentsById),
+        renderEvidenceGroup('contradiction', 'Self contradiction', row.evidenceIds.C, commentsById),
         renderUnverifiedEvidence(row.unverifiedComments || [], commentsById),
     ].filter(group => group !== null);
     evidence.replaceChildren(...groups);
@@ -3307,7 +3348,8 @@ function renderResults(result, comments) {
     warningList.replaceChildren(...result.warnings.map(text => makeElement('li', { text })));
     elements.warnings.querySelector('summary').textContent = `${result.warnings.length} warnings`;
     elements.warnings.hidden = result.warnings.length === 0;
-    elements.results.replaceChildren(...result.rows.map(row => renderAxis(row, commentsById)));
+    const rows = orientRows(rankRows(result.rows.map(row => withAuthorCounts(row, commentsById))));
+    elements.results.replaceChildren(...rows.map(row => renderAxis(row, commentsById)));
     renderUnverifiedAxes(result.unverifiedAxes || [], commentsById);
 }
 
