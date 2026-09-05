@@ -631,6 +631,9 @@ function makeFakeCallChat(log) {
         if (call.stage === 'consolidate') {
             return { json: { axes: TOY_AXES.map(axis => ({ statementA: axis.statementA, statementB: axis.statementB })) }, usage: fakeUsage };
         }
+        if (call.stage === 'synthesize') {
+            return { json: { sections: [{ text: 'Portion value divides the discussion.', axisIds: [1] }], caveats: [] }, usage: fakeUsage };
+        }
         if (call.stage === 'score') {
             const source = call.meta.swapPoles ? TOY_PASS2 : TOY_PASS1;
             const stances = [];
@@ -648,6 +651,269 @@ function makeFakeCallChat(log) {
         throw new Error('unexpected stage ' + call.stage);
     };
 }
+
+test('synthesis uses consolidation settings, verified evidence, structured references and deterministic counts', async () => {
+    const log = [];
+    const progress = [];
+    const result = await core.runPipeline({
+        thread: core.flattenThread(TOY_THREAD), callChat: makeFakeCallChat(log),
+        onProgress: update => progress.push(update), config: { ...TOY_CONFIG, modelConsolidate: 'expensive-test-model' },
+    });
+    const call = log.at(-1);
+    assert.equal(call.stage, 'synthesize');
+    assert.equal(call.model, 'expensive-test-model');
+    assert.equal(call.maxTokens, 16000);
+    assert.equal(call.schema.name, 'thread_synthesis');
+    assert.ok(progress.some(update => update.stage === 'synthesize' && update.inFlight === 1));
+    assert.deepEqual(result.synthesis.sections[0].axisIds, [1]);
+    const input = JSON.parse(call.messages[1].content);
+    for (const axis of input.axes) {
+        const row = result.rows.find(row => row.axisId === axis.axisId);
+        assert.deepEqual(axis.people, { A: row.countA, B: row.countB, middle: row.countM, selfContradiction: row.countC });
+        assert.ok(Object.values(axis.evidence).every(group => group.length <= 2));
+    }
+    assert.ok(!call.messages[1].content.includes('"author"'));
+    assert.match(call.messages[0].content, /NOT consensus/);
+});
+
+test('synthesis rejects missing prose, unsupported references and malformed caveats', () => {
+    for (const json of [
+        {}, { sections: [], caveats: [] },
+        { sections: [{ text: 'Claim', axisIds: [999] }], caveats: [] },
+        { sections: [{ text: 'Claim', axisIds: ['1'] }], caveats: [] },
+        { sections: [{ text: 'Claim', axisIds: [1] }], caveats: [null] },
+    ]) assert.throws(() => core.parseSynthesisResponse(json, [1]), /Synthesis/);
+});
+
+test('synthesis always enforces compact prose and references', () => {
+    const paragraph = words => ({ text: Array(words).fill('interpretation').join(' '), axisIds: [1] });
+    const valid = { sections: [paragraph(75), paragraph(75), paragraph(75)], caveats: [] };
+    assert.equal(core.parseSynthesisResponse(valid, [1]).sections.length, 3);
+    assert.doesNotThrow(() => core.parseSynthesisResponse({ sections: [{ text: 'GPT-6 frames the discussion.', axisIds: [1] }], caveats: [] }, [1]));
+    for (const sections of [
+        [paragraph(101)],
+        Array.from({ length: 4 }, () => paragraph(76)),
+        Array.from({ length: 5 }, () => paragraph(20)),
+        [{ text: 'Interpretation', axisIds: [1, 2, 3] }],
+        [{ text: 'First paragraph.\nSecond paragraph.', axisIds: [1] }],
+        [{ text: 'Supported by 64 people', axisIds: [1] }],
+        [{ text: 'The split (64–18) suggests tension.', axisIds: [1] }],
+    ]) {
+        assert.throws(() => core.parseSynthesisResponse({ sections, caveats: [] }, [1, 2, 3]), /concise/);
+    }
+    const prompt = core.buildSynthesisMessages('Title', [], new Map())[0].content;
+    assert.match(prompt, /200–300 words/);
+    assert.match(prompt, /3–4 concise paragraphs/);
+    assert.match(prompt, /1–2 supporting axisIds/);
+});
+
+test('inline narrative counts toggle only local normalized stance evidence, including middle and contradiction', () => {
+    const source = require('node:fs').readFileSync(require.resolve('../hn_polarization.html'), 'utf8');
+    class Element {
+        constructor(tag, text = '') { this.tagName = tag; this.textContent = text; this.children = []; this.dataset = {}; this.attributes = {}; this.hidden = false; }
+        appendChild(node) { this.children.push(node); return node; }
+        append(...nodes) { nodes.forEach(node => this.appendChild(node)); }
+        setAttribute(key, value) { this.attributes[key] = value; }
+        getAttribute(key) { return this.attributes[key]; }
+        addEventListener(name, handler) { this[name] = handler; }
+        querySelectorAll(selector) {
+            return this.children.flatMap(child => [
+                ...(selector === '.evidence-group' && child.className?.split(' ').includes('evidence-group') ? [child] : []),
+                ...child.querySelectorAll(selector),
+            ]);
+        }
+    }
+    const sandbox = {
+        document: { createTextNode: text => new Element('#text', text) },
+        makeElement: (tag, options = {}) => Object.assign(new Element(tag, options.text || ''), { className: options.className || '' }),
+        CONSTANTS: core.CONSTANTS,
+    };
+    const vm = require('node:vm');
+    for (const [start, end] of [
+        ['function evidenceToggle(', '// Each visible count'],
+        ['function renderEvidenceGroup(', 'function stanceLabel('],
+        ['function renderNarrativeSection(', 'function renderResults('],
+    ]) vm.runInNewContext(source.slice(source.indexOf(start), source.indexOf(end, source.indexOf(start))), sandbox);
+    const comments = core.indexCommentsById([
+        { id: 1, author: 'alice', text: 'For' }, { id: 2, author: 'alice', text: 'For again' },
+        { id: 3, author: 'bob', text: 'Against' }, { id: 4, author: 'chris', text: 'Conditional' },
+        { id: 5, author: 'dana', text: 'For' }, { id: 6, author: 'dana', text: 'Against' },
+    ]);
+    const raw = { axisId: 1, statementA: 'Keep it', statementB: 'Change it', countA: 999, commentIdsA: [1, 2, 5], commentIdsB: [3, 6], commentIdsM: [4] };
+    const rows = [core.withAuthorCounts(raw, comments), core.withAuthorCounts({ ...raw, axisId: 2, commentIdsB: [], commentIdsM: [] }, comments)];
+    const block = sandbox.renderNarrativeSection({ text: 'Interpretation first.', axisIds: [1, 2] }, rows, comments, 0);
+    const [paragraph, evidence] = block.children;
+    const counts = paragraph.children[0];
+    const buttons = counts.children.filter(child => child.tagName === 'button');
+    assert.deepEqual(buttons.map(button => button.textContent), ['1', '1', '1', '1 self contradiction']);
+    assert.equal(evidence.hidden, true);
+    assert.ok(buttons.every(button => !/blue|orange/i.test(button.getAttribute('aria-label'))));
+    const visible = () => evidence.children.filter(group => !group.hidden);
+    const commentsIn = group => group.children.filter(child => child.tagName === 'article').length;
+    buttons[0].click();
+    assert.equal(visible().length, 1);
+    assert.equal(visible()[0].dataset.evidenceKind, '1-A');
+    assert.equal(commentsIn(visible()[0]), 2);
+    assert.match(visible()[0].children[0].textContent, /1 person, 2 verified comments/);
+    buttons[1].click();
+    assert.equal(visible()[0].dataset.evidenceKind, '1-B');
+    assert.equal(buttons[0].getAttribute('aria-expanded'), 'false');
+    buttons[2].click();
+    assert.equal(visible()[0].dataset.evidenceKind, '1-M');
+    buttons[3].click();
+    assert.equal(visible()[0].dataset.evidenceKind, '1-C');
+    assert.equal(commentsIn(visible()[0]), 2);
+    buttons[3].click();
+    assert.equal(evidence.hidden, true);
+    const otherButtons = paragraph.children[1].children.filter(child => child.tagName === 'button');
+    otherButtons[1].click();
+    assert.equal(visible()[0].dataset.evidenceKind, '2-B');
+    assert.match(visible()[0].children[0].textContent, /0 people, 0 verified comments/);
+    assert.equal(visible().length, 1);
+    assert.ok(!/scrollIntoView|comparisons\.open|\.focus\(/.test(source.slice(source.indexOf('function renderNarrativeSection('), source.indexOf('function renderResults('))));
+});
+
+test('invalid JSON from the final provider call is charged and not silently retried', async () => {
+    let calls = 0;
+    await assert.rejects(core.callOpenRouter({
+        apiKey: 'fake', request: { ...minimalRequest(), stage: 'synthesize' }, sleepImpl: async () => {},
+        fetchImpl: async () => {
+            calls += 1;
+            return fakeResponse(200, { choices: [{ message: { content: 'not JSON' }, finish_reason: 'stop' }], usage: { cost: 0.02 } });
+        },
+    }), error => /not valid JSON/.test(error.message) && error.usage.cost === 0.02);
+    assert.equal(calls, 1);
+});
+
+test('synthesis samples each author once per class and keeps self contradiction separate', () => {
+    const comments = [
+        { id: 1, author: 'repeated-author', text: 'x'.repeat(1500) },
+        { id: 2, author: 'repeated-author', text: 'Again' },
+        { id: 3, author: 'contradicting-author', text: 'Yes' },
+        { id: 4, author: 'contradicting-author', text: 'No' },
+        { id: 5, author: 'minority-author', text: 'Minority reasoning' },
+    ];
+    const row = { axisId: 1, statementA: 'A', statementB: 'B', commentIdsA: [1, 2, 3], commentIdsB: [4, 5], commentIdsM: [] };
+    const messages = core.buildSynthesisMessages('Title', [row], core.indexCommentsById(comments));
+    const axis = JSON.parse(messages[1].content).axes[0];
+    assert.deepEqual(axis.people, { A: 1, B: 1, middle: 0, selfContradiction: 1 });
+    assert.deepEqual(axis.evidence.A.map(item => item.commentId), [1]);
+    assert.equal(axis.evidence.A[0].excerpt.length, 703);
+    assert.deepEqual(axis.evidence.B.map(item => item.commentId), [5]);
+    assert.equal(axis.evidence.C.length, 1);
+    assert.ok(!messages[1].content.includes('repeated-author'));
+});
+
+test('failed synthesis preserves comparisons and valid cached stages; retry and reopening are free for hits', async () => {
+    const { api } = mapStore();
+    const thread = core.flattenThread(TOY_THREAD);
+    const fake = makeFakeCallChat([]);
+    const run = callChat => core.runPipeline({ thread, config: TOY_CONFIG, onProgress: () => {}, callChat });
+    const failed = await run(core.makeCachedCallChat(async call => {
+        if (call.stage === 'synthesize') return { json: { sections: [{ text: 'Invented reference', axisIds: [999] }], caveats: [] }, usage: { cost: 0.002 } };
+        return fake(call);
+    }, api));
+    assert.equal(failed.synthesis, null);
+    assert.match(failed.synthesisError, /unsupported axis/);
+    assert.deepEqual(failed.rows.map(row => row.axisId), TOY_EXPECTED_ORDER);
+    assertClose(failed.cost, (failed.calls - 1) * 0.001 + 0.002, 'invalid final response billed');
+    const probe = await core.probeCache({ thread, store: api, config: TOY_CONFIG });
+    assert.equal(probe.complete, false);
+    assert.deepEqual(probe.stages.at(-1), { stage: 'synthesize', hits: 0, total: 1 });
+    const log = [];
+    const recovered = await run(core.makeCachedCallChat(makeFakeCallChat(log), api));
+    assert.deepEqual(log.map(call => call.stage), ['synthesize']);
+    assert.ok(recovered.synthesis);
+    const reopened = await run(core.makeCachedCallChat(() => { throw new Error('No network allowed'); }, api));
+    assert.equal(reopened.cost, 0);
+    assert.deepEqual(reopened.synthesis, recovered.synthesis);
+});
+
+test('short synthesis refreshes only its model cache and ignores prior saved-result versions', async () => {
+    const { store, api } = mapStore();
+    const thread = core.flattenThread(TOY_THREAD);
+    const calls = [];
+    const run = callChat => core.runPipeline({ thread, config: TOY_CONFIG, onProgress: () => {}, callChat });
+    await run(core.makeCachedCallChat(makeFakeCallChat(calls), api));
+    const synthesisCall = calls.find(call => call.stage === 'synthesize');
+    const currentKey = core.requestCacheKey(synthesisCall);
+    const previousCall = {
+        ...synthesisCall,
+        messages: synthesisCall.messages.map(message => ({
+            ...message, content: message.content.replace(/^Short synthesis format v2\. /, ''),
+        })),
+    };
+    const previousKey = core.requestCacheKey(previousCall);
+    assert.notEqual(currentKey, previousKey);
+    store.set(previousKey, {
+        json: { sections: [{ text: Array(101).fill('old').join(' '), axisIds: [1] }], caveats: [] },
+        usage: { cost: 1 },
+    });
+    store.delete(currentKey);
+    const probe = await core.probeCache({ thread, store: api, config: TOY_CONFIG });
+    assert.equal(probe.complete, false);
+    assert.deepEqual(probe.stages.at(-1), { stage: 'synthesize', hits: 0, total: 1 });
+    const refreshed = [];
+    await run(core.makeCachedCallChat(makeFakeCallChat(refreshed), api));
+    assert.deepEqual(refreshed.map(call => call.stage), ['synthesize']);
+    assert.ok(store.has(previousKey), 'old data is not deleted');
+    const source = require('node:fs').readFileSync(require.resolve('../hn_polarization.html'), 'utf8');
+    assert.match(source, /const RESULT_CACHE_VERSION = 5;/);
+    assert.match(source, /saved\.version === RESULT_CACHE_VERSION/);
+    assert.match(source, /cachedRecord\.version === RESULT_CACHE_VERSION/);
+    assert.doesNotMatch(source, /Read saved narrative|synthesisNeedsDisclosure|predates narrative synthesis/);
+});
+
+test('cancelled and truncated synthesis preserve comparisons and surface failure', async () => {
+    for (const mode of ['cancel', 'truncate', 'network']) {
+        const controller = new AbortController();
+        const fake = makeFakeCallChat([]);
+        const result = await core.runPipeline({
+            thread: core.flattenThread(TOY_THREAD), config: TOY_CONFIG, signal: controller.signal, onProgress: () => {},
+            callChat: async call => {
+                if (call.stage !== 'synthesize') return fake(call);
+                assert.equal(call.signal, controller.signal);
+                if (mode === 'cancel') controller.abort();
+                if (mode === 'truncate') throw new core.TruncationError('truncated final output', { cost: 0.005 });
+                throw new Error('network unavailable');
+            },
+        });
+        assert.equal(result.rows.length, 6);
+        assert.equal(result.synthesis, null);
+        assert.match(result.synthesisError, mode === 'cancel' ? /Cancelled/ : mode === 'truncate' ? /truncated/ : /network/);
+        assert.ok(result.warnings.some(warning => warning.includes('Summary unavailable')));
+    }
+});
+
+test('budget exceeded by final call still returns usable comparisons and records final spend', async () => {
+    const fake = makeFakeCallChat([]);
+    const result = await core.runPipeline({
+        thread: core.flattenThread(TOY_THREAD), config: { ...TOY_CONFIG, budgetUsd: 1 }, onProgress: () => {},
+        callChat: async call => {
+            const response = await fake(call);
+            return call.stage === 'synthesize' ? { ...response, usage: { cost: 2 } } : response;
+        },
+    });
+    assert.match(result.synthesisError, /Budget/);
+    assert.equal(result.rows.length, 6);
+    assert.ok(result.cost > 2);
+});
+
+test('no verified rows skips synthesis without inventing a narrative', async () => {
+    const fake = makeFakeCallChat([]);
+    const log = [];
+    const result = await core.runPipeline({
+        thread: core.flattenThread(TOY_THREAD), config: TOY_CONFIG, onProgress: () => {},
+        callChat: async call => {
+            log.push(call.stage);
+            if (call.stage === 'score') return { json: { stances: [] }, usage: { cost: 0 } };
+            return fake(call);
+        },
+    });
+    assert.equal(result.rows.length, 0);
+    assert.equal(result.synthesis, null);
+    assert.equal(log.includes('synthesize'), false);
+});
 
 test('runPipeline reproduces the toy ranking end to end with a fake model', async () => {
     const log = [];
@@ -897,7 +1163,7 @@ test('consolidation model metrics use role-specific columns', () => {
 test('combinedRate scales the consolidation rate by the volume model\'s candidate factor', () => {
     const opus = core.VOLUME_MODELS.opus5;
     const sonnet = core.CONSOLIDATION_MODELS.sonnet5;
-    assertClose(core.combinedRate('opus5', 'sonnet5', 'usdPerMillionChars'), opus.usdPerMillionChars + sonnet.usdPerMillionChars * opus.candidateFactor, 'opus factor applied');
+    assertClose(core.combinedRate('opus5', 'sonnet5', 'usdPerMillionChars'), opus.usdPerMillionChars + sonnet.usdPerMillionChars * (opus.candidateFactor + 1), 'opus factor plus synthesis allowance applied');
     assert.equal(core.VOLUME_MODELS.haiku.candidateFactor, 1, 'Haiku is the reference');
     for (const choice of Object.values(core.VOLUME_MODELS)) {
         assert.ok(choice.candidateFactor > 0);
@@ -905,15 +1171,14 @@ test('combinedRate scales the consolidation rate by the volume model\'s candidat
 });
 
 test('combinedRate sums the per-character rates and estimateRunSeconds never goes below the stage latency floor', () => {
-    const expected = core.VOLUME_MODELS.haiku.usdPerMillionChars + core.CONSOLIDATION_MODELS.sonnet5.usdPerMillionChars;
+    const expected = core.VOLUME_MODELS.haiku.usdPerMillionChars + 2 * core.CONSOLIDATION_MODELS.sonnet5.usdPerMillionChars;
     assertClose(core.combinedRate('haiku', 'sonnet5', 'usdPerMillionChars'), expected, 'combined rate');
     const seconds = core.estimateRunSeconds(416000, 'haiku', 'sonnet5');
-    assertClose(seconds, (core.VOLUME_MODELS.haiku.secondsPerMillionChars + core.CONSOLIDATION_MODELS.sonnet5.secondsPerMillionChars) * 0.416, 'seconds for a large thread');
-    // Three stages in sequence: extraction and scoring each take at least one volume call, consolidation one consolidation call.
-    const floor = 2 * core.VOLUME_MODELS.haiku.minimumSeconds + core.CONSOLIDATION_MODELS.sonnet5.minimumSeconds;
+    assertClose(seconds, (core.VOLUME_MODELS.haiku.secondsPerMillionChars + 2 * core.CONSOLIDATION_MODELS.sonnet5.secondsPerMillionChars) * 0.416, 'seconds for a large thread');
+    const floor = 2 * core.VOLUME_MODELS.haiku.minimumSeconds + 2 * core.CONSOLIDATION_MODELS.sonnet5.minimumSeconds;
     assert.equal(core.estimateRunSeconds(0, 'haiku', 'sonnet5'), floor);
     assert.equal(core.estimateRunSeconds(8000, 'haiku', 'sonnet5'), floor, 'a small thread is bounded by latency');
-    assert.ok(floor >= 20 && floor <= 40, 'the Claude pair took 28 seconds on the 38-comment smoke test');
+    assert.equal(floor, 46, 'includes the additional synthesis latency');
     for (const choice of Object.values(core.VOLUME_MODELS).concat(Object.values(core.CONSOLIDATION_MODELS))) {
         assert.ok(choice.minimumSeconds > 0);
     }
@@ -1220,7 +1485,7 @@ test('probeCache after a full run reports every stage fully cached without calli
     const run = await core.runPipeline({ thread, callChat: cachedFake(api), onProgress: () => {}, config: TOY_CONFIG });
     const probe = await core.probeCache({ thread, store: api, config: TOY_CONFIG });
     assert.equal(probe.complete, true);
-    assert.deepEqual(probe.stages.map(stage => stage.stage), ['extract', 'consolidate', 'score']);
+    assert.deepEqual(probe.stages.map(stage => stage.stage), ['extract', 'consolidate', 'score', 'synthesize']);
     for (const stage of probe.stages) {
         assert.equal(stage.hits, stage.total, stage.stage);
     }

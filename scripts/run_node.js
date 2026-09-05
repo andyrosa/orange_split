@@ -113,6 +113,12 @@ function formatRow(row) {
 }
 
 function report(result, elapsedSeconds) {
+    if (result.synthesis) {
+        for (const section of result.synthesis.sections) console.log(`${section.text}\n`);
+        for (const caveat of result.synthesis.caveats) console.log(`Caveat: ${caveat}`);
+    } else if (result.synthesisError) {
+        console.error(`Summary unavailable: ${result.synthesisError}; comparisons preserved.`);
+    }
     for (const row of result.rows) {
         console.log(formatRow(row));
     }
@@ -157,6 +163,7 @@ async function main() {
         fs.writeFileSync(outPath, JSON.stringify({ threadId, title: thread.title, url: thread.url, elapsedSeconds, ...result }, null, 2), 'utf8');
         process.stderr.write(`wrote ${outPath}\n`);
     }
+    if (result.synthesisError) process.exitCode = 1;
 }
 
 main().catch(error => {
