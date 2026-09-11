@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HN Split story picker proposals</title>
+<title>HN Split model picker proposals</title>
 <style>
 :root {
     color-scheme: light;
@@ -102,6 +102,50 @@ p { line-height: 1.45; }
 .hn-title .option-title { display: inline; }
 .hn-id { color: #777; font-size: 12px; }
 .muted { color: #666; font-size: 12px; }
+.model-proposal { overflow: visible; }
+.model-proposal .heading { flex-wrap: wrap; }
+.model-demo { position: relative; min-width: 0; }
+.model-names { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.model-trigger { max-width: 100%; padding: 9px 14px; border: 1px solid #c5ced8; border-radius: 6px; background: #fafcfe; color: #234c74; font: 600 14px/20px system-ui, sans-serif; white-space: nowrap; cursor: pointer; }
+.model-trigger:hover, .model-trigger[aria-expanded="true"] { background: #eaf3fc; border-color: #477cac; }
+.model-demo button:focus-visible, .model-scroll:focus-visible, .previous-proposals > summary:focus-visible { outline: 3px solid #286eae; outline-offset: 3px; }
+.model-panel { box-sizing: border-box; width: 100%; min-width: 0; margin-top: 8px; border: 1px solid #b9c8d7; border-radius: 8px; background: #fff; box-shadow: 0 12px 30px #20364f22; overflow: hidden; }
+.model-panel[hidden] { display: none; }
+.model-demo[data-variant="a"] .model-panel { position: absolute; left: 0; top: 100%; z-index: 10; }
+.model-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px 6px; }
+.model-panel h3 { margin: 0; font-size: 15px; }
+.model-close { flex: none; padding: 5px 9px; background: #f5f6f7; border: 1px solid #d5dbe1; border-radius: 4px; color: #33485b; cursor: pointer; font: inherit; font-size: 12px; }
+.model-panel-help { color: #65717d; font-size: 12px; margin: 0; padding: 0 14px 10px; }
+.model-scroll { max-width: 100%; max-height: 360px; overflow: auto; overscroll-behavior: contain; }
+.model-table { width: 100%; min-width: 980px; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.model-table th, .model-table td { padding: 10px 12px; text-align: left; border-top: 1px solid #e6ebef; }
+.model-table thead th { background: #f2f5f8; color: #546270; font-weight: 600; vertical-align: bottom; }
+.model-table tbody th { white-space: nowrap; }
+.model-table tbody tr:hover { background: #f5f9fd; }
+.model-table tr.is-selected { background: #edf5fc; }
+.model-choice { border: 0; border-radius: 3px; background: transparent; color: #245c8c; padding: 5px 0; cursor: pointer; font: 600 12px system-ui, sans-serif; text-align: left; }
+.model-choice[aria-pressed="true"]::after { content: " ✓"; }
+.model-table td:last-child { min-width: 80px; }
+.model-switches { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 10px; }
+.model-switches button { border: 1px solid #cbd6e1; border-radius: 5px; padding: 6px 10px; background: #fff; color: #355470; font: inherit; font-size: 12px; cursor: pointer; }
+.model-switches button[aria-pressed="true"] { background: #eaf3fc; border-color: #477cac; }
+.model-demo[data-variant="b"] .model-names { display: inline-flex; gap: 0; padding: 3px; border: 1px solid #cad3dd; border-radius: 9px; background: #f4f7fa; max-width: 100%; box-sizing: border-box; }
+.model-demo[data-variant="b"] .model-trigger { background: transparent; border-color: transparent; }
+.model-demo[data-variant="b"] .model-trigger + .model-trigger { border-left-color: #ccd5df; border-radius: 0 6px 6px 0; }
+.model-demo[data-variant="b"] .model-trigger:hover, .model-demo[data-variant="b"] .model-trigger[aria-expanded="true"] { background: #fff; }
+.model-demo[data-variant="c"] .model-names { flex-direction: column; align-items: flex-start; gap: 2px; }
+.model-demo[data-variant="c"] .model-trigger { border-color: transparent; background: transparent; padding: 4px 0; border-radius: 2px; text-decoration: underline; text-decoration-color: #a9bfd3; text-underline-offset: 4px; }
+.model-demo[data-variant="c"] .model-trigger:hover { color: #143b60; text-decoration-color: currentColor; }
+.previous-proposals { margin-top: 36px; border-top: 1px solid #d8d8d4; padding-top: 18px; }
+.previous-proposals > summary { cursor: pointer; color: #556270; font-size: 14px; padding: 8px 0; }
+.previous-proposals > h1 { margin-top: 18px; }
+@media (max-width: 560px) {
+    .model-proposal { padding: 14px; }
+    .model-names { flex-direction: column; align-items: flex-start; gap: 4px; }
+    .model-demo[data-variant="b"] .model-names { display: inline-flex; align-items: stretch; }
+    .model-demo[data-variant="b"] .model-trigger { text-align: left; }
+    .model-demo[data-variant="b"] .model-trigger + .model-trigger { border-left-color: transparent; border-top-color: #ccd5df; border-radius: 0 0 6px 6px; }
+}
 @media (max-width: 800px) {
     main { padding: 14px; }
     .badges { justify-content: flex-start; }
@@ -115,6 +159,30 @@ p { line-height: 1.45; }
 </head>
 <body>
 <main>
+<h1>Model pickers, without the tables</h1>
+<p class="intro">Names at rest; properties only while choosing. Each pair is extraction + scoring first, consolidation + synthesis second. These independent demos use the live page’s model options and measured samples; nothing changes the live app.</p>
+
+<section class="proposal recommended model-proposal">
+<div class="heading"><h2>A. Inline names</h2><span class="recommendation">Recommended</span></div>
+<p class="description">Two small buttons. A wide comparison popover opens on demand without pushing the rest of the page down.</p>
+<div class="model-demo" data-variant="a" id="model-demo-a"></div>
+</section>
+
+<section class="proposal model-proposal">
+<div class="heading"><h2>B. Paired control</h2></div>
+<p class="description">One connected pair, one shared comparison panel. Switch roles inside the panel; the content below moves down while choosing.</p>
+<div class="model-demo" data-variant="b" id="model-demo-b"></div>
+</section>
+
+<section class="proposal model-proposal">
+<div class="heading"><h2>C. Two quiet rows</h2></div>
+<p class="description">Two name-only lines with a lightweight link treatment. The comparison expands below both names—best for an already narrow sidebar.</p>
+<div class="model-demo" data-variant="c" id="model-demo-c"></div>
+</section>
+<noscript><p>Enable JavaScript to try these local model-selection demos.</p></noscript>
+
+<details class="previous-proposals">
+<summary>Previous proposals · story pickers (preserved)</summary>
 <h1>Story picker proposals</h1>
 <p class="intro">Real metadata from the nine stored threads. Every treatment preserves the current dropdown’s title, comment count, posting time, and ID, then adds snapshot freshness and readiness. “Ready” means the current 100% Luna/Sonnet run can open without a model request.</p>
 
@@ -204,7 +272,189 @@ p { line-height: 1.45; }
 <div class="picker single-scroll" id="hn-options"></div>
 </div>
 </section>
+</details>
 </main>
+
+<script id="model-proposals">
+// Snapshot of volumeMetrics/consolidationMetrics in hn_polarization.html; no live calls or storage.
+const proposalModels = {
+    extraction: {
+        label: 'Extraction + scoring',
+        selected: 'lunaLow',
+        columns: ['Model', 'Reasoning effort', 'Estimated cost / 1k comments', 'Estimated time / 1k comments', 'Stances found / comment', 'Two-sided rows / 100 comments', 'Stances held in blind review', 'Stances wrong in blind review'],
+        rows: [
+            ['haiku', 'Claude Haiku 4.5', 'none', '$0.94', '69 seconds', '0.5', '3 to 4', '59%', '12%'],
+            ['glmFlash', 'GLM 5.3 Flash', 'low', '$0.19', '41 minutes', '0.5 to 0.6', '3.5 to 4', 'not measured', 'not measured'],
+            ['geminiFlash', 'Gemini 3.8 Flash', 'none', '$1.94', '3 minutes', '0.3', '3', 'not measured', 'not measured'],
+            ['opus5', 'Claude Opus 5', 'adaptive', '$10.46', '4 minutes', '0.7', '13', '74%', '0%'],
+            ['lunaLow', 'GPT-5.6 Luna', 'low', '$0.26', '2 minutes', '0.5', '6', '80%', '6%'],
+        ],
+    },
+    consolidation: {
+        label: 'Consolidation + synthesis',
+        selected: 'sonnet5',
+        columns: ['Model', 'Reasoning effort', 'Estimated cost / 1k comments', 'Estimated time / 1k comments', 'Axes with both sides', 'Measured across', 'Notes'],
+        rows: [
+            ['sonnet5', 'Claude Sonnet 5', 'adaptive', '$0.23', '3 minutes', '61% to 74%', '3 runs', ''],
+            ['glm53', 'GLM 5.3', 'high', '$0.14', '6 minutes', '79% to 88%', '2 runs', ''],
+            ['geminiFlash', 'Gemini 3.8 Flash', 'none', '$0.02', '16 seconds', '93%', '1 run', 'measured with the same model scoring'],
+            ['opus5', 'Claude Opus 5', 'adaptive', '$0.26', '48 seconds', '58%', '1 run', 'fine-grained axes'],
+            ['solLow', 'GPT-5.6 Sol', 'low', '$0.08', '2 minutes', '38%', '1 run', '55% one-arm'],
+            ['lunaMax', 'GPT-5.6 Luna', 'max', '$0.20', '29 minutes', '56%', '1 run', ''],
+            ['fableLow', 'Claude Fable 5.1', 'low', '$0.76', '2 minutes', '59%', '1 run', ''],
+        ],
+    },
+};
+
+let openModelDemo = null;
+
+function proposalElement(tag, className, text) {
+    const element = document.createElement(tag);
+    if (className) element.className = className;
+    if (text !== undefined) element.textContent = text;
+    return element;
+}
+
+function proposalButton(className, text) {
+    const button = proposalElement('button', className, text);
+    button.type = 'button';
+    return button;
+}
+
+function initializeModelProposal(root) {
+    const selected = {};
+    const triggers = {};
+    const switches = {};
+    let currentRole = null;
+    const names = proposalElement('div', 'model-names');
+    const panel = proposalElement('section', 'model-panel');
+    panel.id = `${root.id}-panel`;
+    panel.hidden = true;
+    const header = proposalElement('div', 'model-panel-header');
+    const title = proposalElement('h3');
+    title.id = `${root.id}-title`;
+    panel.setAttribute('aria-labelledby', title.id);
+    const closeButton = proposalButton('model-close', 'Close');
+    const help = proposalElement('p', 'model-panel-help', 'Select a model name to apply. ✓ marks the current choice. Sample rates, not a forecast for your thread. Scroll horizontally for all properties.');
+    help.id = `${root.id}-help`;
+    const scroll = proposalElement('div', 'model-scroll');
+    scroll.tabIndex = 0;
+    scroll.setAttribute('role', 'region');
+    scroll.setAttribute('aria-labelledby', title.id);
+    scroll.setAttribute('aria-describedby', help.id);
+    header.append(title, closeButton);
+    panel.append(header, help);
+    if (root.dataset.variant === 'b') {
+        const switcher = proposalElement('div', 'model-switches');
+        for (const [role, data] of Object.entries(proposalModels)) {
+            const button = proposalButton('', data.label);
+            button.setAttribute('aria-pressed', 'false');
+            button.addEventListener('click', () => show(role));
+            switches[role] = button;
+            switcher.append(button);
+        }
+        panel.append(switcher);
+    }
+    panel.append(scroll);
+
+    function close(restoreFocus = false) {
+        panel.hidden = true;
+        for (const trigger of Object.values(triggers)) trigger.setAttribute('aria-expanded', 'false');
+        if (openModelDemo?.root === root) openModelDemo = null;
+        if (restoreFocus && currentRole) triggers[currentRole].focus();
+    }
+
+    function renderTable(role) {
+        const data = proposalModels[role];
+        const table = proposalElement('table', 'model-table');
+        table.setAttribute('aria-labelledby', title.id);
+        const thead = proposalElement('thead');
+        const headingRow = proposalElement('tr');
+        for (const label of data.columns) {
+            const th = proposalElement('th', '', label);
+            th.scope = 'col';
+            headingRow.append(th);
+        }
+        thead.append(headingRow);
+        const tbody = proposalElement('tbody');
+        let activeButton;
+        for (const [key, name, ...metrics] of data.rows) {
+            const active = selected[role] === key;
+            const row = proposalElement('tr', active ? 'is-selected' : '');
+            const th = proposalElement('th');
+            th.scope = 'row';
+            const button = proposalButton('model-choice', name);
+            button.setAttribute('aria-pressed', String(active));
+            button.setAttribute('aria-label', `${name}, ${data.label}, ${metrics[0]} effort${active ? ', current choice' : ''}`);
+            button.addEventListener('click', () => {
+                selected[role] = key;
+                updateTrigger(role);
+                close(true);
+            });
+            if (active) activeButton = button;
+            th.append(button);
+            row.append(th);
+            for (const metric of metrics) row.append(proposalElement('td', '', metric));
+            tbody.append(row);
+        }
+        table.append(thead, tbody);
+        scroll.replaceChildren(table);
+        scroll.scrollLeft = 0;
+        return activeButton;
+    }
+
+    function updateTrigger(role) {
+        const data = proposalModels[role];
+        const name = data.rows.find(row => row[0] === selected[role])[1];
+        triggers[role].textContent = name;
+        triggers[role].title = `${data.label}: choose model`;
+        triggers[role].setAttribute('aria-label', `${name} — ${data.label}: choose model`);
+    }
+
+    function show(role) {
+        if (openModelDemo && openModelDemo.root !== root) openModelDemo.close();
+        currentRole = role;
+        title.textContent = `${proposalModels[role].label} · choose a model`;
+        for (const [key, trigger] of Object.entries(triggers)) trigger.setAttribute('aria-expanded', String(key === role));
+        for (const [key, button] of Object.entries(switches)) button.setAttribute('aria-pressed', String(key === role));
+        const activeButton = renderTable(role);
+        panel.hidden = false;
+        openModelDemo = { root, close };
+        activeButton.focus();
+    }
+
+    for (const [role, data] of Object.entries(proposalModels)) {
+        selected[role] = data.selected;
+        const trigger = proposalButton('model-trigger');
+        trigger.setAttribute('aria-controls', panel.id);
+        trigger.setAttribute('aria-expanded', 'false');
+        trigger.addEventListener('click', () => {
+            if (!panel.hidden && currentRole === role) close();
+            else show(role);
+        });
+        triggers[role] = trigger;
+        updateTrigger(role);
+        names.append(trigger);
+    }
+    closeButton.addEventListener('click', () => close(true));
+    root.append(names, panel);
+}
+
+for (const root of document.querySelectorAll('.model-demo')) initializeModelProposal(root);
+
+document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && openModelDemo) {
+        event.preventDefault();
+        openModelDemo.close(true);
+    }
+});
+document.addEventListener('click', event => {
+    if (openModelDemo && !openModelDemo.root.contains(event.target)) openModelDemo.close();
+});
+document.addEventListener('focusin', event => {
+    if (openModelDemo && !openModelDemo.root.contains(event.target)) openModelDemo.close();
+});
+</script>
 
 <script>
 const threads = [

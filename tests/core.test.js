@@ -8,6 +8,125 @@ const FLOAT_TOLERANCE = 0.001;
 
 const core = loadCore();
 
+test('minimum-comment arrows double or halve with whole-number bounds', () => {
+    let value = 100;
+    for (const expected of [200, 400, 800]) {
+        value = core.stepMinComments(value, 'up');
+        assert.equal(value, expected);
+    }
+    value = 100;
+    for (const expected of [50, 25, 12, 6, 3, 1, 0, 0]) {
+        value = core.stepMinComments(value, 'down');
+        assert.equal(value, expected);
+    }
+    for (const value of ['', '0', -1, 'invalid', NaN, Infinity, -Infinity]) {
+        assert.equal(core.stepMinComments(value, 'up'), 1);
+        assert.equal(core.stepMinComments(value, 'down'), 0);
+    }
+    assert.equal(core.stepMinComments('137', 'up'), 274);
+    assert.equal(core.stepMinComments('137', 'down'), 68);
+    assert.equal(core.stepMinComments('25.75', 'up'), 51);
+    assert.equal(core.stepMinComments('25.75', 'down'), 12);
+    for (const value of [Number.MAX_SAFE_INTEGER - 1, Number.MAX_SAFE_INTEGER, Number.MAX_VALUE, '1e300']) {
+        assert.equal(core.stepMinComments(value, 'up'), Number.MAX_SAFE_INTEGER);
+        assert.ok(Number.isSafeInteger(core.stepMinComments(value, 'down')));
+    }
+});
+
+test('minimum-comment input and buttons refresh both story sources without changing typed values or storage', () => {
+    const source = require('node:fs').readFileSync(require.resolve('../hn_polarization.html'), 'utf8');
+    class Control extends EventTarget {
+        constructor(value = '') { super(); this.value = value; this.hidden = true; }
+    }
+    const elements = {
+        minComments: new Control(), minCommentsUp: new Control(), minCommentsDown: new Control(),
+        threadId: new Control(), storyList: new Control(),
+    };
+    const stories = [0, 25, 50, 100, 137, 200, 400].map(numComments => ({ title: 'Example story', numComments }));
+    let visible = [];
+    let refreshes = 0;
+    const sandbox = {
+        elements, Event, stepMinComments: core.stepMinComments, isThreadId: core.isThreadId,
+        homePageStories: stories, lastSearch: { text: 'Example', stories },
+        storyScope: 'front', searchLatest: { cancel() {} },
+        SEARCH_MIN_CHARS: 3, HEADER_HOME_PAGE: 'Front page', searchHeader: () => 'Search',
+        closeList() { elements.storyList.hidden = true; },
+        showList(rows) {
+            refreshes += 1;
+            visible = Array.from(sandbox.storiesAboveMinComments(rows), story => story.numComments);
+            elements.storyList.hidden = false;
+        },
+        localStorage: new Proxy({}, { get() { throw new Error('Threshold must not access storage'); } }),
+        fetch() { throw new Error('No network requests in this test'); },
+    };
+    const vm = require('node:vm');
+    for (const [start, end] of [
+        ['function positiveNumberInBox(', 'function maxCostInBox('],
+        ['const DEFAULT_MIN_COMMENTS =', '// The thread id the box currently denotes'],
+        ['function refreshList(', 'function selectStoryScope('],
+    ]) {
+        const offset = source.indexOf(start);
+        assert.ok(offset >= 0 && source.indexOf(end, offset) > offset);
+        vm.runInNewContext(source.slice(offset, source.indexOf(end, offset)), sandbox);
+    }
+    assert.match(source, /\ninitializeMinComments\(\);/);
+    sandbox.initializeMinComments();
+    assert.equal(elements.minComments.value, 100);
+    const press = key => {
+        const event = new Event('keydown', { cancelable: true });
+        Object.defineProperty(event, 'key', { value: key });
+        elements.minComments.dispatchEvent(event);
+        return event.defaultPrevented;
+    };
+    for (const scope of ['front', 'search']) {
+        sandbox.storyScope = scope;
+        elements.threadId.value = scope === 'search' ? 'Example' : '';
+        elements.minComments.value = '100';
+        assert.equal(press('ArrowUp'), true);
+        assert.equal(Number(elements.minComments.value), 200);
+        assert.deepEqual(visible, [200, 400]);
+        elements.minCommentsUp.dispatchEvent(new Event('click'));
+        assert.equal(Number(elements.minComments.value), 400);
+        assert.deepEqual(visible, [400]);
+        elements.minCommentsDown.dispatchEvent(new Event('click'));
+        assert.equal(Number(elements.minComments.value), 200);
+        assert.equal(press('ArrowDown'), true);
+        assert.equal(Number(elements.minComments.value), 100);
+        assert.deepEqual(visible, [100, 137, 200, 400]);
+        for (const value of ['137', '25.75', '', '0', '1e300']) {
+            elements.minComments.value = value;
+            const before = refreshes;
+            elements.minComments.dispatchEvent(new Event('input'));
+            assert.equal(elements.minComments.value, value, 'typing must not be quantized');
+            assert.equal(refreshes, before + 1);
+            assert.deepEqual(visible, stories.filter(story => story.numComments >= Number(value)).map(story => story.numComments));
+        }
+        elements.minComments.value = '';
+        assert.equal(press('ArrowUp'), true);
+        assert.equal(Number(elements.minComments.value), 1);
+        elements.minCommentsDown.dispatchEvent(new Event('click'));
+        assert.equal(Number(elements.minComments.value), 0);
+        elements.minCommentsDown.dispatchEvent(new Event('click'));
+        assert.equal(Number(elements.minComments.value), 0);
+        const before = refreshes;
+        for (const key of ['ArrowLeft', 'ArrowRight', 'Home', 'End', 'Enter']) assert.equal(press(key), false);
+        assert.equal(refreshes, before);
+        assert.equal(press('Escape'), false);
+        assert.equal(elements.storyList.hidden, true);
+        for (const control of [elements.minComments, elements.minCommentsUp, elements.minCommentsDown]) {
+            elements.storyList.hidden = false;
+            control.dispatchEvent(new Event('blur'));
+            assert.equal(elements.storyList.hidden, true);
+        }
+    }
+    assert.match(source, /#min-comments \{[^}]*appearance: textfield/);
+    assert.match(source, /#min-comments::-webkit-inner-spin-button[^}]*-webkit-appearance: none/);
+    assert.match(source, /<input id="min-comments"[^>]*step="any"[^>]*aria-describedby="min-comments-help"/);
+    for (const [direction, label] of [['up', 'Double'], ['down', 'Halve']]) {
+        assert.match(source, new RegExp(`<button id="min-comments-${direction}" type="button" aria-label="${label} minimum comments" aria-controls="min-comments"`));
+    }
+});
+
 function assertClose(actual, expected, label) {
     assert.ok(Math.abs(actual - expected) < FLOAT_TOLERANCE, `${label}: expected ${expected}, got ${actual}`);
 }
@@ -274,6 +393,11 @@ test('parseScoreResponse flattens per-comment objects found in a bare array or u
 test('a response of unknown shape raises InvalidResponseError', () => {
     assert.throws(() => core.parseScoreResponse({ bogus: true }, new Set(), [], false), error => error instanceof core.InvalidResponseError);
     assert.throws(() => core.parseExtractResponse({ bogus: true }, new Set()), error => error instanceof core.InvalidResponseError);
+    assert.throws(() => core.parseExtractResponse(undefined, new Set()), core.InvalidResponseError);
+    assert.throws(() => core.parseExtractResponse({ candidates: [null, {}] }, new Set()), core.InvalidResponseError);
+    assert.throws(() => core.parseConsolidateResponse({ axes: [null, {}] }), core.InvalidResponseError);
+    assert.throws(() => core.parseScoreResponse({ stances: [null] }, new Set(), [], false), core.InvalidResponseError);
+    assert.deepEqual(core.parseExtractResponse({ candidates: [] }, new Set()).candidates, [], 'an explicitly empty extraction remains valid');
 });
 
 test('runPipeline splits a scoring batch whose response has an unknown shape', async () => {
@@ -512,6 +636,95 @@ function minimalRequest() {
     return { model: 'm', messages: [], schema: { name: 's', schema: {} }, sampling: { temperature: 0 }, maxTokens: 10 };
 }
 
+test('missing usage.cost recovers delayed generation billing without another paid call', async () => {
+    const methods = [];
+    const sleeps = [];
+    const data = { id: 'gen/a', choices: [{ message: { content: '{"answer":42}' }, finish_reason: 'stop' }], usage: { prompt_tokens: 10 } };
+    const result = await core.callOpenRouter({
+        apiKey: 'k', request: { ...minimalRequest(), model: 'anthropic/claude-sonnet-5' },
+        sleepImpl: async ms => sleeps.push(ms),
+        fetchImpl: async (url, options) => {
+            methods.push(options.method);
+            if (options.method === 'POST') return fakeResponse(200, data);
+            assert.ok(url.endsWith('id=gen%2Fa'));
+            if (methods.length === 2) return fakeResponse(404, {});
+            if (methods.length === 3) return fakeResponse(200, { data: { id: data.id, total_cost: null } });
+            return fakeResponse(200, { data: { id: data.id, total_cost: 0.12 } });
+        },
+    });
+    assert.deepEqual(methods, ['POST', 'GET', 'GET', 'GET']);
+    assert.deepEqual(sleeps, [1000, 2000]);
+    assert.deepEqual(result.json, { answer: 42 });
+    assert.equal(result.usage.cost, 0.12);
+    assert.equal(result.usage.costSource, 'generation');
+});
+
+test('unresolved billing persists output and retry resolves it without repeating generation', async () => {
+    const entries = new Map();
+    const store = { get: key => entries.get(key), set: (key, value) => entries.set(key, JSON.parse(JSON.stringify(value))) };
+    let available = false;
+    let posts = 0;
+    let gets = 0;
+    const callChat = request => core.callOpenRouter({
+        apiKey: 'k', request, sleepImpl: async () => {},
+        fetchImpl: async (_, options) => {
+            if (options.method === 'POST') {
+                posts++;
+                return fakeResponse(200, { id: 'gen-1', choices: [{ message: { content: '{"answer":42}' }, finish_reason: 'stop' }] });
+            }
+            gets++;
+            return available ? fakeResponse(200, { data: { id: 'gen-1', total_cost: 0.25 } }) : fakeResponse(503, {});
+        },
+    });
+    await assert.rejects(core.makeCachedCallChat(callChat, store)(minimalRequest()), core.CostUnavailableError);
+    assert.equal(gets, 3);
+    assert.equal(entries.values().next().value.billingResponse.id, 'gen-1');
+    available = true;
+    const retry = core.makeCachedCallChat(callChat, store);
+    const recovered = await retry(minimalRequest());
+    assert.equal(recovered.usage.cost, 0.25);
+    assert.deepEqual(recovered.json, { answer: 42 });
+    assert.equal((await retry(minimalRequest())).usage.cached, true);
+    assert.equal(posts, 1);
+    assert.equal(gets, 4);
+});
+
+test('missing id and invalid costs remain unknown, but explicit zero is valid', async () => {
+    for (const cost of [undefined, null, '0', -1, NaN, Infinity, 0]) {
+        let calls = 0;
+        const promise = core.callOpenRouter({
+            apiKey: 'k', request: minimalRequest(), sleepImpl: async () => {},
+            fetchImpl: async () => {
+                calls++;
+                return fakeResponse(200, { usage: { cost }, choices: [{ message: { content: '{}' } }] });
+            },
+        });
+        if (cost === 0) assert.equal((await promise).usage.cost, 0);
+        else await assert.rejects(promise, core.CostUnavailableError);
+        assert.equal(calls, 1);
+    }
+});
+
+test('pool waits for in-flight work to finish and stops queued work on failure', async () => {
+    let release;
+    let finished = false;
+    let queued = false;
+    const gate = new Promise(resolve => { release = resolve; });
+    const promise = core.runPool([
+        async () => { throw new Error('billing unavailable'); },
+        async () => { await gate; finished = true; },
+        async () => { queued = true; },
+    ], 2);
+    let settled = false;
+    const checked = assert.rejects(promise, /billing unavailable/).then(() => { settled = true; });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(settled, false);
+    release();
+    await checked;
+    assert.equal(finished, true);
+    assert.equal(queued, false);
+});
+
 test('callOpenRouter sends a JSON-schema request with the requested sampling and parses the JSON content', async () => {
     const seen = [];
     const fetchImpl = async (url, options) => {
@@ -632,7 +845,7 @@ function makeFakeCallChat(log) {
             return { json: { axes: TOY_AXES.map(axis => ({ statementA: axis.statementA, statementB: axis.statementB })) }, usage: fakeUsage };
         }
         if (call.stage === 'synthesize') {
-            return { json: { sections: [{ text: 'Portion value divides the discussion.', axisIds: [1] }], caveats: [] }, usage: fakeUsage };
+            return { json: { sections: [{ text: 'Portion value divides the discussion[[axis:1]].', axisIds: [1] }], caveats: [] }, usage: fakeUsage };
         }
         if (call.stage === 'score') {
             const source = call.meta.swapPoles ? TOY_PASS2 : TOY_PASS1;
@@ -685,19 +898,45 @@ test('synthesis rejects missing prose, unsupported references and malformed cave
     ]) assert.throws(() => core.parseSynthesisResponse(json, [1]), /Synthesis/);
 });
 
+test('synthesis requires exact, known, claim-local markers and rejects the old paragraph-end format', () => {
+    const parse = (text, axisIds = [1]) => core.parseSynthesisResponse({ sections: [{ text, axisIds }], caveats: [] }, [1, 2]);
+    const text = 'Cost divides opinion[[axis:1]], but reliability raises another trade-off[[axis:2]]. Neither implies consensus.';
+    assert.equal(parse(text, [1, 2]).sections[0].text, text);
+    assert.deepEqual(core.synthesisTextParts(text), [
+        { text: 'Cost divides opinion' }, { axisId: 1 },
+        { text: ', but reliability raises another trade-off' }, { axisId: 2 },
+        { text: '. Neither implies consensus.' },
+    ]);
+    for (const [text, ids] of [
+        ['Old plain prose.', [1]],
+        ['Claim[[axis:999]].', [1]],
+        ['Claim[[axis:1]]. Another claim[[axis:2]].', [1]],
+        ['Claim[[axis:1]].', [1, 2]],
+        ['Claim[[axis:2]]. Another claim[[axis:1]].', [1, 2]],
+        ['Claim[[axis:1]]. Another claim[[axis:1]].', [1, 1]],
+        ['[[axis:1]]Unsupported leading marker.', [1]],
+        ['Claim[[axis:1]] [[axis:2]].', [1, 2]],
+        ['Claim[[axis:1]][[axis:2]].', [1, 2]],
+        ['Claim[[axis:9007199254740993]].', [1]],
+        ...['[[axis:01]]', '[[axis:0]]', '[[axis:-1]]', '[[axis:1.0]]', '[[axis:1,2]]',
+            '[[axis: 1]]', '[[Axis:1]]', '[axis:1]', '[[axis:1]', '[[axis:1]]]',
+            '[[1]]', '[[axis:1]] trailing[[', '[[axis:1]] stray]'].map(marker => [`Claim${marker}.`, [1]]),
+    ]) assert.throws(() => parse(text, ids), /citation marker/, text);
+});
+
 test('synthesis always enforces compact prose and references', () => {
-    const paragraph = words => ({ text: Array(words).fill('interpretation').join(' '), axisIds: [1] });
+    const paragraph = words => ({ text: Array(words).fill('interpretation').join(' ') + '[[axis:1]]', axisIds: [1] });
     const valid = { sections: [paragraph(75), paragraph(75), paragraph(75)], caveats: [] };
     assert.equal(core.parseSynthesisResponse(valid, [1]).sections.length, 3);
-    assert.doesNotThrow(() => core.parseSynthesisResponse({ sections: [{ text: 'GPT-6 frames the discussion.', axisIds: [1] }], caveats: [] }, [1]));
+    assert.doesNotThrow(() => core.parseSynthesisResponse({ sections: [{ text: 'GPT-6 frames the discussion[[axis:1]].', axisIds: [1] }], caveats: [] }, [1]));
     for (const sections of [
         [paragraph(101)],
         Array.from({ length: 4 }, () => paragraph(76)),
         Array.from({ length: 5 }, () => paragraph(20)),
-        [{ text: 'Interpretation', axisIds: [1, 2, 3] }],
-        [{ text: 'First paragraph.\nSecond paragraph.', axisIds: [1] }],
-        [{ text: 'Supported by 64 people', axisIds: [1] }],
-        [{ text: 'The split (64–18) suggests tension.', axisIds: [1] }],
+        [{ text: 'Interpretation[[axis:1]] of another view[[axis:2]] and a third[[axis:3]].', axisIds: [1, 2, 3] }],
+        [{ text: 'First paragraph.\nSecond paragraph[[axis:1]].', axisIds: [1] }],
+        [{ text: 'Supported by 64 people[[axis:1]]', axisIds: [1] }],
+        [{ text: 'The split (64–18) suggests tension[[axis:1]].', axisIds: [1] }],
     ]) {
         assert.throws(() => core.parseSynthesisResponse({ sections, caveats: [] }, [1, 2, 3]), /concise/);
     }
@@ -705,12 +944,60 @@ test('synthesis always enforces compact prose and references', () => {
     assert.match(prompt, /200–300 words/);
     assert.match(prompt, /3–4 concise paragraphs/);
     assert.match(prompt, /1–2 supporting axisIds/);
+    assert.match(prompt, /splitting on whitespace/);
+    assert.match(prompt, /Return ONLY a JSON object/);
+    assert.match(prompt, /not Markdown or standalone prose/);
+    assert.match(prompt, /immediately after the exact supported claim or sentence/);
+    assert.match(prompt, /not in a reference list appended to the paragraph/);
+    const outputSchema = JSON.parse(prompt.slice(prompt.lastIndexOf('\n') + 1));
+    assert.deepEqual(outputSchema.required, ['sections', 'caveats']);
+    assert.deepEqual(outputSchema.properties.sections.items.required, ['text', 'axisIds']);
 });
 
-test('inline narrative counts toggle only local normalized stance evidence, including middle and contradiction', () => {
+test('oversized narrative reports measured violations and retains the rejected response', () => {
+    const json = {
+        sections: [163, 155, 178, 122, 136, 131].map(count => ({
+            text: Array.from({ length: count }, (_, index) => 'argument' + (index < 5 ? `[[axis:${index + 1}]]` : '')).join(' '), axisIds: [1, 2, 3, 4, 5],
+        })),
+        caveats: [],
+    };
+    assert.throws(() => core.parseSynthesisResponse(json, [1, 2, 3, 4, 5]), error => {
+        assert.match(error.message, /6 paragraphs \(maximum 4\)/);
+        assert.match(error.message, /885 narrative words \(maximum 300\)/);
+        assert.match(error.message, /paragraph 3: 178 words \(maximum 100\)/);
+        assert.match(error.message, /5 axis references \(maximum 2\)/);
+        assert.equal(error.response, json);
+        return true;
+    });
+});
+
+test('synthesis schema enforces the same paragraph boundary as validation', async () => {
+    const calls = [];
+    await core.runPipeline({
+        thread: core.flattenThread(TOY_THREAD), config: TOY_CONFIG,
+        onProgress: () => {}, callChat: makeFakeCallChat(calls),
+    });
+    const schema = calls.find(call => call.stage === 'synthesize').schema.schema;
+    const textSchema = schema.properties.sections.items.properties.text;
+    const pattern = new RegExp(textSchema.pattern);
+    for (const count of [1, 75, 100]) {
+        const text = Array(count).fill('word').join(' ') + '[[axis:1]]';
+        assert.ok(pattern.test(text));
+        assert.doesNotThrow(() => core.parseSynthesisResponse({ sections: [{ text, axisIds: [1] }], caveats: [] }, [1]));
+    }
+    for (const text of ['', ' ', 'unmarked prose', 'one[[axis:1]]\ntwo', 'one[[axis:1]]\r\ntwo', 'one[[axis:1]]\n', 'one[[axis:1]]\r', Array(101).fill('word').join(' ') + '[[axis:1]]']) {
+        assert.equal(pattern.test(text), false, JSON.stringify(text));
+    }
+    assert.equal(schema.properties.sections.maxItems, 4);
+    assert.equal(schema.properties.sections.items.properties.axisIds.maxItems, 2);
+    assert.equal(textSchema.maxLength, 2400);
+});
+
+test('claim-local inline counts preserve surrounding prose and toggle only local normalized stance evidence safely', () => {
     const source = require('node:fs').readFileSync(require.resolve('../hn_polarization.html'), 'utf8');
     class Element {
         constructor(tag, text = '') { this.tagName = tag; this.textContent = text; this.children = []; this.dataset = {}; this.attributes = {}; this.hidden = false; }
+        set innerHTML(value) { throw new Error('Unsafe HTML insertion'); }
         appendChild(node) { this.children.push(node); return node; }
         append(...nodes) { nodes.forEach(node => this.appendChild(node)); }
         setAttribute(key, value) { this.attributes[key] = value; }
@@ -727,6 +1014,7 @@ test('inline narrative counts toggle only local normalized stance evidence, incl
         document: { createTextNode: text => new Element('#text', text) },
         makeElement: (tag, options = {}) => Object.assign(new Element(tag, options.text || ''), { className: options.className || '' }),
         CONSTANTS: core.CONSTANTS,
+        synthesisTextParts: core.synthesisTextParts,
     };
     const vm = require('node:vm');
     for (const [start, end] of [
@@ -735,15 +1023,25 @@ test('inline narrative counts toggle only local normalized stance evidence, incl
         ['function renderNarrativeSection(', 'function renderResults('],
     ]) vm.runInNewContext(source.slice(source.indexOf(start), source.indexOf(end, source.indexOf(start))), sandbox);
     const comments = core.indexCommentsById([
-        { id: 1, author: 'alice', text: 'For' }, { id: 2, author: 'alice', text: 'For again' },
+        { id: 1, author: 'alice', text: '<img src=x onerror=alert(1)>' }, { id: 2, author: 'alice', text: 'For again' },
         { id: 3, author: 'bob', text: 'Against' }, { id: 4, author: 'chris', text: 'Conditional' },
         { id: 5, author: 'dana', text: 'For' }, { id: 6, author: 'dana', text: 'Against' },
     ]);
     const raw = { axisId: 1, statementA: 'Keep it', statementB: 'Change it', countA: 999, commentIdsA: [1, 2, 5], commentIdsB: [3, 6], commentIdsM: [4] };
     const rows = [core.withAuthorCounts(raw, comments), core.withAuthorCounts({ ...raw, axisId: 2, commentIdsB: [], commentIdsM: [] }, comments)];
-    const block = sandbox.renderNarrativeSection({ text: 'Interpretation first.', axisIds: [1, 2] }, rows, comments, 0);
+    const text = 'Interpretation <img src=x onerror=alert(1)>[[axis:1]], but a different claim[[axis:2]]. The conclusion follows.';
+    const section = core.parseSynthesisResponse({ sections: [{ text, axisIds: [1, 2] }], caveats: [] }, [1, 2]).sections[0];
+    const block = sandbox.renderNarrativeSection(section, rows, comments, 0);
     const [paragraph, evidence] = block.children;
-    const counts = paragraph.children[0];
+    assert.equal(paragraph.textContent, '');
+    assert.deepEqual(paragraph.children.map(child => child.tagName), ['#text', 'span', '#text', 'span', '#text']);
+    assert.equal(paragraph.children[0].textContent, 'Interpretation <img src=x onerror=alert(1)>');
+    assert.equal(paragraph.children[2].textContent, ', but a different claim');
+    assert.equal(paragraph.children[4].textContent, '. The conclusion follows.');
+    const content = node => node.textContent + node.children.map(content).join('');
+    assert.equal(content(paragraph), 'Interpretation <img src=x onerror=alert(1)> (1–1–1; 1 self contradiction), but a different claim (2–0). The conclusion follows.');
+    assert.doesNotMatch(content(paragraph), /\[\[axis:|999/);
+    const counts = paragraph.children[1];
     const buttons = counts.children.filter(child => child.tagName === 'button');
     assert.deepEqual(buttons.map(button => button.textContent), ['1', '1', '1', '1 self contradiction']);
     assert.equal(evidence.hidden, true);
@@ -755,6 +1053,7 @@ test('inline narrative counts toggle only local normalized stance evidence, incl
     assert.equal(visible()[0].dataset.evidenceKind, '1-A');
     assert.equal(commentsIn(visible()[0]), 2);
     assert.match(visible()[0].children[0].textContent, /1 person, 2 verified comments/);
+    assert.match(content(visible()[0]), /<img src=x onerror=alert\(1\)>/);
     buttons[1].click();
     assert.equal(visible()[0].dataset.evidenceKind, '1-B');
     assert.equal(buttons[0].getAttribute('aria-expanded'), 'false');
@@ -765,11 +1064,13 @@ test('inline narrative counts toggle only local normalized stance evidence, incl
     assert.equal(commentsIn(visible()[0]), 2);
     buttons[3].click();
     assert.equal(evidence.hidden, true);
-    const otherButtons = paragraph.children[1].children.filter(child => child.tagName === 'button');
+    const otherButtons = paragraph.children[3].children.filter(child => child.tagName === 'button');
     otherButtons[1].click();
     assert.equal(visible()[0].dataset.evidenceKind, '2-B');
     assert.match(visible()[0].children[0].textContent, /0 people, 0 verified comments/);
     assert.equal(visible().length, 1);
+    const tags = node => [node.tagName, ...node.children.flatMap(tags)];
+    assert.ok(!tags(block).some(tag => ['img', 'script'].includes(tag)));
     assert.ok(!/scrollIntoView|comparisons\.open|\.focus\(/.test(source.slice(source.indexOf('function renderNarrativeSection('), source.indexOf('function renderResults('))));
 });
 
@@ -779,10 +1080,452 @@ test('invalid JSON from the final provider call is charged and not silently retr
         apiKey: 'fake', request: { ...minimalRequest(), stage: 'synthesize' }, sleepImpl: async () => {},
         fetchImpl: async () => {
             calls += 1;
-            return fakeResponse(200, { choices: [{ message: { content: 'not JSON' }, finish_reason: 'stop' }], usage: { cost: 0.02 } });
+            return fakeResponse(200, { choices: [{ message: { content: '**On Nitter**, commenters disagree.' }, finish_reason: 'stop' }], usage: { cost: 0.02 } });
         },
-    }), error => /not valid JSON/.test(error.message) && error.usage.cost === 0.02);
+    }), error => error instanceof core.InvalidResponseError && /not valid JSON/.test(error.message) && error.usage.cost === 0.02 && error.response === '**On Nitter**, commenters disagree.');
     assert.equal(calls, 1);
+});
+
+function validFormatResponse(stage) {
+    return stage === 'consolidate'
+        ? { axes: TOY_AXES.map(({ statementA, statementB }) => ({ statementA, statementB })) }
+        : { sections: [{ text: 'Portion value divides the discussion[[axis:1]].', axisIds: [1] }], caveats: [] };
+}
+
+function formatFake(log, stage, original, repair, options = {}) {
+    const fake = makeFakeCallChat(log);
+    return async call => {
+        if (call.stage !== stage) return fake(call);
+        log.push(call);
+        const repairing = !!call.meta.formatRepair;
+        const content = repairing ? repair : original;
+        const cost = repairing ? (options.repairCost ?? 0.03) : (options.originalCost ?? 0.02);
+        return core.callOpenRouter({
+            apiKey: 'fake', request: call, signal: call.signal, sleepImpl: async () => {},
+            fetchImpl: async (_, request) => {
+                assert.equal(request.method, 'POST', 'fixtures do not need billing lookups');
+                if (options.onCall) options.onCall(call);
+                return fakeResponse(200, {
+                    choices: [{ message: { content: typeof content === 'string' ? content : JSON.stringify(content) },
+                        finish_reason: !repairing && options.truncated ? 'length' : 'stop' }],
+                    usage: { cost },
+                });
+            },
+        });
+    };
+}
+
+test('missing, malformed and unknown citation markers use bounded repair for fresh output and cached replay', async () => {
+    for (const text of ['Unmarked claim.', 'Claim[[axis:1].', 'Claim[[axis:999]].']) {
+        const original = { sections: [{ text, axisIds: [1] }], caveats: [] };
+        const repaired = { sections: [{
+            text: 'The portion trade-off divides opinion[[axis:1]], while noise is a separate concern[[axis:2]]. Context matters.',
+            axisIds: [1, 2],
+        }], caveats: [] };
+        const { api } = mapStore();
+        const log = [];
+        const thread = core.flattenThread(TOY_THREAD);
+        const run = callChat => core.runPipeline({ thread, config: TOY_CONFIG, onProgress: () => {}, callChat });
+        const failed = await run(core.makeCachedCallChat(formatFake(log, 'synthesize', original, original), api));
+        assert.equal(log.filter(call => call.stage === 'synthesize').length, 2);
+        assert.equal(failed.synthesis, null);
+        assert.equal(failed.rows.length, 6);
+        assert.match(failed.synthesisError, /format repair failed.*citation marker/s);
+        assert.deepEqual(failed.synthesisFailure, { response: original, repairResponse: original });
+        const retries = [];
+        const recovered = await run(core.makeCachedCallChat(formatFake(retries, 'synthesize', original, repaired), api));
+        assert.deepEqual(recovered.synthesis, repaired);
+        assert.equal(retries.length, 1, 'only the bounded repair is retried; analysis and original synthesis are cached');
+        assert.equal(retries[0].meta.formatRepair, true);
+        assert.match(retries[0].messages.at(-1).content, /citation marker/);
+        const probe = await core.probeCache({ thread, config: TOY_CONFIG, store: api });
+        assert.equal(probe.complete, true);
+        const replay = await run(core.makeCachedCallChat(() => { throw new Error('No network'); }, api));
+        assert.equal(replay.cost, 0);
+        assert.deepEqual(replay.synthesis, repaired);
+    }
+});
+
+for (const stage of ['consolidate', 'synthesize']) {
+    test(`${stage} repairs Markdown and malformed shapes once, with shared fresh/cache validation`, async () => {
+        const badShapes = ['**Main disagreement**\n\nSome support it; others disagree.', { wrong: true },
+            stage === 'consolidate' ? { axes: [null, {}, 'prose'] } : { sections: [{ text: 'Missing references' }], caveats: [] }];
+        for (const original of badShapes) {
+            const { api, store } = mapStore();
+            const log = [];
+            const run = callChat => core.runPipeline({
+                thread: core.flattenThread(TOY_THREAD), config: TOY_CONFIG, onProgress: () => {}, callChat,
+            });
+            const result = await run(core.makeCachedCallChat(formatFake(log, stage, original, validFormatResponse(stage)), api));
+            assert.ok(result.synthesis);
+            assert.deepEqual(result.rows.map(row => row.axisId), TOY_EXPECTED_ORDER);
+            const calls = log.filter(call => call.stage === stage);
+            assert.equal(calls.length, 2);
+            const [first, repair] = calls;
+            assert.equal(repair.meta.formatRepair, true);
+            for (const field of ['stage', 'model', 'schema', 'sampling', 'reasoning', 'maxTokens']) {
+                assert.deepEqual(repair[field], first[field], field);
+            }
+            assert.deepEqual(repair.messages.slice(0, -2), first.messages);
+            assert.equal(repair.messages.at(-2).content, typeof original === 'string' ? original : JSON.stringify(original));
+            assert.match(repair.messages.at(-1).content, /failed validation:.*(?:not valid JSON|axes|narrative)/);
+            assert.match(repair.messages.at(-1).content, /one attempt/);
+            assert.notEqual(core.requestCacheKey(first), core.requestCacheKey(repair));
+            assert.equal(store.size, result.calls, 'original and repair both persist');
+            assertClose(result.cost, (result.calls - 2) * 0.001 + 0.05, 'all paid calls counted');
+            assert.equal(result.calls, log.length);
+            const probe = await core.probeCache({ thread: core.flattenThread(TOY_THREAD), config: TOY_CONFIG, store: api });
+            assert.equal(probe.complete, true);
+            assert.deepEqual(probe.stages.find(item => item.stage === stage), { stage, hits: 2, total: 2 });
+            const replay = await run(core.makeCachedCallChat(() => { throw new Error('No network'); }, api));
+            assert.equal(replay.cost, 0);
+            assert.equal(replay.stats.cachedCalls, replay.calls);
+            assert.deepEqual(replay.rows, result.rows);
+            assert.deepEqual(replay.synthesis, result.synthesis);
+        }
+    });
+
+    test(`${stage} preserves safe fence and list normalization without repair`, async () => {
+        const log = [];
+        const valid = validFormatResponse(stage);
+        const content = '```json\n' + JSON.stringify(stage === 'consolidate' ? valid.axes : valid) + '\n```';
+        const result = await core.runPipeline({
+            thread: core.flattenThread(TOY_THREAD), config: TOY_CONFIG, onProgress: () => {},
+            callChat: formatFake(log, stage, content, 'must not be used'),
+        });
+        assert.ok(result.synthesis);
+        assert.equal(log.filter(call => call.stage === stage).length, 1);
+        assert.ok(!log.some(call => call.meta.formatRepair));
+    });
+
+    test(`${stage} failed repair is capped, diagnostic output persists, explicit retry only repairs`, async () => {
+        const { api, store } = mapStore();
+        const log = [];
+        const progress = [];
+        const run = callChat => core.runPipeline({
+            thread: core.flattenThread(TOY_THREAD), config: TOY_CONFIG, onProgress: event => progress.push(event), callChat,
+        });
+        const failing = run(core.makeCachedCallChat(formatFake(log, stage, '**Original prose**', '**Still prose**'), api));
+        if (stage === 'synthesize') {
+            const result = await failing;
+            assert.equal(result.synthesis, null);
+            assert.match(result.synthesisError, /format repair failed.*not valid JSON.*Original validation/s);
+            assert.deepEqual(result.synthesisFailure, { response: '**Original prose**', repairResponse: '**Still prose**' });
+            assert.equal(result.rows.length, 6);
+        } else {
+            await assert.rejects(failing, /format repair failed.*not valid JSON.*Original validation/s);
+            assert.ok(!log.some(call => call.stage === 'score'));
+        }
+        const calls = log.filter(call => call.stage === stage);
+        assert.equal(calls.length, 2);
+        assertClose(progress.at(-1).cost, (log.length - 2) * 0.001 + 0.05, 'failed original and repair billed');
+        assert.equal(progress.at(-1).calls, log.length);
+        assert.equal(store.get(core.requestCacheKey(calls[0])).responseError.response, '**Original prose**');
+        assert.equal(store.get(core.requestCacheKey(calls[1])).responseError.response, '**Still prose**');
+        const probe = await core.probeCache({ thread: core.flattenThread(TOY_THREAD), config: TOY_CONFIG, store: api });
+        assert.equal(probe.complete, false);
+        assert.deepEqual(probe.stages.at(-1), { stage, hits: 1, total: 2 });
+        const retries = [];
+        const recovered = await run(core.makeCachedCallChat(makeFakeCallChat(retries), api));
+        assert.ok(recovered.synthesis);
+        assert.deepEqual(retries.filter(call => call.stage === stage).map(call => call.meta.formatRepair), [true]);
+    });
+
+    test(`${stage} exhausted budget or cancellation prevents repair and retains original paid output`, async () => {
+        for (const mode of ['budget', 'cancel']) {
+            const { api, store } = mapStore();
+            const log = [];
+            const controller = new AbortController();
+            const fake = makeFakeCallChat(log);
+            const malformed = formatFake(log, stage, '**Original prose**', validFormatResponse(stage), {
+                originalCost: 1,
+                onCall: () => { if (mode === 'cancel') controller.abort(); },
+            });
+            const running = core.runPipeline({
+                thread: core.flattenThread(TOY_THREAD), config: { ...TOY_CONFIG, budgetUsd: 1 }, signal: controller.signal, onProgress: () => {},
+                callChat: core.makeCachedCallChat(async call => {
+                    if (call.stage === stage) return malformed(call);
+                    return { ...await fake(call), usage: { cost: 0 } };
+                }, api),
+            });
+            if (stage === 'synthesize') {
+                const result = await running;
+                assert.equal(result.synthesis, null);
+                assert.match(result.synthesisError, mode === 'budget' ? /Budget exhausted.*format repair/ : /Cancelled/);
+                assert.equal(result.cost, 1);
+                assert.equal(result.rows.length, 6);
+            } else {
+                await assert.rejects(running, mode === 'budget' ? /Budget exhausted.*format repair/ : /Cancelled/);
+            }
+            const calls = log.filter(call => call.stage === stage);
+            assert.equal(calls.length, 1);
+            assert.equal(store.get(core.requestCacheKey(calls[0])).responseError.response, '**Original prose**');
+            const retries = [];
+            const recovered = await core.runPipeline({
+                thread: core.flattenThread(TOY_THREAD), config: TOY_CONFIG, onProgress: () => {},
+                callChat: core.makeCachedCallChat(makeFakeCallChat(retries), api),
+            });
+            assert.ok(recovered.synthesis);
+            assert.deepEqual(retries.filter(call => call.stage === stage).map(call => call.meta.formatRepair), [true]);
+        }
+    });
+
+    test(`${stage} truncated output is billed and repaired once using its saved raw response`, async () => {
+        const log = [];
+        const result = await core.runPipeline({
+            thread: core.flattenThread(TOY_THREAD), config: TOY_CONFIG, onProgress: () => {},
+            callChat: formatFake(log, stage, '{"truncated":', validFormatResponse(stage), { truncated: true }),
+        });
+        assert.ok(result.synthesis);
+        assert.equal(log.filter(call => call.stage === stage).length, 2);
+        assert.match(log.find(call => call.meta.formatRepair).messages.at(-1).content, /truncated at max_tokens/);
+        assertClose(result.cost, (log.length - 2) * 0.001 + 0.05, 'truncation and repair billed');
+    });
+}
+
+test('unknown billing for original or repair stops spending and recovers only metadata before retry', async () => {
+    for (const stage of ['consolidate', 'synthesize']) {
+        for (const unknownOnRepair of [false, true]) {
+            const { api } = mapStore();
+            const fake = makeFakeCallChat([]);
+            const posts = [];
+            let billingReady = false;
+            const callChat = async call => {
+                if (call.stage !== stage) return fake(call);
+                const repairing = !!call.meta.formatRepair;
+                return core.callOpenRouter({
+                    apiKey: 'fake', request: call, sleepImpl: async () => {},
+                    fetchImpl: async (_, request) => {
+                        if (request.method === 'GET') return fakeResponse(billingReady ? 200 : 404, { data: { id: 'pending', total_cost: 0.04 } });
+                        posts.push(repairing);
+                        return fakeResponse(200, {
+                            id: 'pending',
+                            choices: [{ message: { content: repairing ? JSON.stringify(validFormatResponse(stage)) : '**Original prose**' }, finish_reason: 'stop' }],
+                            usage: repairing === unknownOnRepair ? {} : { cost: 0.02 },
+                        });
+                    },
+                });
+            };
+            const run = () => core.runPipeline({
+                thread: core.flattenThread(TOY_THREAD), config: TOY_CONFIG, onProgress: () => {},
+                callChat: core.makeCachedCallChat(callChat, api),
+            });
+            if (stage === 'synthesize') {
+                const failed = await run();
+                assert.equal(failed.synthesis, null);
+                assert.match(failed.synthesisError, /cost is unknown.*not a zero-cost call/);
+                assert.equal(failed.rows.length, 6);
+            } else {
+                await assert.rejects(run(), core.CostUnavailableError);
+            }
+            assert.deepEqual(posts, unknownOnRepair ? [false, true] : [false]);
+            const probe = await core.probeCache({ thread: core.flattenThread(TOY_THREAD), config: TOY_CONFIG, store: api });
+            assert.equal(probe.complete, false);
+            billingReady = true;
+            const recovered = await run();
+            assert.ok(recovered.synthesis);
+            assert.deepEqual(posts, [false, true], 'one original and one repair generation across both runs');
+            assert.ok(recovered.cost >= 0.04, 'recovered charge is not a free cache hit');
+        }
+    }
+});
+
+test('missing cost in a custom response or cache is never silently treated as free', async () => {
+    const { api, store } = mapStore();
+    const calls = [];
+    const fake = makeFakeCallChat(calls);
+    const run = callChat => core.runPipeline({
+        thread: core.flattenThread(TOY_THREAD), config: TOY_CONFIG, onProgress: () => {}, callChat,
+    });
+    const failed = await run(core.makeCachedCallChat(async call => {
+        const response = await fake(call);
+        return call.stage === 'synthesize' ? { ...response, usage: {} } : response;
+    }, api));
+    assert.match(failed.synthesisError, /cost is unknown/);
+    assert.equal(calls.filter(call => call.stage === 'synthesize').length, 1);
+    const synthesisKey = core.requestCacheKey(calls.find(call => call.stage === 'synthesize'));
+    assert.deepEqual(store.get(synthesisKey).usage, {});
+    const replay = await run(core.makeCachedCallChat(() => { throw new Error('No paid retry'); }, api));
+    assert.match(replay.synthesisError, /cost is unknown/);
+    assert.equal(replay.synthesis, null);
+    assert.equal((await core.probeCache({ thread: core.flattenThread(TOY_THREAD), config: TOY_CONFIG, store: api })).complete, false);
+});
+
+test('a format failure without known usage cannot start a repair or become a free cached response', async () => {
+    const { api } = mapStore();
+    const log = [];
+    const fake = makeFakeCallChat(log);
+    let attempts = 0;
+    const run = callChat => core.runPipeline({ thread: core.flattenThread(TOY_THREAD), config: TOY_CONFIG, onProgress: () => {}, callChat });
+    const failed = await run(core.makeCachedCallChat(call => {
+        if (call.stage !== 'synthesize') return fake(call);
+        attempts++;
+        throw new core.InvalidResponseError('malformed content', '**Original prose**');
+    }, api));
+    assert.match(failed.synthesisError, /cost is unknown.*not a zero-cost call/);
+    assert.equal(attempts, 1);
+    const retried = await run(core.makeCachedCallChat(() => { throw new Error('Must not repeat unknown-charge output'); }, api));
+    assert.match(retried.synthesisError, /cost is unknown/);
+    assert.equal(retried.synthesis, null);
+});
+
+test('missing completion content and choices retain their known charge without transport regeneration', async () => {
+    for (const choices of [[], [{ message: {} }]]) {
+        const { api } = mapStore();
+        let posts = 0;
+        const request = { ...minimalRequest(), stage: 'synthesize', meta: { axisIds: [1] } };
+        const cached = core.makeCachedCallChat(call => core.callOpenRouter({
+            apiKey: 'fake', request: call, sleepImpl: async () => {},
+            fetchImpl: async () => {
+                posts++;
+                return fakeResponse(200, { choices, usage: { cost: 0.02 } });
+            },
+        }), api);
+        await assert.rejects(cached(request), error => error instanceof core.InvalidResponseError && error.usage.cost === 0.02 && error.response === null);
+        await assert.rejects(cached(request), error => error instanceof core.InvalidResponseError && error.usage.cached && error.usage.cost === 0);
+        assert.equal(posts, 1);
+    }
+});
+
+test('paid malformed extraction and scoring content split rather than repeating the original request', async () => {
+    for (const stage of ['extract', 'score']) {
+        const { api } = mapStore();
+        const calls = [];
+        const fake = makeFakeCallChat(calls);
+        const run = callChat => core.runPipeline({ thread: core.flattenThread(TOY_THREAD), config: TOY_CONFIG, onProgress: () => {}, callChat });
+        const result = await run(core.makeCachedCallChat(async call => {
+            if (call.stage !== stage || call.meta.commentIds.length === 1) return fake(call);
+            calls.push(call);
+            return core.callOpenRouter({
+                apiKey: 'fake', request: call, sleepImpl: async () => {},
+                fetchImpl: async () => fakeResponse(200, {
+                    choices: [{ message: { content: 'Not JSON' } }], usage: { cost: 0.001 },
+                }),
+            });
+        }, api));
+        assert.ok(result.synthesis);
+        assert.deepEqual(result.rows.map(row => row.axisId), TOY_EXPECTED_ORDER);
+        assert.equal(new Set(calls.map(core.requestCacheKey)).size, calls.length);
+        assert.ok(!calls.some(call => call.meta.formatRepair));
+        assertClose(result.cost, calls.length * 0.001, 'malformed split parents still billed');
+        const replay = await run(core.makeCachedCallChat(() => { throw new Error('No network'); }, api));
+        assert.equal(replay.cost, 0);
+        assert.equal(replay.stats.cachedCalls, replay.calls);
+        assert.deepEqual(replay.rows, result.rows);
+    }
+});
+
+test('a terminal batch error drains in-flight calls, stops all queued work, and permits explicit retry', async () => {
+    for (const mode of ['network', 'shape']) {
+        const { api, store } = mapStore();
+        const log = [];
+        const fake = makeFakeCallChat([]);
+        const controller = new AbortController();
+        let release;
+        const gate = new Promise(resolve => { release = resolve; });
+        const config = { ...TOY_CONFIG, extractBatchChars: 1 };
+        const progress = [];
+        const running = core.runPipeline({
+            thread: core.flattenThread(TOY_THREAD), config, signal: controller.signal, onProgress: event => progress.push(event),
+            callChat: core.makeCachedCallChat(async call => {
+                log.push(call);
+                if (log.length === 1) {
+                    if (mode === 'network') throw new Error('network unavailable');
+                    return { json: { wrong: true }, usage: { cost: 0.02 } };
+                }
+                await gate;
+                assert.equal(call.signal.aborted, false);
+                return fake(call);
+            }, api),
+        });
+        let settled = false;
+        const checked = assert.rejects(running, mode === 'network' ? /network unavailable/ : /candidates array/).then(() => { settled = true; });
+        await new Promise(resolve => setImmediate(resolve));
+        assert.equal(log.length, 2);
+        assert.equal(settled, false);
+        release();
+        await checked;
+        assert.equal(log.length, 2, 'no more requests scheduled after terminal failure');
+        assert.equal(progress.at(-1).inFlight, 0);
+        assertClose(progress.at(-1).cost, mode === 'network' ? 0.001 : 0.021, 'drained call and known failed charge recorded');
+        assert.equal(store.get(core.requestCacheKey(log[1])).usage.cost, 0.001);
+        const probe = await core.probeCache({ thread: core.flattenThread(TOY_THREAD), config, store: api });
+        assert.equal(probe.complete, false);
+        assert.equal(probe.stages[0].hits, 1, 'invalid singleton is a miss, not a permanently poisoned cache hit');
+        const retries = [];
+        const recovered = await core.runPipeline({
+            thread: core.flattenThread(TOY_THREAD), config, onProgress: () => {},
+            callChat: core.makeCachedCallChat(makeFakeCallChat(retries), api),
+        });
+        assert.ok(recovered.synthesis);
+        assert.ok(retries.some(call => core.requestCacheKey(call) === core.requestCacheKey(log[0])));
+        assert.ok(!retries.some(call => core.requestCacheKey(call) === core.requestCacheKey(log[1])));
+    }
+});
+
+test('repair cancellation, over-budget completion, and transport failure preserve comparisons and accounted output', async () => {
+    for (const mode of ['cancel', 'budget', 'network']) {
+        const { api } = mapStore();
+        const log = [];
+        const controller = new AbortController();
+        const malformed = formatFake(log, 'synthesize', '**Original prose**', validFormatResponse('synthesize'), {
+            repairCost: mode === 'budget' ? 2 : 0.03,
+            onCall: call => { if (mode === 'cancel' && call.meta.formatRepair) controller.abort(); },
+        });
+        const result = await core.runPipeline({
+            thread: core.flattenThread(TOY_THREAD), config: TOY_CONFIG, signal: controller.signal, onProgress: () => {},
+            callChat: core.makeCachedCallChat(async call => {
+                if (mode === 'network' && call.meta.formatRepair) {
+                    log.push(call);
+                    throw new Error('repair network unavailable');
+                }
+                return malformed(call);
+            }, api),
+        });
+        assert.equal(log.filter(call => call.stage === 'synthesize').length, 2);
+        assert.equal(result.synthesis, null);
+        assert.equal(result.rows.length, 6);
+        assert.match(result.synthesisError, mode === 'cancel' ? /Cancelled/ : mode === 'budget' ? /Budget/ : /repair network unavailable/);
+        assert.equal(result.synthesisFailure.response, '**Original prose**');
+        assertClose(result.cost, (log.length - 2) * 0.001 + 0.02 + (mode === 'budget' ? 2 : mode === 'cancel' ? 0.03 : 0), 'all completed output billed');
+        const retries = [];
+        const recovered = await core.runPipeline({
+            thread: core.flattenThread(TOY_THREAD), config: TOY_CONFIG, onProgress: () => {},
+            callChat: core.makeCachedCallChat(makeFakeCallChat(retries), api),
+        });
+        assert.ok(recovered.synthesis);
+        if (mode === 'network') {
+            assert.deepEqual(retries.map(call => call.meta.formatRepair), [true]);
+        } else {
+            assert.equal(retries.length, 0, 'completed repair was cached despite cancellation/budget stop');
+            assert.equal(recovered.cost, 0);
+        }
+    }
+});
+
+test('failed storage retains raw original in the cache wrapper and warns before a new run can repeat it', async () => {
+    for (const throws of [false, true]) {
+        const log = [];
+        const failing = formatFake(log, 'synthesize', '**Original prose**', '**Invalid repair**');
+        const good = makeFakeCallChat(log);
+        let recovering = false;
+        const cached = core.makeCachedCallChat(call => recovering ? good(call) : failing(call), {
+            get: () => undefined,
+            set: () => { if (throws) throw new Error('storage unavailable'); return false; },
+        });
+        const run = () => core.runPipeline({ thread: core.flattenThread(TOY_THREAD), config: TOY_CONFIG, onProgress: () => {}, callChat: cached });
+        const failed = await run();
+        assert.equal(failed.synthesisFailure.response, '**Original prose**');
+        assert.equal(failed.stats.cacheWriteFailures, failed.calls);
+        assert.ok(failed.warnings.some(warning => /cache writes failed.*new run or reload/.test(warning)));
+        const count = log.length;
+        recovering = true;
+        const recovered = await run();
+        assert.ok(recovered.synthesis);
+        assert.equal(log.length, count + 1);
+        assert.equal(log.at(-1).meta.formatRepair, true);
+        assertClose(recovered.cost, 0.001, 'retained original is not billed twice');
+    }
 });
 
 test('synthesis samples each author once per class and keeps self contradiction separate', () => {
@@ -815,11 +1558,13 @@ test('failed synthesis preserves comparisons and valid cached stages; retry and 
     }, api));
     assert.equal(failed.synthesis, null);
     assert.match(failed.synthesisError, /unsupported axis/);
+    assert.equal(failed.synthesisFailure.response.sections[0].text, 'Invented reference');
+    assert.match(failed.warnings.at(-1), /uncached calls may cost money/);
     assert.deepEqual(failed.rows.map(row => row.axisId), TOY_EXPECTED_ORDER);
-    assertClose(failed.cost, (failed.calls - 1) * 0.001 + 0.002, 'invalid final response billed');
+    assertClose(failed.cost, (failed.calls - 2) * 0.001 + 0.004, 'invalid original and repair both billed');
     const probe = await core.probeCache({ thread, store: api, config: TOY_CONFIG });
     assert.equal(probe.complete, false);
-    assert.deepEqual(probe.stages.at(-1), { stage: 'synthesize', hits: 0, total: 1 });
+    assert.deepEqual(probe.stages.at(-1), { stage: 'synthesize', hits: 1, total: 2 });
     const log = [];
     const recovered = await run(core.makeCachedCallChat(makeFakeCallChat(log), api));
     assert.deepEqual(log.map(call => call.stage), ['synthesize']);
@@ -840,13 +1585,13 @@ test('short synthesis refreshes only its model cache and ignores prior saved-res
     const previousCall = {
         ...synthesisCall,
         messages: synthesisCall.messages.map(message => ({
-            ...message, content: message.content.replace(/^Short synthesis format v2\. /, ''),
+            ...message, content: message.content.replace(/^Short synthesis format v4\. /, 'Short synthesis format v3. '),
         })),
     };
     const previousKey = core.requestCacheKey(previousCall);
     assert.notEqual(currentKey, previousKey);
     store.set(previousKey, {
-        json: { sections: [{ text: Array(101).fill('old').join(' '), axisIds: [1] }], caveats: [] },
+        json: { sections: [{ text: 'Previous paragraph-end citations.', axisIds: [1] }], caveats: [] },
         usage: { cost: 1 },
     });
     store.delete(currentKey);
@@ -858,10 +1603,45 @@ test('short synthesis refreshes only its model cache and ignores prior saved-res
     assert.deepEqual(refreshed.map(call => call.stage), ['synthesize']);
     assert.ok(store.has(previousKey), 'old data is not deleted');
     const source = require('node:fs').readFileSync(require.resolve('../hn_polarization.html'), 'utf8');
-    assert.match(source, /const RESULT_CACHE_VERSION = 5;/);
+    assert.match(source, /const RESULT_CACHE_VERSION = 6;/);
     assert.match(source, /saved\.version === RESULT_CACHE_VERSION/);
     assert.match(source, /cachedRecord\.version === RESULT_CACHE_VERSION/);
     assert.doesNotMatch(source, /Read saved narrative|synthesisNeedsDisclosure|predates narrative synthesis/);
+});
+
+test('invalid synthesis cache is retained and only its format repair is retried on explicit rerun', async () => {
+    const { store, api } = mapStore();
+    const thread = core.flattenThread(TOY_THREAD);
+    const calls = [];
+    const run = callChat => core.runPipeline({ thread, config: TOY_CONFIG, onProgress: () => {}, callChat });
+    await run(core.makeCachedCallChat(makeFakeCallChat(calls), api));
+    const key = core.requestCacheKey(calls.find(call => call.stage === 'synthesize'));
+    const rejected = { sections: [{ text: Array(101).fill('argument').join(' ') + '[[axis:1]]', axisIds: [1] }], caveats: [] };
+    store.set(key, { json: rejected, usage: { cost: 0.07 } });
+    const probe = await core.probeCache({ thread, store: api, config: TOY_CONFIG });
+    assert.equal(probe.complete, false);
+    assert.deepEqual(probe.stages.at(-1), { stage: 'synthesize', hits: 1, total: 2 });
+    let attempts = 0;
+    const failed = await run(core.makeCachedCallChat(async call => {
+        assert.equal(call.stage, 'synthesize');
+        assert.equal(call.meta.formatRepair, true);
+        attempts += 1;
+        return { json: rejected, usage: { cost: 0.07 } };
+    }, api));
+    assert.equal(attempts, 1, 'one repair, without repeating the original paid call');
+    assert.equal(failed.synthesis, null);
+    assert.deepEqual(failed.synthesisFailure.response, rejected);
+    assert.match(failed.synthesisError, /101 words \(maximum 100\)/);
+    assert.equal(failed.cost, 0.07);
+    assert.equal(failed.stats.cachedCalls, failed.calls - 1);
+    const retries = [];
+    const recovered = await run(core.makeCachedCallChat(makeFakeCallChat(retries), api));
+    assert.deepEqual(retries.map(call => call.stage), ['synthesize']);
+    assert.ok(recovered.synthesis);
+    assert.equal(recovered.synthesisFailure, null);
+    const reopened = await run(core.makeCachedCallChat(() => { throw new Error('No network'); }, api));
+    assert.equal(reopened.cost, 0);
+    assert.ok(reopened.synthesis);
 });
 
 test('cancelled and truncated synthesis preserve comparisons and surface failure', async () => {
@@ -1013,7 +1793,15 @@ test('runPipeline reports calls in flight, never more than the concurrency', asy
     assert.ok(inFlight.every(count => count >= 0 && count <= 2), 'never more than the concurrency');
     assert.equal(progress[progress.length - 1].inFlight, 0);
     assert.equal(core.formatProgress({ stage: 'extract', done: 0, total: 38, inFlight: 30, calls: 40, cachedCalls: 0, cost: 0.2138 }),
-        'extract: 0/38 done, 30 in flight, 40 calls (0 from cache), $0.2138 spent');
+        'extract: 0/38 done, 30 in flight, 40 calls (none from cache), $0.2138 spent');
+});
+
+test('formatProgress says all from cache only for nonzero fully cached calls', () => {
+    const update = { stage: 'score', done: 41, total: 41, inFlight: 0, calls: 41, cachedCalls: 41, cost: 0 };
+    assert.ok(core.formatProgress(update).includes('41 calls (all from cache)'));
+    assert.ok(core.formatProgress({ ...update, cachedCalls: 40 }).includes('41 calls (40 from cache)'));
+    assert.ok(core.formatProgress({ ...update, cachedCalls: 0 }).includes('41 calls (none from cache)'));
+    assert.ok(core.formatProgress({ ...update, calls: 0, cachedCalls: 0 }).includes('0 calls (none from cache)'));
 });
 
 test('runPipeline splits a scoring batch that truncates and still completes', async () => {
@@ -1393,16 +2181,18 @@ test('parseCacheExport accepts cache-only exports and rejects unrelated browser 
 
 test('makeCachedCallChat serves a repeated request from the store at zero cost', async () => {
     let innerCalls = 0;
+    const json = { stances: [{ comment: 1, axis: 1, stance: 'A' }] };
     const inner = async () => {
         innerCalls += 1;
-        return { json: { ok: innerCalls }, usage: { promptTokens: 1, completionTokens: 1, cost: 0.01 } };
+        return { json, usage: { promptTokens: 1, completionTokens: 1, cost: 0.01 } };
     };
     const { api } = mapStore();
     const cached = core.makeCachedCallChat(inner, api);
-    const first = await cached(baseCall());
-    const second = await cached({ ...baseCall(), meta: { batchIndex: 1 } });
+    const call = { ...baseCall(), meta: { commentIds: [1], presentedAxes: TOY_AXES, swapPoles: false } };
+    const first = await cached(call);
+    const second = await cached({ ...call, meta: { ...call.meta, batchIndex: 1 } });
     assert.equal(innerCalls, 1);
-    assert.deepEqual(second.json, { ok: 1 });
+    assert.deepEqual(second.json, json);
     assert.equal(second.usage.cost, 0);
     assert.equal(second.usage.cached, true);
     assert.equal(first.usage.cached, undefined);
@@ -1465,6 +2255,56 @@ test('runPipeline stops when the budget is exceeded', async () => {
         onProgress: () => {},
         config: { ...TOY_CONFIG, budgetUsd: 0.0015 },
     }), /budget/i);
+});
+
+test('unknown billing stops new pipeline work but drains and caches already in-flight calls', async () => {
+    const { api } = mapStore();
+    const log = [];
+    const fake = makeFakeCallChat(log);
+    let started = 0;
+    let release;
+    const gate = new Promise(resolve => { release = resolve; });
+    const cached = core.makeCachedCallChat(async call => {
+        started++;
+        if (started === 1) throw new core.CostUnavailableError({ id: 'pending', choices: [] }, call.model);
+        await gate;
+        assert.equal(call.signal.aborted, false);
+        return fake(call);
+    }, api);
+    const controller = new AbortController();
+    const progress = [];
+    const running = core.runPipeline({
+        thread: core.flattenThread(TOY_THREAD), callChat: cached,
+        onProgress: event => progress.push(event), signal: controller.signal,
+        config: TOY_CONFIG,
+    });
+    let settled = false;
+    const checked = assert.rejects(running, core.CostUnavailableError).then(() => { settled = true; });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(started, 2);
+    assert.equal(settled, false);
+    release();
+    await checked;
+    assert.equal(started, 2);
+    assert.equal(log.length, 1);
+    assert.equal((await api.get(core.requestCacheKey(log[0]))).usage.cost, 0.001);
+    assert.equal(progress.at(-1).cost, 0.001);
+    assert.equal(controller.signal.aborted, false);
+    const probe = await core.probeCache({ thread: core.flattenThread(TOY_THREAD), store: api, config: TOY_CONFIG });
+    assert.equal(probe.complete, false);
+    assert.equal(probe.stages[0].hits, 1);
+});
+
+test('unknown billing warns when persistent storage fails and retains the response in memory', async () => {
+    let calls = 0;
+    const raw = { id: 'pending', choices: [] };
+    const cached = core.makeCachedCallChat(async call => {
+        calls++;
+        if (calls === 2) assert.equal(call.billingResponse, raw);
+        throw new core.CostUnavailableError(raw, call.model);
+    }, { get: () => null, set: () => false });
+    await assert.rejects(cached(minimalRequest()), /could not be saved to persistent cache/);
+    await assert.rejects(cached(minimalRequest()), /could not be saved to persistent cache/);
 });
 
 // ---------------------------------------------------------------------------
