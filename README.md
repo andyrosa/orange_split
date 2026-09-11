@@ -38,11 +38,14 @@ A final model synthesis leads with the main disagreements and their reasoning, i
 
 ## User interface
 
-The hosted app is at https://andyrosa.github.io/hn_polarization/. The source repository,
-https://github.com/andyrosa/hn_polarization, is private; the GitHub Pages website is public.
+The source repository, https://github.com/andyrosa/hn_polarization, is private.
+The intended GitHub Pages URL is https://andyrosa.github.io/hn_polarization/.
+Hosting is not enabled yet: GitHub rejected Pages on this private repository because
+the account's current plan does not support it. Enabling Pages here requires GitHub Pro
+or another eligible plan. Once enabled, the GitHub Pages website will be public.
 
-Every push to `main` runs `node --test`, including the Content-Security-Policy checks,
-and deploys through `.github/workflows/pages.yml`. The workflow publishes only
+Every push to `main` runs `node --test`, including the Content-Security-Policy checks.
+Once Pages is enabled, `.github/workflows/pages.yml` also deploys the app. It publishes only
 `hn_polarization.html`, copied byte-for-byte to `index.html`. Cache exports, prototypes,
 documentation, scripts, and tests are not included in the website. GitHub Pages must
 use **GitHub Actions** as its publishing source. Deployment can also be started manually
