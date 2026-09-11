@@ -38,18 +38,20 @@ A final model synthesis leads with the main disagreements and their reasoning, i
 
 ## User interface
 
-The source repository, https://github.com/andyrosa/hn_polarization, is private.
-The intended GitHub Pages URL is https://andyrosa.github.io/hn_polarization/.
-Hosting is not enabled yet: GitHub rejected Pages on this private repository because
-the account's current plan does not support it. Enabling Pages here requires GitHub Pro
-or another eligible plan. Once enabled, the GitHub Pages website will be public.
+The app is hosted at https://andyrosa.github.io/hn_polarization/.
+The public source repository is https://github.com/andyrosa/hn_polarization.
 
-Every push to `main` runs `node --test`, including the Content-Security-Policy checks.
-Once Pages is enabled, `.github/workflows/pages.yml` also deploys the app. It publishes only
+Every push to `main` runs `node --test`, including the Content-Security-Policy checks,
+and deploys through `.github/workflows/pages.yml`. The workflow publishes only
 `hn_polarization.html`, copied byte-for-byte to `index.html`. Cache exports, prototypes,
 documentation, scripts, and tests are not included in the website. GitHub Pages must
 use **GitHub Actions** as its publishing source. Deployment can also be started manually
 from the repository's **Actions** tab.
+
+Cache exports, generated outputs, local browser diagnostics, environment files, and
+private key files are ignored by Git. Keep credentials in the browser or the
+`OPENROUTER_API_KEY` environment variable; never commit them. The public history
+excludes cache exports and browser diagnostics and uses a GitHub noreply commit email.
 
 Open `hn_polarization.html` in a browser. The tab title names HN Split and changes to the loaded article title. Every button sits right after the thing it acts on and appears only when it can do something.
 

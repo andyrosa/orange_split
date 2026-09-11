@@ -1,1 +1,11 @@
 /_site/
+/.publication/
+/.playwright-mcp/
+/.claude/
+/outputs/
+/hn-split-cache-*.json
+.env
+.env.*
+!.env.example
+*.key
+*.pem
