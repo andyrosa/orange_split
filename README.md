@@ -38,6 +38,16 @@ A final model synthesis leads with the main disagreements and their reasoning, i
 
 ## User interface
 
+The hosted app is at https://andyrosa.github.io/hn_polarization/. The source repository,
+https://github.com/andyrosa/hn_polarization, is private; the GitHub Pages website is public.
+
+Every push to `main` runs `node --test`, including the Content-Security-Policy checks,
+and deploys through `.github/workflows/pages.yml`. The workflow publishes only
+`hn_polarization.html`, copied byte-for-byte to `index.html`. Cache exports, prototypes,
+documentation, scripts, and tests are not included in the website. GitHub Pages must
+use **GitHub Actions** as its publishing source. Deployment can also be started manually
+from the repository's **Actions** tab.
+
 Open `hn_polarization.html` in a browser. The tab title names HN Split and changes to the loaded article title. Every button sits right after the thing it acts on and appears only when it can do something.
 
 1. Pick **Front page** or **Search all**, then use the leftmost Thread box. Front page immediately lists the current front-page stories and typing filters that list locally. Search all waits for three characters, then shows at most 30 Algolia story matches, matching the front-page request size without creating an enormous dropdown. A numeric thread id loads directly in either mode. The full-width list opens under the box on focus, click, or typing. Its E4-style natural-language rows preserve the linked title, current comment count, posting time, id, fetched snapshot count, new-comment difference, and preprocessing status. Clicking the title opens the Hacker News post in a new tab; clicking elsewhere loads it for analysis. A bold title means at least one model call or a completed result for the selected run is already cached; a snapshot alone does not bold it. Status distinguishes a saved result, fully cached calls, partial calls, snapshot only, or not stored. The Min comments box to its right hides stories with fewer comments from both lists; default 100, empty hides nothing. Arrow keys move the highlight, Enter or a row click picks, and Escape or leaving the box closes. A picked row or a typed id ("Load thread", Enter, or leaving the box) loads the thread; the box empties and the loaded title follows it as another new-tab link to the Hacker News post. The line below compares HN's current comment count with the stored snapshot. When they match it reads, for example, "32 comments, posted 2026-09-02 09:24 PM, id 49543530, fetched comments on 2026-09-02 09:25 PM". When new comments exist, the older snapshot count is repeated in bold after "fetched" (for example, "35 comments ... fetched **32** comments on ..."). Import changes its button to **Importing…**, reports the file being processed, and disables conflicting cache controls until storage and cache checks finish.
