@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-ORlBgV0RSLdvMuY4Joh5FDYnmt4l5Ty8EoF6GsTPFhM=' 'sha256-ZlMQtLCu/uhQK8tJbLC/mYHZ5G2il9LMUjzuYO+lmnc='; style-src 'sha256-4kKiRzGidt0EHKdBhOe6BbiyfqcowHEFHbdyGBudr/Y='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-m8f1IVWT0zdX/CXxT8tdgt1JRcKT2hweXY1lL4zfCNg=' 'sha256-tFpYcky37ckc0YCffsY/TD0n/r4RfkuE/oQ1uz3OnzY='; style-src 'sha256-vA/SQJiJ8SEUkNmdsTMg/uUFtGYPjzqw5Oq3AVBMpOs='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
 <title>HN Split - For and Against on Hacker News</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EHN:s%3C/text%3E%3C/svg%3E">
 <style>
@@ -51,22 +51,23 @@ input[type="number"] { width: 5em; }
 input[type="range"] { width: 8rem; vertical-align: middle; }
 #share { accent-color: #b91c1c; }
 #share.full-share { accent-color: #15803d; }
-select.model { display: block; width: 100%; max-width: 86rem; margin-top: 0.25rem; }
-.model-choice { margin: 1em 0; }
-.model-picker { position: relative; width: 100%; max-width: 86rem; margin-top: 0.3rem; }
+.model-choices { position: relative; display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1em 0; }
+.model-choice { min-width: 0; max-width: 100%; }
 .model-grid { display: grid; align-items: stretch; }
 .volume-grid { grid-template-columns: minmax(11rem, 2fr) minmax(6rem, 0.75fr) minmax(7rem, 0.9fr) minmax(7rem, 0.9fr) minmax(6rem, 0.8fr) minmax(8rem, 1fr) minmax(8rem, 1fr) minmax(7rem, 0.9fr); }
 .consolidation-grid { grid-template-columns: minmax(11rem, 1.6fr) minmax(6rem, 0.7fr) minmax(8rem, 0.9fr) minmax(8rem, 0.9fr) minmax(8rem, 0.9fr) minmax(6rem, 0.7fr) minmax(13rem, 1.8fr); }
-.model-grid-header { padding: 0 2.2rem 0.3rem 0.75rem; color: #555; font-size: 11px; line-height: 1.15; }
+.model-grid-header { position: sticky; top: 0; padding: 0.55rem 2.2rem 0.55rem 0.75rem; background: #eee; color: #555; font-size: 11px; line-height: 1.15; }
 .model-cell { display: flex; align-items: center; min-width: 0; padding: 0 0.55rem; }
 .model-cell:first-child { padding-left: 0; }
 .model-cell + .model-cell { border-left: 1px solid #ddd; }
 .model-grid .metric { text-align: right; font-variant-numeric: tabular-nums; }
 .model-grid .metric { justify-content: flex-end; }
-.model-trigger { position: relative; width: 100%; margin: 0; padding: 0.5rem 2.2rem 0.5rem 0.75rem; border: 1px solid #777; border-radius: 3px; background: #fff; color: #111; text-align: left; }
+.model-trigger { position: relative; max-width: 100%; margin: 0; padding: 0.5rem 2.2rem 0.5rem 0.75rem; border: 1px solid #c5ced8; border-radius: 6px; background: #fafcfe; color: #234c74; font: 600 14px/20px system-ui, sans-serif; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.model-trigger:hover, .model-trigger[aria-expanded="true"] { background: #eaf3fc; border-color: #477cac; }
 .model-trigger::after { content: "v"; position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); }
 .model-trigger:focus { outline: 2px solid #2b6cb0; outline-offset: 1px; }
-.model-options { position: absolute; z-index: 3; top: 100%; left: 0; right: 0; max-height: 24rem; overflow-y: auto; border: 1px solid #777; border-top: 0; background: #fff; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); }
+.model-options { position: absolute; z-index: 3; top: calc(100% + 0.3rem); left: 0; width: 100%; max-width: 86rem; box-sizing: border-box; max-height: 24rem; overflow: auto; border: 1px solid #777; background: #fff; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); }
+.model-options .model-grid { min-width: 68rem; box-sizing: border-box; }
 .model-option { width: 100%; margin: 0; padding: 0.55rem 2.2rem 0.55rem 0.75rem; border: 0; border-top: 1px solid #eee; border-radius: 0; background: #fff; color: #111; text-align: left; }
 .model-option:hover, .model-option:focus { background: #e8f2fb; outline: none; }
 .model-option[aria-selected="true"] { background: #d8eaf8; font-weight: 600; }
@@ -153,22 +154,26 @@ button { margin-right: 0.5rem; }
 <span id="thread-info"></span>
 <button id="refresh-thread" type="button" hidden>Refetch</button>
 </p>
+<div class="model-choices">
 <div class="model-choice">
-<label for="volume-model-button">Extraction and scoring model</label>
+<label id="volume-model-label" class="visually-hidden" for="volume-model-button">Extraction and scoring model</label>
 <div id="volume-model-picker" class="model-picker">
+<button id="volume-model-button" class="model-trigger" type="button" aria-labelledby="volume-model-label volume-model-button" aria-haspopup="listbox" aria-expanded="false" aria-controls="volume-model-options"></button>
+<div id="volume-model-options" class="model-options" role="listbox" aria-labelledby="volume-model-label" hidden>
 <div id="volume-model-header" class="model-grid volume-grid model-grid-header" aria-hidden="true"></div>
-<button id="volume-model-button" class="model-grid volume-grid model-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="volume-model-options"></button>
-<div id="volume-model-options" class="model-options" role="listbox" aria-labelledby="volume-model-button" hidden></div>
+</div>
 <select id="volume-model" hidden aria-hidden="true" tabindex="-1"></select>
 </div>
 </div>
 <div class="model-choice">
-<label for="consolidation-model-button">Consolidation and summary model</label>
+<label id="consolidation-model-label" class="visually-hidden" for="consolidation-model-button">Consolidation and summary model</label>
 <div id="consolidation-model-picker" class="model-picker">
+<button id="consolidation-model-button" class="model-trigger" type="button" aria-labelledby="consolidation-model-label consolidation-model-button" aria-haspopup="listbox" aria-expanded="false" aria-controls="consolidation-model-options"></button>
+<div id="consolidation-model-options" class="model-options" role="listbox" aria-labelledby="consolidation-model-label" hidden>
 <div id="consolidation-model-header" class="model-grid consolidation-grid model-grid-header" aria-hidden="true"></div>
-<button id="consolidation-model-button" class="model-grid consolidation-grid model-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="consolidation-model-options"></button>
-<div id="consolidation-model-options" class="model-options" role="listbox" aria-labelledby="consolidation-model-button" hidden></div>
+</div>
 <select id="consolidation-model" hidden aria-hidden="true" tabindex="-1"></select>
+</div>
 </div>
 </div>
 <p id="share-row" hidden>
@@ -180,12 +185,12 @@ button { margin-right: 0.5rem; }
 <label>OpenRouter key <input id="api-key" type="password" autocomplete="off"></label> <label><input id="remember-key" type="checkbox"> Remember pasted key</label> <button id="connect-openrouter" type="button" hidden>Sign in with OpenRouter instead</button>
 </p>
 <p>
-<span id="storage-info">Cached in this browser: <button id="cached-threads-toggle" type="button" aria-expanded="false" aria-controls="cached-threads-list"></button>, <span id="cached-call-count"></span>, <span id="cached-result-count" title="Finished runs stored for immediate page restoration"></span>.</span>
+<span id="storage-info">Cached locally: <button id="cached-threads-toggle" type="button" aria-expanded="false" aria-controls="cached-threads-list"></button>, <span id="cached-call-count"></span>, <span id="cached-result-count" title="Finished runs stored for immediate page restoration"></span><span id="cached-date-range" title="Earliest and latest thread snapshot fetch times, in local time"></span></span>
 <button id="export-cache" type="button">Export</button>
 <button id="import-cache" type="button">Import</button>
 <input id="import-cache-file" type="file" accept=".json,application/json" hidden>
 <button id="delete-cached" type="button" hidden>Delete</button>
-<span id="key-stored" hidden>OpenRouter key <span id="key-scope"></span> <button id="wipe-key" type="button">Delete</button></span>
+<span id="key-stored" hidden>OpenRouter key <button id="wipe-key" type="button">Delete</button></span>
 </p>
 <ul id="cached-threads-list" hidden></ul>
 <div id="status"></div>
@@ -201,6 +206,7 @@ button { margin-right: 0.5rem; }
 // Core pipeline: no DOM access. Shared by the page script and by Node (tests, scripts/run_node.js).
 
 const CONSTANTS = Object.freeze({
+    APP_NAME: 'HN Split',
     HN_ITEM_URL: 'https://hn.algolia.com/api/v1/items/',
     HN_CURRENT_ITEM_URL: 'https://hacker-news.firebaseio.com/v0/item/',
     HN_ITEM_PAGE_URL: 'https://news.ycombinator.com/item?id=',
@@ -1808,11 +1814,50 @@ async function pkceChallenge(verifier) {
     return base64UrlEncode(new Uint8Array(digest));
 }
 
-function openRouterAuthUrl(callbackUrl, challenge) {
+// A recognition hint for the saved key, not a device identity. Use only browser/OS names:
+// profile names are unavailable to webpages, and versions are both noisy and short-lived.
+function openRouterKeyLabel(browserInfo = {}) {
+    const ua = browserInfo.userAgent || '';
+    const brands = browserInfo.userAgentData?.brands || [];
+    const brandNames = [
+        ['Microsoft Edge', 'Edge'], ['Opera', 'Opera'], ['Brave', 'Brave'],
+        ['Vivaldi', 'Vivaldi'], ['Google Chrome', 'Chrome'],
+    ];
+    let browser = brandNames.find(([brand]) => brands.some(item => item.brand === brand))?.[1];
+    if (!browser) {
+        // Chromium browsers also say Chrome/Safari; iOS browsers also say Safari.
+        const browserTokens = [
+            [/Edg(?:e|A|iOS)?\//, 'Edge'], [/OPR\/|Opera\/|OPiOS\//, 'Opera'],
+            [/SamsungBrowser\//, 'Samsung Internet'], [/Vivaldi\//, 'Vivaldi'],
+            [/Firefox\/|FxiOS\//, 'Firefox'], [/Chromium\//, 'Chromium'],
+            [/Chrome\/|CriOS\//, 'Chrome'], [/Version\/.*Safari\//, 'Safari'],
+        ];
+        browser = browserTokens.find(([pattern]) => pattern.test(ua))?.[1];
+        if (!browser && brands.some(item => item.brand === 'Chromium')) browser = 'Chromium';
+    }
+    let os = browserInfo.userAgentData?.platform;
+    if (!os) {
+        // iPadOS can identify as a Mac when requesting desktop pages.
+        const isIPad = browserInfo.platform === 'MacIntel' && browserInfo.maxTouchPoints > 1;
+        if (/iPad/.test(ua) || isIPad) os = 'iPadOS';
+        else if (/iPhone|iPod/.test(ua)) os = 'iOS';
+        else if (/Android/.test(ua)) os = 'Android';
+        else if (/CrOS/.test(ua)) os = 'ChromeOS';
+        else if (/Windows/.test(ua)) os = 'Windows';
+        else if (/Macintosh|Mac OS X/.test(ua)) os = 'macOS';
+        else if (/Linux/.test(ua)) os = 'Linux';
+    }
+    if (os === 'Chrome OS') os = 'ChromeOS';
+    const context = browser ? `${browser}${os ? ` on ${os}` : ''}` : (os ? `Browser on ${os}` : 'This browser');
+    return `${CONSTANTS.APP_NAME} - ${context}`;
+}
+
+function openRouterAuthUrl(callbackUrl, challenge, keyLabel = CONSTANTS.APP_NAME) {
     const url = new URL(CONSTANTS.OPENROUTER_AUTH_URL);
     url.searchParams.set('callback_url', callbackUrl);
     url.searchParams.set('code_challenge', challenge);
     url.searchParams.set('code_challenge_method', 'S256');
+    url.searchParams.set('key_label', keyLabel);
     return url.toString();
 }
 
@@ -2366,7 +2411,7 @@ if (typeof module !== 'undefined' && module.exports) {
         axisMetaText, formatDuration, formatElapsed, formatClockDuration, formatProgress, formatRunCost, formatRunSummary,
         runPool, callOpenRouter, makeOpenRouterCallChat, runPipeline, TruncationError, InvalidResponseError, CostUnavailableError,
         requestCacheKey, parseCacheExport, makeCachedCallChat, probeCache, formatCacheProbe, formatNextRun,
-        makePkceVerifier, pkceChallenge, openRouterAuthUrl, exchangeOpenRouterCode,
+        makePkceVerifier, pkceChallenge, openRouterKeyLabel, openRouterAuthUrl, exchangeOpenRouterCode,
         runResultCacheKey, makeRunPageUrl, parseRunPageUrl,
     };
 }
@@ -2480,7 +2525,7 @@ const resultStore = makePrefixedStore(CONSTANTS.RESULT_KEY_PREFIX, cacheStorage)
 // A pasted OpenRouter key can be held here until reload. OAuth keys are remembered in localStorage.
 let memoryApiKey = null;
 
-// Where the key lives, shown after "OpenRouter key" while one is held.
+// Where the key lives, shown in the held key's tooltip.
 const KEY_SCOPE_REMEMBERED = 'remembered in this browser';
 const KEY_SCOPE_MEMORY = 'held until reload';
 
@@ -2539,7 +2584,6 @@ const elements = {
     keyEntry: document.getElementById('key-entry'),
     connectOpenRouter: document.getElementById('connect-openrouter'),
     keyStored: document.getElementById('key-stored'),
-    keyScope: document.getElementById('key-scope'),
     apiKey: document.getElementById('api-key'),
     rememberKey: document.getElementById('remember-key'),
     wipeKey: document.getElementById('wipe-key'),
@@ -2551,6 +2595,7 @@ const elements = {
     cachedThreadsToggle: document.getElementById('cached-threads-toggle'),
     cachedThreadsList: document.getElementById('cached-threads-list'),
     cachedResultCount: document.getElementById('cached-result-count'),
+    cachedDateRange: document.getElementById('cached-date-range'),
     exportCache: document.getElementById('export-cache'),
     importCache: document.getElementById('import-cache'),
     importCacheFile: document.getElementById('import-cache-file'),
@@ -2904,13 +2949,31 @@ function setImporting(active) {
     setRunning();
 }
 
-function counted(count, singular) {
-    return `${count} ${singular}${count === 1 ? '' : 's'}`;
+function counted(count, singular, plural = `${singular}s`) {
+    return `${count} ${count === 1 ? singular : plural}`;
 }
 
 function closeCachedThreads() {
     elements.cachedThreadsList.hidden = true;
     elements.cachedThreadsToggle.setAttribute('aria-expanded', 'false');
+}
+
+function cachedSnapshotDateRange(records) {
+    if (records.length === 0) {
+        return '';
+    }
+    const times = records.map(record => record.fetchedAt ? new Date(record.fetchedAt).getTime() : NaN);
+    if (times.some(time => !Number.isFinite(time))) {
+        return ' (snapshot date range unavailable)';
+    }
+    const format = time => {
+        const date = new Date(time);
+        const pad = number => String(number).padStart(2, '0');
+        return `${String(date.getFullYear()).padStart(4, '0')}/${pad(date.getMonth() + 1)}/${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    };
+    const earliest = times.reduce((left, right) => Math.min(left, right));
+    const latest = times.reduce((left, right) => Math.max(left, right));
+    return ` ${format(earliest)} to ${format(latest)}`;
 }
 
 // Stored snapshots are listed newest first. Choosing one follows the normal cached-thread load path.
@@ -2926,6 +2989,7 @@ function renderCachedThreads() {
             fetchedAt: snapshot.fetchedAt,
         };
     }).sort((left, right) => right.fetchedAt.localeCompare(left.fetchedAt));
+    elements.cachedDateRange.textContent = cachedSnapshotDateRange(records);
     const rows = records.map(record => {
         const item = makeElement('li');
         const label = `${record.title} (${counted(record.comments, 'comment')}, fetched ${formatLocalDateTime(record.fetchedAt)}, id ${record.threadId})`;
@@ -2950,9 +3014,9 @@ function refreshStorageInfo() {
     const cachedCalls = cacheStore.count();
     const storedThreads = snapshotStore.count();
     const storedResults = resultStore.count();
-    elements.cachedCallCount.textContent = counted(cachedCalls, 'model call');
+    elements.cachedCallCount.textContent = counted(cachedCalls, 'AI call');
     elements.cachedThreadsToggle.textContent = counted(storedThreads, 'thread');
-    elements.cachedResultCount.textContent = counted(storedResults, 'saved result');
+    elements.cachedResultCount.textContent = counted(storedResults, 'summary', 'summaries');
     renderCachedThreads();
     elements.exportCache.disabled = activeController !== null || importActive || cachedCalls + storedThreads + storedResults === 0;
     elements.deleteCached.hidden = cachedCalls === 0 && storedThreads === 0 && storedResults === 0;
@@ -3023,7 +3087,7 @@ function refreshKeyState() {
     const held = currentApiKey() !== null;
     elements.keyEntry.hidden = held;
     elements.keyStored.hidden = !held;
-    elements.keyScope.textContent = keyScopeText();
+    elements.keyStored.title = keyScopeText();
 }
 
 function fillModelOptions(select, choices, defaultKey, labelForChoice = choice => choice.label) {
@@ -3066,8 +3130,8 @@ function focusModelOption(picker, offset) {
 
 function syncModelPicker(picker) {
     const selected = picker.choices[picker.select.value];
-    renderModelGrid(picker, picker.button, picker.metrics(selected));
-    picker.button.title = selected.label;
+    picker.button.textContent = selected.name;
+    picker.button.title = `${picker.select === elements.volumeModel ? 'Extraction and scoring' : 'Consolidation and summary'}: ${selected.label}`;
     for (const option of modelOptionButtons(picker)) {
         option.setAttribute('aria-selected', String(option.dataset.key === picker.select.value));
     }
@@ -3108,7 +3172,7 @@ function initializeModelPicker(picker) {
         });
         return option;
     });
-    picker.options.replaceChildren(...options);
+    picker.options.replaceChildren(picker.header, ...options);
     syncModelPicker(picker);
     picker.button.addEventListener('click', () => {
         const opening = picker.options.hidden;
@@ -3126,6 +3190,9 @@ function initializeModelPicker(picker) {
     picker.button.addEventListener('keydown', event => {
         if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
             event.preventDefault();
+            for (const other of modelPickers) {
+                if (other !== picker) closeModelOptions(other);
+            }
             picker.options.hidden = false;
             picker.button.setAttribute('aria-expanded', 'true');
             focusModelOption(picker, event.key === 'ArrowDown' ? 0 : -1);
@@ -3852,7 +3919,7 @@ function pageCallbackUrl() {
 async function startOpenRouterSignIn() {
     const verifier = makePkceVerifier();
     sessionStorage.setItem(CONSTANTS.PKCE_VERIFIER_STORAGE_KEY, verifier);
-    location.assign(openRouterAuthUrl(pageCallbackUrl(), await pkceChallenge(verifier)));
+    location.assign(openRouterAuthUrl(pageCallbackUrl(), await pkceChallenge(verifier), openRouterKeyLabel(navigator)));
 }
 
 // On return from OpenRouter the URL carries ?code=; exchange it for a key, hold the key, and remove
