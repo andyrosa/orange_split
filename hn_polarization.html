@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-ORlBgV0RSLdvMuY4Joh5FDYnmt4l5Ty8EoF6GsTPFhM=' 'sha256-zB1Z59rg4Mwp2q/tt3+P38F8Q8mHpd0bJyI2BbSGIfo='; style-src 'sha256-4kKiRzGidt0EHKdBhOe6BbiyfqcowHEFHbdyGBudr/Y='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-ORlBgV0RSLdvMuY4Joh5FDYnmt4l5Ty8EoF6GsTPFhM=' 'sha256-ZlMQtLCu/uhQK8tJbLC/mYHZ5G2il9LMUjzuYO+lmnc='; style-src 'sha256-4kKiRzGidt0EHKdBhOe6BbiyfqcowHEFHbdyGBudr/Y='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
 <title>HN Split - For and Against on Hacker News</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EHN:s%3C/text%3E%3C/svg%3E">
 <style>
@@ -2378,56 +2378,104 @@ if (typeof module !== 'undefined' && module.exports) {
 // Rows are shown biggest first (polarized people), one block per axis: statement 1 above,
 // statement 2 below, with a proportion bar between them flanked by each side's vote count.
 
-// A JSON store over localStorage keys sharing one prefix. get returns null when absent; set returns
-// false when the browser refuses the write (storage full or value too large) instead of throwing.
-function makePrefixedStore(prefix) {
+// IndexedDB holds the large caches. A memory index keeps page reads synchronous; writes only
+// update it after the transaction commits, so failed imports never expose partial entries.
+async function openCacheStorage() {
+    const db = await new Promise((resolve, reject) => {
+        const request = indexedDB.open('hn_polarization_cache', 1);
+        request.onupgradeneeded = () => request.result.createObjectStore('entries');
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+        request.onblocked = () => reject(new Error('Close other HN Split tabs and reload to open the cache.'));
+    });
+    db.onversionchange = () => db.close();
+    const entries = new Map();
+    await new Promise((resolve, reject) => {
+        const transaction = db.transaction('entries', 'readonly');
+        const request = transaction.objectStore('entries').openCursor();
+        request.onsuccess = () => {
+            const cursor = request.result;
+            if (cursor) {
+                entries.set(cursor.key, cursor.value);
+                cursor.continue();
+            }
+        };
+        transaction.oncomplete = resolve;
+        transaction.onabort = () => reject(transaction.error || new Error('Cache read aborted.'));
+    });
+    const storage = {
+        entries,
+        async write(values, removed = []) {
+            // Serialize before opening the transaction; JSON errors cannot cause partial writes.
+            const serialized = values.map(([key, value]) => [key, JSON.stringify(value)]);
+            await new Promise((resolve, reject) => {
+                const transaction = db.transaction('entries', 'readwrite');
+                transaction.oncomplete = () => {
+                    for (const key of removed) entries.delete(key);
+                    for (const [key, value] of serialized) entries.set(key, value);
+                    resolve();
+                };
+                transaction.onabort = () => reject(transaction.error || new Error('Cache write aborted.'));
+                try {
+                    const store = transaction.objectStore('entries');
+                    for (const key of removed) store.delete(key);
+                    for (const [key, value] of serialized) store.put(value, key);
+                } catch (error) {
+                    transaction.abort();
+                    reject(error);
+                }
+            });
+        },
+    };
+    return storage;
+}
+
+function makePrefixedStore(prefix, cacheStorage) {
     return {
         get(key) {
-            const raw = localStorage.getItem(prefix + key);
-            return raw === null ? null : JSON.parse(raw);
+            const raw = cacheStorage.entries.get(prefix + key);
+            return raw === undefined ? null : JSON.parse(raw);
         },
         has(key) {
-            return localStorage.getItem(prefix + key) !== null;
+            return cacheStorage.entries.has(prefix + key);
         },
-        set(key, value) {
+        async set(key, value) {
             try {
-                localStorage.setItem(prefix + key, JSON.stringify(value));
+                await cacheStorage.write([[prefix + key, value]]);
                 return true;
             } catch (storageError) {
                 return false;
             }
         },
         remove(key) {
-            localStorage.removeItem(prefix + key);
+            return cacheStorage.write([], [prefix + key]);
         },
-        // Full localStorage keys under the prefix.
         keys() {
-            const found = [];
-            for (let index = 0; index < localStorage.length; index += 1) {
-                const key = localStorage.key(index);
-                if (key.startsWith(prefix)) found.push(key);
-            }
-            return found;
+            return [...cacheStorage.entries.keys()].filter(key => key.startsWith(prefix));
         },
         count() {
             return this.keys().length;
         },
         clear() {
-            for (const key of this.keys()) localStorage.removeItem(key);
+            return cacheStorage.write([], this.keys());
         },
     };
 }
 
+// Finish loading storage before installing handlers or restoring a saved run.
+(async function initializePage() {
+const cacheStorage = await openCacheStorage();
+
 // Model call results, so reruns of the same request cost nothing. A refused write returns false, which
 // the pipeline counts and reports.
-const cacheStore = makePrefixedStore(CONSTANTS.CACHE_KEY_PREFIX);
+const cacheStore = makePrefixedStore(CONSTANTS.CACHE_KEY_PREFIX, cacheStorage);
 
 // Fetched threads by id, so reruns score the same comments; a live thread gains comments, which would
 // change every prompt and miss the result cache.
-const snapshotStore = makePrefixedStore(CONSTANTS.THREAD_KEY_PREFIX);
+const snapshotStore = makePrefixedStore(CONSTANTS.THREAD_KEY_PREFIX, cacheStorage);
 
 // Completed runs keyed by every URL parameter, including the snapshot capture time.
-const resultStore = makePrefixedStore(CONSTANTS.RESULT_KEY_PREFIX);
+const resultStore = makePrefixedStore(CONSTANTS.RESULT_KEY_PREFIX, cacheStorage);
 
 // A pasted OpenRouter key can be held here until reload. OAuth keys are remembered in localStorage.
 let memoryApiKey = null;
@@ -2912,10 +2960,9 @@ function refreshStorageInfo() {
 
 function cacheExportPayload() {
     const entries = {};
-    for (let index = 0; index < localStorage.length; index += 1) {
-        const key = localStorage.key(index);
+    for (const [key, raw] of cacheStorage.entries) {
         if (CACHE_EXPORT_PREFIXES.some(prefix => key.startsWith(prefix))) {
-            entries[key] = JSON.parse(localStorage.getItem(key));
+            entries[key] = JSON.parse(raw);
         }
     }
     return {
@@ -2936,32 +2983,15 @@ function downloadCacheExport() {
     setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-function importCacheEntries(entries) {
-    const previous = new Map();
-    let overwritten = 0;
+async function importCacheEntries(entries) {
+    const values = Object.entries(entries);
+    const overwritten = values.filter(([key]) => cacheStorage.entries.has(key)).length;
     try {
-        for (const [key, value] of Object.entries(entries)) {
-            const oldValue = localStorage.getItem(key);
-            previous.set(key, oldValue);
-            if (oldValue !== null) {
-                overwritten += 1;
-            }
-            localStorage.setItem(key, JSON.stringify(value));
-        }
+        await cacheStorage.write(values);
     } catch (error) {
-        for (const [key, oldValue] of previous) {
-            if (oldValue === null) {
-                localStorage.removeItem(key);
-            }
-        }
-        for (const [key, oldValue] of previous) {
-            if (oldValue !== null) {
-                localStorage.setItem(key, oldValue);
-            }
-        }
-        throw new Error(`Cache import could not be stored: ${error.message}`);
+        throw new Error(`Cache import could not be stored. Existing cache entries were kept. ${error.message}`);
     }
-    return { imported: previous.size, overwritten };
+    return { imported: values.length, overwritten };
 }
 
 async function importCacheFile(file) {
@@ -2970,7 +3000,7 @@ async function importCacheFile(file) {
     await defaultSleep(0);
     try {
         const payload = parseCacheExport(await file.text());
-        const counts = importCacheEntries(payload.entries);
+        const counts = await importCacheEntries(payload.entries);
         flattenedThreads.clear();
         invalidateResultCache();
         await afterStoreChange();
@@ -3448,7 +3478,7 @@ async function loadThreadFromPage(threadId, { share, cachedResult, cachedComment
         if (snapshot === null) {
             setStatus(`Fetching thread ${threadId}`);
             snapshot = { fetchedAt: new Date().toISOString(), item: await fetchThreadItem(threadId) };
-            stored = snapshotStore.set(threadId, snapshot);
+            stored = await snapshotStore.set(threadId, snapshot);
             setStatus(stored ? '' : 'Thread could not be stored (browser storage full or too large); a reload will fetch it again.', !stored);
         } else {
             setStatus('');
@@ -3930,7 +3960,7 @@ async function runFromPage({ urlWrite = RUN_URL_WRITE.none, runSelection } = {})
         calledModel = result.calls !== result.stats.cachedCalls;
         const referencedComments = commentsReferencedByResult(result, thread.comments);
         if (selection !== undefined && selection !== null
-            && !resultStore.set(runResultCacheKey(selection), {
+            && !await resultStore.set(runResultCacheKey(selection), {
                 version: RESULT_CACHE_VERSION,
                 selection,
                 result,
@@ -3975,13 +4005,16 @@ elements.wipeKey.addEventListener('click', () => {
     refreshRunButton();
     setStatus('OpenRouter key wiped from this browser.');
 });
-elements.deleteCached.addEventListener('click', () => {
+elements.deleteCached.addEventListener('click', async () => {
     const removedCalls = cacheStore.count();
     const removedSnapshots = snapshotStore.count();
     const removedResults = resultStore.count();
-    cacheStore.clear();
-    snapshotStore.clear();
-    resultStore.clear();
+    try {
+        await cacheStorage.write([], [...cacheStore.keys(), ...snapshotStore.keys(), ...resultStore.keys()]);
+    } catch (error) {
+        setStatus(`Cache delete failed: ${error.message}`, true);
+        return;
+    }
     flattenedThreads.clear();
     invalidateResultCache();
     afterStoreChange();
@@ -4036,9 +4069,14 @@ elements.threadId.addEventListener('change', () => {
         loadThreadFromPage(threadId);
     }
 });
-elements.refreshThread.addEventListener('click', () => {
+elements.refreshThread.addEventListener('click', async () => {
     const threadId = String(loadedThread.id);
-    snapshotStore.remove(threadId);
+    try {
+        await snapshotStore.remove(threadId);
+    } catch (error) {
+        setStatus(`Thread refresh failed: ${error.message}`, true);
+        return;
+    }
     flattenedThreads.delete(threadId);
     invalidateResultCache();
     loadThreadFromPage(threadId);
@@ -4102,6 +4140,12 @@ if (initialRunSelection !== null) {
     }
     loadThreadFromPage(initialRunSelection.article, options);
 }
+})().catch(error => {
+    const status = document.getElementById('status');
+    status.textContent = `Cache storage could not be opened: ${error.message}. Existing data was kept. Reload to retry.`;
+    status.classList.add('error');
+    console.error(error);
+});
 </script>
 </body>
 </html>
