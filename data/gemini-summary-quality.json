@@ -1,0 +1,1355 @@
+{
+  "model": "google/gemini-3.8-flash",
+  "effort": "none",
+  "evaluator": "openai/gpt-6-astra",
+  "evaluatorEffort": "high",
+  "method": "Standalone absolute grading, two independent repeats per summary, no comparison or ranking",
+  "weights": {
+    "faithfulness": 0.6,
+    "coverage": 0.3,
+    "clarity": 0.1
+  },
+  "sourceHash": "3cd977da858789a90c70db966c7b326da2d0533f21fe57b494d8911cac350224",
+  "generatedAt": "2026-09-12T18:32:38.031Z",
+  "threads": 5,
+  "pipelineRuns": 5,
+  "reviews": 10,
+  "scores": {
+    "faithfulness": 74.5,
+    "coverage": 68.5,
+    "clarity": 89.7
+  },
+  "weighted": 74.22,
+  "majorReviewCount": 8,
+  "majorIssues": 10,
+  "totals": {
+    "comments": 1234,
+    "candidates": 233,
+    "axes": 60,
+    "twoSided": 55,
+    "agreedPairs": 566,
+    "classifiedPairs": 889,
+    "pipelineCost": 0.57516356,
+    "seconds": 357.91499999999996,
+    "consolidateCost": 0.1642485,
+    "scoreCost": 0.23106116,
+    "synthesizeCost": 0.09601875
+  },
+  "newPipelineSpend": 0.4913284099999998,
+  "gradingSpend": 3.8083805,
+  "runs": [
+    {
+      "id": "22866284",
+      "title": "The Wolfram Physics Project",
+      "metrics": {
+        "comments": 323,
+        "candidates": 76,
+        "axes": 7,
+        "verifiedAxes": 7,
+        "twoSided": 7,
+        "twoSidedPercent": 100,
+        "twoSidedPer100Comments": 2.1671826625387,
+        "oneSided": 0,
+        "agreement": 0.959731543624161,
+        "reviewedPairShare": 0.6506550218340611,
+        "agreedShareOfAllClassifiedPairs": 0.6244541484716157,
+        "stats": {
+          "comments": 323,
+          "authors": 184,
+          "cachedCalls": 17,
+          "cacheWriteFailures": 0,
+          "classifiedPairs": 229,
+          "reviewedPairs": 149,
+          "conflictingStances": 6,
+          "singlePassStances": 80,
+          "agreedStances": 143
+        },
+        "synthesisValid": true,
+        "warnings": [],
+        "elapsedSeconds": 84.556,
+        "stages": {
+          "extract": {
+            "calls": 17,
+            "historicalOrNewCost": 0.028879099999999998,
+            "paidNow": 0,
+            "serviceSeconds": 0
+          },
+          "consolidate": {
+            "calls": 1,
+            "historicalOrNewCost": 0.02606475,
+            "paidNow": 0.02606475,
+            "serviceSeconds": 20.7
+          },
+          "score": {
+            "calls": 34,
+            "historicalOrNewCost": 0.0712397,
+            "paidNow": 0.0712397,
+            "serviceSeconds": 427.31600000000003
+          },
+          "synthesize": {
+            "calls": 1,
+            "historicalOrNewCost": 0.01818,
+            "paidNow": 0.01818,
+            "serviceSeconds": 13.798
+          }
+        },
+        "historicalOrNewCost": 0.14436355
+      }
+    },
+    {
+      "id": "49571634",
+      "title": "Nitter has more working instances than before the takedowns",
+      "metrics": {
+        "comments": 173,
+        "candidates": 31,
+        "axes": 21,
+        "verifiedAxes": 21,
+        "twoSided": 18,
+        "twoSidedPercent": 85.71428571428571,
+        "twoSidedPer100Comments": 10.404624277456648,
+        "oneSided": 3,
+        "agreement": 0.9438202247191011,
+        "reviewedPairShare": 0.7295081967213115,
+        "agreedShareOfAllClassifiedPairs": 0.6885245901639344,
+        "stats": {
+          "comments": 173,
+          "authors": 120,
+          "cachedCalls": 5,
+          "cacheWriteFailures": 0,
+          "classifiedPairs": 122,
+          "reviewedPairs": 89,
+          "conflictingStances": 5,
+          "singlePassStances": 33,
+          "agreedStances": 84
+        },
+        "synthesisValid": true,
+        "warnings": [],
+        "elapsedSeconds": 52.377,
+        "stages": {
+          "extract": {
+            "calls": 5,
+            "historicalOrNewCost": 0.008799999999999999,
+            "paidNow": 0,
+            "serviceSeconds": 0
+          },
+          "consolidate": {
+            "calls": 1,
+            "historicalOrNewCost": 0.020388,
+            "paidNow": 0.020388,
+            "serviceSeconds": 15.04
+          },
+          "score": {
+            "calls": 18,
+            "historicalOrNewCost": 0.026992620000000002,
+            "paidNow": 0.026992620000000002,
+            "serviceSeconds": 190.10699999999994
+          },
+          "synthesize": {
+            "calls": 1,
+            "historicalOrNewCost": 0.020085,
+            "paidNow": 0.020085,
+            "serviceSeconds": 12.064
+          }
+        },
+        "historicalOrNewCost": 0.07626562
+      }
+    },
+    {
+      "id": "47155526",
+      "title": "Woxi: Wolfram Mathematica Reimplementation in Rust",
+      "metrics": {
+        "comments": 137,
+        "candidates": 19,
+        "axes": 6,
+        "verifiedAxes": 6,
+        "twoSided": 6,
+        "twoSidedPercent": 100,
+        "twoSidedPer100Comments": 4.37956204379562,
+        "oneSided": 0,
+        "agreement": 0.9642857142857143,
+        "reviewedPairShare": 0.8615384615384616,
+        "agreedShareOfAllClassifiedPairs": 0.8307692307692308,
+        "stats": {
+          "comments": 137,
+          "authors": 83,
+          "cachedCalls": 4,
+          "cacheWriteFailures": 0,
+          "classifiedPairs": 65,
+          "reviewedPairs": 56,
+          "conflictingStances": 2,
+          "singlePassStances": 9,
+          "agreedStances": 54
+        },
+        "synthesisValid": true,
+        "warnings": [
+          "extract: candidate \"Having plentiful, readable tests and documentation makes rev...\": unknown comment id 47198051"
+        ],
+        "elapsedSeconds": 38.074,
+        "stages": {
+          "extract": {
+            "calls": 4,
+            "historicalOrNewCost": 0.007514000000000001,
+            "paidNow": 0,
+            "serviceSeconds": 0
+          },
+          "consolidate": {
+            "calls": 1,
+            "historicalOrNewCost": 0.00944775,
+            "paidNow": 0.00944775,
+            "serviceSeconds": 7.952
+          },
+          "score": {
+            "calls": 14,
+            "historicalOrNewCost": 0.020996499999999998,
+            "paidNow": 0.020996499999999998,
+            "serviceSeconds": 126.831
+          },
+          "synthesize": {
+            "calls": 1,
+            "historicalOrNewCost": 0.01704225,
+            "paidNow": 0.01704225,
+            "serviceSeconds": 12.996
+          }
+        },
+        "historicalOrNewCost": 0.055000499999999994
+      }
+    },
+    {
+      "id": "49574167",
+      "title": "AI handles incidents, engineers lose touch with their systems",
+      "metrics": {
+        "comments": 264,
+        "candidates": 61,
+        "axes": 10,
+        "verifiedAxes": 10,
+        "twoSided": 9,
+        "twoSidedPercent": 90,
+        "twoSidedPer100Comments": 3.4090909090909087,
+        "oneSided": 1,
+        "agreement": 0.9142857142857143,
+        "reviewedPairShare": 0.6161971830985915,
+        "agreedShareOfAllClassifiedPairs": 0.5633802816901409,
+        "stats": {
+          "comments": 264,
+          "authors": 175,
+          "cachedCalls": 10,
+          "cacheWriteFailures": 0,
+          "classifiedPairs": 284,
+          "reviewedPairs": 175,
+          "conflictingStances": 15,
+          "singlePassStances": 109,
+          "agreedStances": 160
+        },
+        "synthesisValid": true,
+        "warnings": [],
+        "elapsedSeconds": 101.013,
+        "stages": {
+          "extract": {
+            "calls": 10,
+            "historicalOrNewCost": 0.018742449999999997,
+            "paidNow": 0,
+            "serviceSeconds": 0
+          },
+          "consolidate": {
+            "calls": 1,
+            "historicalOrNewCost": 0.06232125,
+            "paidNow": 0.06232125,
+            "serviceSeconds": 44.339
+          },
+          "score": {
+            "calls": 28,
+            "historicalOrNewCost": 0.059988999999999994,
+            "paidNow": 0.059988999999999994,
+            "serviceSeconds": 372.406
+          },
+          "synthesize": {
+            "calls": 1,
+            "historicalOrNewCost": 0.0219405,
+            "paidNow": 0.0219405,
+            "serviceSeconds": 14.593
+          }
+        },
+        "historicalOrNewCost": 0.1629932
+      }
+    },
+    {
+      "id": "49568506",
+      "title": "Formalizing Fermat's Last Theorem",
+      "metrics": {
+        "comments": 337,
+        "candidates": 46,
+        "axes": 16,
+        "verifiedAxes": 16,
+        "twoSided": 15,
+        "twoSidedPercent": 93.75,
+        "twoSidedPer100Comments": 4.451038575667656,
+        "oneSided": 1,
+        "agreement": 0.946969696969697,
+        "reviewedPairShare": 0.6984126984126984,
+        "agreedShareOfAllClassifiedPairs": 0.6613756613756614,
+        "stats": {
+          "comments": 337,
+          "authors": 222,
+          "cachedCalls": 10,
+          "cacheWriteFailures": 0,
+          "classifiedPairs": 189,
+          "reviewedPairs": 132,
+          "conflictingStances": 7,
+          "singlePassStances": 57,
+          "agreedStances": 125
+        },
+        "synthesisValid": true,
+        "warnings": [],
+        "elapsedSeconds": 81.895,
+        "stages": {
+          "extract": {
+            "calls": 10,
+            "historicalOrNewCost": 0.0198996,
+            "paidNow": 0,
+            "serviceSeconds": 0
+          },
+          "consolidate": {
+            "calls": 1,
+            "historicalOrNewCost": 0.04602675,
+            "paidNow": 0.04602675,
+            "serviceSeconds": 32.09
+          },
+          "score": {
+            "calls": 34,
+            "historicalOrNewCost": 0.05184333999999999,
+            "paidNow": 0.05184333999999999,
+            "serviceSeconds": 316.294
+          },
+          "synthesize": {
+            "calls": 1,
+            "historicalOrNewCost": 0.018771,
+            "paidNow": 0.018771,
+            "serviceSeconds": 11.04
+          }
+        },
+        "historicalOrNewCost": 0.13654069
+      }
+    }
+  ],
+  "evaluations": [
+    {
+      "id": "22866284",
+      "title": "The Wolfram Physics Project",
+      "repeat": 0,
+      "requestHash": "de1d98826a23865282d29fa6cebd399c364b87e06a9aad43ceeffc9ae755d0cf",
+      "themes": [
+        {
+          "point": "Critics demanded rigorous derivations and testable predictions. A project author cited relativity derivations and black-hole predictions, while acknowledging that reproducing the Standard Model and completing empirical verification remained unfinished; a critic still questioned whether the graphs actually supported the derivations.",
+          "commentIds": [
+            22868856,
+            22869274,
+            22871146
+          ]
+        },
+        {
+          "point": "Supporters valued hypergraph rewriting as an alternative to rigid cellular-automaton grids. Skeptics questioned whether computational generality actually constrains physics, and whether assuming simple underlying rules is justified.",
+          "commentIds": [
+            22873067,
+            22869485,
+            22870279,
+            22874187
+          ]
+        },
+        {
+          "point": "Originality was a substantive dispute, not only a credit dispute: critics connected Wolfram's terminology to established programming-language theory, while others challenged those equivalences or defended productive reformulation.",
+          "commentIds": [
+            22867177,
+            22873469,
+            22874466,
+            22868747
+          ]
+        },
+        {
+          "point": "Early accusations of bypassing academic scrutiny were qualified by confirmation that the papers were already under peer review. Debate then concerned ordinary preprint sharing and broad feedback versus premature publicity aimed at lay audiences.",
+          "commentIds": [
+            22867241,
+            22869741,
+            22870486,
+            22870547,
+            22870974
+          ]
+        },
+        {
+          "point": "Participants disputed whether Wolfram's reputation and alleged treatment of others were necessary context or distractions from scientific evaluation. Moderation against repetitive personality attacks itself attracted objections.",
+          "commentIds": [
+            22870662,
+            22868397,
+            22869384,
+            22870837,
+            22871601
+          ]
+        },
+        {
+          "point": "Some justified outsider approaches through perceived stagnation, while others distinguished stalled fundamental unification from substantial activity across theoretical physics.",
+          "commentIds": [
+            22867378,
+            22867560,
+            22867530,
+            22874039
+          ]
+        }
+      ],
+      "grade": {
+        "variant": "V1",
+        "faithfulness": 72,
+        "coverage": 64,
+        "clarity": 90,
+        "issues": [
+          {
+            "severity": "major",
+            "claim": "Defending the decision to forgo standard academic channels",
+            "commentIds": [
+              22868365,
+              22869741,
+              22869901,
+              22870547,
+              22870974
+            ],
+            "explanation": "This wording presupposes that the project decided to bypass academic channels. Some commenters defended that possibility, but the project author explicitly stated that its preprints were already undergoing peer review at different journals. Subsequent replies distinguished simultaneous public dissemination from an excessive press campaign. The summary turns an early disputed premise into the factual setup for a main disagreement."
+          }
+        ],
+        "omissions": [
+          "The project author's concrete replies about existing derivations and proposed predictions, the acknowledged Standard Model and verification gaps, and the remaining criticism of the graph-to-physics connection.",
+          "The technical substance of the prior-work dispute, including proposed equivalences with reachability and higher-order rewriting and arguments that reformulation can still contribute.",
+          "Why critics considered a highly general computational language insufficient: it must constrain possibilities or deliver explanatory or predictive advantages, rather than merely reproduce familiar physics.",
+          "The defense of concurrent preprint publication and public feedback, distinct from rejecting peer review."
+        ],
+        "rationale": "The summary captures the broad merit, publicity, and personality disputes, and most adjacent axis citations support those positions. However, it materially misframes the publication process and compresses the strongest technical exchanges into generic promise-versus-hype language. Within the word budget, concrete rebuttals and qualifications deserved more space than repeated broad contrasts. The prose is coherent and readable, and the caveats appropriately avoid claiming professional consensus, but they do not repair the rollout misstatement."
+      }
+    },
+    {
+      "id": "22866284",
+      "title": "The Wolfram Physics Project",
+      "repeat": 1,
+      "requestHash": "8c1df3ac8071fcb0a5e5f5fa6a564172e23af3013f4172b0c0eb33dd3366fa9b",
+      "themes": [
+        {
+          "point": "Critics demanded rigorous recovery of known physics and testable predictions, not suggestive graphs. A project participant countered with claimed relativity and black-hole derivations and proposed observational tests, while acknowledging that Standard Model matter and experimental verification remained unresolved. Skeptics subsequently questioned whether the graph formalism actually supplied the derivations.",
+          "commentIds": [
+            22868856,
+            22868943,
+            22869274,
+            22868925,
+            22871146
+          ]
+        },
+        {
+          "point": "The originality dispute concerned substantive overlap with existing computer science, not just credit or personality. Critics identified rewriting systems and reachable sets; others questioned exact equivalences and argued that reinvention or reformulation could produce useful insights.",
+          "commentIds": [
+            22867177,
+            22874466,
+            22873469,
+            22868747
+          ]
+        },
+        {
+          "point": "Publicity before completed peer review divided commenters, but a project participant explicitly said the papers were already under review. Defenders emphasized normal preprint practice and broader feedback; critics distinguished scholarly announcements from a publicity campaign aimed at laypeople.",
+          "commentIds": [
+            22869741,
+            22870486,
+            22870547,
+            22870974
+          ]
+        },
+        {
+          "point": "Some wanted discussion confined to scientific content, while others considered reputation, attribution practices, and alleged harm to collaborators relevant context. Moderation sought to discourage repetitive personal attacks without excluding substantive criticism.",
+          "commentIds": [
+            22868397,
+            22870662,
+            22870837,
+            22871601,
+            22873805
+          ]
+        },
+        {
+          "point": "Commenters disputed whether a highly general computational language meaningfully constrains physics and whether a simple underlying rule is justified. Supporters valued potentially emergent physical structure and simpler explanations; skeptics distinguished explanatory power from merely encoding existing results.",
+          "commentIds": [
+            22869485,
+            22874187,
+            22870279,
+            22873428,
+            22875483
+          ]
+        }
+      ],
+      "grade": {
+        "variant": "V1",
+        "faithfulness": 72,
+        "coverage": 63,
+        "clarity": 90,
+        "issues": [
+          {
+            "severity": "major",
+            "claim": "Defending the decision to forgo standard academic channels",
+            "commentIds": [
+              22867378,
+              22868365,
+              22869741,
+              22869901,
+              22870486,
+              22870547
+            ],
+            "explanation": "This wording presupposes that the current project abandoned conventional academic review. Although some commenters defended bypassing academic conventions, the complete discussion explicitly reports that the project's preprints were already under review. The subsequent disagreement concerned publicity before acceptance and the difference between ordinary preprint circulation and a press campaign. Axis 7 supports the outsider/stagnation argument, not the asserted decision to forgo academic channels; axis 2 likewise does not establish that premise."
+          }
+        ],
+        "omissions": [
+          "The concrete rebuttal to accusations of hand-waving: claimed derivations, a proposed maximum-entanglement-rate/stretched-horizon test, and explicit admissions about missing Standard Model matter and unfinished verification.",
+          "The substantive originality debate over existing rewriting-system and programming-language concepts, including challenges to the claimed equivalences and defenses of productive reinvention.",
+          "Why computational generality might be a weakness: critics wanted constraints and predictive leverage rather than another language capable of expressing anything, while supporters argued that genuinely emergent physical structure could justify exploration."
+        ],
+        "rationale": "V1 captures the broad disputes over scientific merit, publicity, and personality, and most positions are appropriately attributed. However, its rollout framing materially misrepresents the review status. Coverage is too generic at the decisive points: supporters become voices of promise rather than participants offering specific technical rebuttals, and substantive methodological objections largely disappear. The prose is concise, coherent, and appropriately sized. Its caveats usefully distinguish forum opinions from professional consensus, but do not repair the misleading procedural premise or missing qualifications."
+      }
+    },
+    {
+      "id": "47155526",
+      "title": "Woxi: Wolfram Mathematica Reimplementation in Rust",
+      "repeat": 0,
+      "requestHash": "c30f4516b905a5dbe3e7a9a7635d2eb704aae30f10667bed3546ee0ffe75ef19",
+      "themes": [
+        {
+          "point": "Usefulness does not necessarily require complete replacement: skeptics emphasize Mathematica’s accumulated polish and specialized libraries, while supporters value legacy compatibility, licensing freedom, and adequate functionality. The Octave discussion likewise disputes whether partial compatibility is sufficient.",
+          "commentIds": [
+            47196606,
+            47198871,
+            47196006,
+            47197066,
+            47197791,
+            47198011,
+            47200443
+          ]
+        },
+        {
+          "point": "AI-assisted progress and thousands of tests are weighed against review feasibility and test validity. Commenters propose oracle-based automation and property testing, while the developer currently follows example-driven development and defers property tests.",
+          "commentIds": [
+            47197166,
+            47197844,
+            47197966,
+            47205899,
+            47197824,
+            47198158,
+            47198896
+          ]
+        },
+        {
+          "point": "Rust-first implementation promises speed; a small core with Woxilang rules promises maintainability and easier mathematical contributions. Small-core advocates also pursue performance through JIT compilation, and others suggest native fast paths or hybrid implementations.",
+          "commentIds": [
+            47199243,
+            47199044,
+            47199336,
+            47201083,
+            47210504,
+            47202369
+          ]
+        },
+        {
+          "point": "Commenters dispute what distinguishes Mathematica: some prize its elegant pattern language and editable, typeset mathematical notebooks; others regard these as less compelling or criticize sprawling notebooks, hidden complexity, and weaker debugging.",
+          "commentIds": [
+            47196662,
+            47196954,
+            47197408,
+            47197970,
+            47198513,
+            47198889
+          ]
+        },
+        {
+          "point": "Symbolic correctness and compatibility remain uncertain. Critics identify rudimentary integration logic, while the developer expresses optimism based on public research; other comments qualify Mathematica’s authority by noting its errors and questioning bug-for-bug equivalence.",
+          "commentIds": [
+            47195970,
+            47202265,
+            47197247,
+            47197345,
+            47201770
+          ]
+        }
+      ],
+      "grade": {
+        "variant": "V1",
+        "faithfulness": 73,
+        "coverage": 76,
+        "clarity": 91,
+        "issues": [
+          {
+            "severity": "minor",
+            "claim": "One faction argues that mathematical operations must be implemented natively in Rust to avoid the severe performance penalties of interpreted code[[axis:2]].",
+            "commentIds": [
+              47199243,
+              47200009,
+              47202369
+            ],
+            "explanation": "The developer prefers implementing as much as possible in Rust for speed and requests contrary arguments. Other objections concern interpreted addition or low-level algorithms, with an explicit qualification for higher-level work. The summary hardens these positions into a categorical requirement."
+          },
+          {
+            "severity": "major",
+            "claim": "Commenters draw parallels to GNU Octave, noting that while it granted accessible baselines for academics lacking institutional access, it ultimately struggled to displace MATLAB due to missing specialized toolboxes[[axis:5]].",
+            "commentIds": [
+              47197359,
+              47197791,
+              47198011,
+              47200173,
+              47200443
+            ],
+            "explanation": "This converts a disputed adequacy analogy into a historical causal verdict. Comments contrast concerns about polish and toolbox breadth with arguments that affordable compatibility suffices and an account of successful PhD use. They do not establish that missing toolboxes caused failure to displace MATLAB. The PhD commenter also had institutional licenses but avoided waiting for them, rather than lacking institutional access."
+          }
+        ],
+        "omissions": [
+          "The small-core proposal’s performance strategy—JIT compilation and native fast paths—and its benefit of enabling mathematicians to contribute without Rust expertise.",
+          "The substantive disagreement over language ergonomics and notebook value, including editable mathematical notation versus complexity and debugging problems.",
+          "Proposed oracle/property-based verification, the developer’s current example-driven approach, and the qualification that Mathematica itself can produce incorrect results.",
+          "Practical reasons a limited clone could be useful beyond openness, including dynamic licensing constraints, concurrent instances, and WASM embedding."
+        ],
+        "rationale": "The summary captures major disputes about cloning scope, AI-generated code, and implementation architecture in concise, readable prose. However, its Octave paragraph turns contested arguments into an unsupported causal history, and its Rust framing is too categorical. Coverage is good but loses consequential qualifications and the language/notebook disagreement. The caveats appropriately distinguish analogy from direct evaluation but do not repair the Octave claim."
+      }
+    },
+    {
+      "id": "47155526",
+      "title": "Woxi: Wolfram Mathematica Reimplementation in Rust",
+      "repeat": 1,
+      "requestHash": "de9d5c92e2a22322b7b4004a4cafedb9afd3b7ab38bd12fb5b11ad0b658b4a0c",
+      "themes": [
+        {
+          "point": "Skeptics question whether a clone can reproduce Mathematica’s accumulated algorithms, polish, and ecosystem. Supporters argue that affordable legacy-code compatibility and freedom from licensing constraints can be useful without complete replacement. Octave’s adequacy is itself disputed.",
+          "commentIds": [
+            47196606,
+            47198871,
+            47196006,
+            47197066,
+            47201811,
+            47197791,
+            47198011,
+            47200443
+          ]
+        },
+        {
+          "point": "Agent-assisted development promises rapid progress, but critics question whether hundreds of thousands of generated lines and thousands of potentially unreviewed tests establish correctness. The developer currently uses example-driven development; others propose property testing against Mathematica.",
+          "commentIds": [
+            47197166,
+            47197844,
+            47197966,
+            47205899,
+            47197824,
+            47198158,
+            47198896
+          ]
+        },
+        {
+          "point": "The developer favors Rust implementations for speed; experienced interpreter authors favor a small core with mathematical rules in Woxilang for maintainability, shared optimization, and contributor accessibility. JIT compilation and native fast paths complicate a simple speed-versus-flexibility division.",
+          "commentIds": [
+            47199243,
+            47199044,
+            47199336,
+            47200253,
+            47201083,
+            47210504
+          ]
+        },
+        {
+          "point": "Concrete criticism of rudimentary integration contrasts with the developer’s optimism about public algorithmic research. Participants also qualify Mathematica’s status as a correctness oracle: it can make mistakes, and identical bug-for-bug output may not be desirable.",
+          "commentIds": [
+            47195970,
+            47202265,
+            47197345,
+            47201770,
+            47212370
+          ]
+        },
+        {
+          "point": "Participants disagree about what makes Mathematica valuable: some prize its elegant language, pattern matching, and editable typeset symbolic notebooks; others dismiss those components or describe unwieldy large notebooks and inferior debugging.",
+          "commentIds": [
+            47196662,
+            47196954,
+            47197408,
+            47197970,
+            47198513,
+            47198889
+          ]
+        }
+      ],
+      "grade": {
+        "variant": "V1",
+        "faithfulness": 73,
+        "coverage": 72,
+        "clarity": 90,
+        "issues": [
+          {
+            "severity": "major",
+            "claim": "while it granted accessible baselines for academics lacking institutional access, it ultimately struggled to displace MATLAB due to missing specialized toolboxes[[axis:5]]",
+            "commentIds": [
+              47197359,
+              47197791,
+              47198011,
+              47199568,
+              47200173,
+              47200443
+            ],
+            "explanation": "This attributes a synthesized historical verdict to commenters whose claims are narrower and contested. They discuss uncertain polish, toolbox breadth, costs, and whether sufficient compatibility counts as success; they do not establish missing toolboxes as the historical cause of Octave’s failure to displace MATLAB. The PhD account also describes contention for existing institutional licenses, not absence of institutional access."
+          },
+          {
+            "severity": "minor",
+            "claim": "One faction argues that mathematical operations must be implemented natively in Rust to avoid the severe performance penalties of interpreted code[[axis:2]].",
+            "commentIds": [
+              47199243,
+              47200009,
+              47202369,
+              47210504
+            ],
+            "explanation": "The author advocates implementing 'as much as possible' in Rust for maximum speed. Other replies question interpreted addition or defend compiled low-level algorithms. 'Must' and 'severe performance penalties' harden these qualified preferences into a broader necessity than the comments establish."
+          }
+        ],
+        "omissions": [
+          "The architectural discussion’s JIT and native-fast-path qualifications, including the argument that improving a small interpreter benefits all higher-level functionality.",
+          "The distinction between current example-driven development and proposed property/oracle testing, plus the qualifications that test counts alone do not establish correctness and Mathematica itself can err.",
+          "The substantive disagreement over language ergonomics and editable symbolic notebooks versus large-project complexity and weaker debugging.",
+          "Practical licensing and deployment advantages that could justify a partial implementation independently of replacing Mathematica’s entire ecosystem."
+        ],
+        "rationale": "The summary clearly captures feasibility concerns, AI-review skepticism, and the principal architectural dispute within the intended budget. However, its Octave paragraph substitutes an unsupported causal history for a disagreement about replacement criteria, and its architecture framing is too categorical. Several important qualifications and the language/notebook debate are absent. The caveats are useful and readable but do not repair these defects."
+      }
+    },
+    {
+      "id": "49568506",
+      "title": "Formalizing Fermat's Last Theorem",
+      "repeat": 0,
+      "requestHash": "d76e5eed0c3ab6552a32587c0267a2d5fea2bc46cb24b5ae8283dc388a753730",
+      "themes": [
+        {
+          "point": "Commenters praised a major autoformalization achievement while distinguishing it from discovering new mathematics. Buzzard explained that his modern-proof, Mathlib, and human-exploration goals remained relevant.",
+          "commentIds": [
+            49568890,
+            49570000,
+            49570837,
+            49571721,
+            49572929
+          ]
+        },
+        {
+          "point": "Mechanical verification shifts scrutiny toward correct theorem encoding and checker soundness. Critics cited AI-exploitable kernel bugs and shared verifier failures; others emphasized increased confidence without claiming an exploit had been demonstrated here.",
+          "commentIds": [
+            49569200,
+            49569229,
+            49569268,
+            49570551,
+            49570807,
+            49571984
+          ]
+        },
+        {
+          "point": "The enormous proof raised concerns about reusable abstractions and maintainability. Replies distinguished necessary prerequisites and fine-grained lemmas from genuine redundancy, proposing refactoring and Mathlib integration.",
+          "commentIds": [
+            49570068,
+            49570468,
+            49570589,
+            49570931,
+            49570346
+          ]
+        },
+        {
+          "point": "Eleven-day completion prompted disputes about economic efficiency: retail token estimates differ from internal inference costs, while training, engineering, and opportunity costs complicate comparisons with Buzzard's differently scoped grant.",
+          "commentIds": [
+            49568959,
+            49569311,
+            49569982,
+            49570127,
+            49570909,
+            49572995,
+            49571721
+          ]
+        },
+        {
+          "point": "Whether formalization demonstrates understanding or threatens human discovery remained contested. Some credited machine comprehension; others denied it, questioned its persistence, or distinguished automated verification from human ingenuity and wonder.",
+          "commentIds": [
+            49569055,
+            49569344,
+            49569969,
+            49569100,
+            49569119,
+            49569204
+          ]
+        },
+        {
+          "point": "Broader hopes for scientific and medical advances met concerns about concentrated ownership, restricted access, human autonomy, and longevity's societal costs. A middle position rejected both utopian and wholly negative predictions.",
+          "commentIds": [
+            49568759,
+            49571558,
+            49571976,
+            49570910,
+            49570140
+          ]
+        }
+      ],
+      "grade": {
+        "variant": "V1",
+        "faithfulness": 82,
+        "coverage": 64,
+        "clarity": 90,
+        "issues": [
+          {
+            "severity": "minor",
+            "claim": "Proponents maintain that once hypotheses are formalized, Lean's small kernel provides unprecedented certainty that human peer review cannot match.",
+            "commentIds": [
+              49569086,
+              49569257,
+              49569200,
+              49569229,
+              49569281
+            ],
+            "explanation": "Sources support substantially increased confidence and superiority to manually checking the proof, but not the universal comparisons 'unprecedented' and 'cannot match.' They also specify correct encoding of the target theorem and trust in the checker, not merely formalized hypotheses."
+          },
+          {
+            "severity": "minor",
+            "claim": "This skepticism extends to claims of machine comprehension, with several arguing that satisfying a proof checker does not demonstrate genuine mathematical understanding[[axis:13]].",
+            "commentIds": [
+              49569055,
+              49569344,
+              49569969,
+              49569268
+            ],
+            "explanation": "Axis 13 supplies one categorical denial of understanding. Comment 49569344 instead asks whether an intermediate understanding is retained. Thus 'several' overstates the evidence, while the transition implies continuity with kernel skeptics that the supplied comments do not establish."
+          }
+        ],
+        "omissions": [
+          "The substantial speed-versus-cost dispute, including uncertainty about retail token estimates, internal costs, and broader development expenses.",
+          "Buzzard's consequential qualification: the achievement adds essentially no new mathematics while leaving distinct modern-proof, library-building, and explanatory goals unfinished.",
+          "The counterargument that prerequisites and fine-grained proof steps explain part of the code volume, alongside proposals for refactoring rather than dismissing the artifact.",
+          "Broader scientific-benefit versus ownership, access, and inequality concerns; the social discussion extended substantially beyond lost mathematical awe."
+        ],
+        "rationale": "The summary captures genuine formalization, reuse, verification, and human-meaning tensions in readable prose. Its support defects are localized overstatements, but coverage is materially incomplete: it favors philosophical concerns over the prominent economic debate and qualifications that complicate its breakthrough-versus-transcription framing. The sampling caveat does not remedy those omissions."
+      }
+    },
+    {
+      "id": "49568506",
+      "title": "Formalizing Fermat's Last Theorem",
+      "repeat": 1,
+      "requestHash": "67476036c45ac6ee2820c0ed4938f275f6af3875d2955450e9496ec1cff74944",
+      "themes": [
+        {
+          "point": "The achievement was praised as a breakthrough in large-scale formalization, not necessarily mathematical discovery. Buzzard welcomed it while distinguishing his continuing modern-proof, library-building and explanatory-document goals.",
+          "commentIds": [
+            49568890,
+            49570000,
+            49570223,
+            49572929,
+            49571721
+          ]
+        },
+        {
+          "point": "Mechanical checking shifts trust to the theorem encoding and checker. Critics cited kernel exploits and shared verifier bugs; others emphasized increased confidence and the absence of evidence that this result exploited bugs.",
+          "commentIds": [
+            49569229,
+            49569268,
+            49570551,
+            49570807,
+            49571984
+          ]
+        },
+        {
+          "point": "Critics questioned whether thirteen million lines provide reusable abstractions. Replies attributed size partly to prerequisites, acknowledged inefficiency, and proposed refactoring rather than dismissing the artifact.",
+          "commentIds": [
+            49570068,
+            49570468,
+            49570589,
+            49570346,
+            49570931
+          ]
+        },
+        {
+          "point": "The eleven-day speed prompted disputed cost comparisons: API-rate estimates differ from internal inference costs, while training, capital, staffing and differing project deliverables complicate comparisons with human formalization.",
+          "commentIds": [
+            49568959,
+            49569311,
+            49569982,
+            49570127,
+            49570909,
+            49571721
+          ]
+        },
+        {
+          "point": "Participants separately disputed machine understanding and the loss of human discovery's emotional significance. Replies distinguished formalization from discovery and defended continuing human ingenuity.",
+          "commentIds": [
+            49569055,
+            49569344,
+            49569969,
+            49569100,
+            49569119,
+            49569204
+          ]
+        },
+        {
+          "point": "Broader optimism about scientific and medical benefits met concerns about concentrated ownership, dependence and inequality; a moderating response rejected both utopian and uniformly negative predictions.",
+          "commentIds": [
+            49568759,
+            49569815,
+            49571558,
+            49570140
+          ]
+        }
+      ],
+      "grade": {
+        "variant": "V1",
+        "faithfulness": 74,
+        "coverage": 67,
+        "clarity": 90,
+        "issues": [
+          {
+            "severity": "major",
+            "claim": "This skepticism extends to claims of machine comprehension, with several arguing that satisfying a proof checker does not demonstrate genuine mathematical understanding",
+            "commentIds": [
+              49569344,
+              49569969,
+              49569055,
+              49569268
+            ],
+            "explanation": "This merges kernel-security skepticism with a separate understanding debate without evidence connecting those positions. Within axis 13, 49569969 explicitly denies understanding, but 49569344 asks whether intermediate understanding is discarded and could be preserved—not whether it existed. The parent, 49569055, positively attributes understanding. The sentence therefore misrepresents the cited positions and invents a broader skeptical alignment."
+          }
+        ],
+        "omissions": [
+          "The substantial speed-versus-cost dispute, including API estimates versus internal costs and broader training, capital and staffing expenses.",
+          "Buzzard's consequential middle position: celebrating the formalization while finding little new mathematical content and retaining distinct modern-proof, Mathlib and human-explanation objectives.",
+          "Responses qualifying the code-size criticism: prerequisites account for some expansion, intermediate-theorem counts are not comparable to paper theorems, and refactoring could improve reuse.",
+          "The broader disagreement over scientific benefits versus concentrated power and dependence, which is not captured by concerns about lost mathematical awe."
+        ],
+        "rationale": "The narrative accurately captures several prominent disputes and remains concise and readable. However, its treatment of comprehension materially misreads the supplied evidence and connects separate skeptical positions. Coverage is selective: substantial space goes to wonder and understanding while economics and Buzzard's important qualification disappear. The caveats appropriately distinguish participant claims from an audit, but do not repair these defects."
+      }
+    },
+    {
+      "id": "49571634",
+      "title": "Nitter has more working instances than before the takedowns",
+      "repeat": 0,
+      "requestHash": "e0cd6930d27f4879454bd86a9f50950c74bbcc9c924a767b608d29b044d01d15",
+      "themes": [
+        {
+          "point": "Nitter's lightweight, account-free interface is praised, but others prefer X's feed, features, or app speed. Privacy and ad-free reading are also defended as reasons independent of interface quality.",
+          "commentIds": [
+            49573035,
+            49573707,
+            49573653,
+            49574548,
+            49575985,
+            49576062
+          ]
+        },
+        {
+          "point": "Instance churn prompts competing claims of fragility and easy substitution. Working redirectors and small authenticated instances offer mitigations, although LibRedirect reportedly does not check availability before redirecting.",
+          "commentIds": [
+            49573190,
+            49573435,
+            49574526,
+            49575166,
+            49575307
+          ]
+        },
+        {
+          "point": "Streisand-effect optimism is challenged by warnings that instance counts do not establish durable access and publicity exposes operators. Replies dispute the access problem and whether surviving services were meaningfully secret.",
+          "commentIds": [
+            49572505,
+            49576437,
+            49576755,
+            49578128,
+            49578342,
+            49578417
+          ]
+        },
+        {
+          "point": "Canonical-link advocates cite broken Nitter links; respondents argue that preserving the original URL path makes failures repairable by replacing only the domain.",
+          "commentIds": [
+            49572369,
+            49572553,
+            49576628,
+            49576688
+          ]
+        },
+        {
+          "point": "Boycott advocates argue that even proxy reading sustains X. Counterarguments include circumvention as leverage, disputed speech advantages, and the public-interest value of observing and archiving influential users.",
+          "commentIds": [
+            49575411,
+            49576403,
+            49576717,
+            49577952,
+            49577227,
+            49576660,
+            49578185
+          ]
+        },
+        {
+          "point": "Access workarounds raise trust concerns: purchased account sessions are described as functional but sketchy, while another commenter warns that some public instances redirect visitors to exploit URLs.",
+          "commentIds": [
+            49573494,
+            49573589,
+            49574468,
+            49576379
+          ]
+        }
+      ],
+      "grade": {
+        "variant": "V1",
+        "faithfulness": 70,
+        "coverage": 74,
+        "clarity": 88,
+        "issues": [
+          {
+            "severity": "major",
+            "claim": "leaving private hosting as the only durable option[[axis:5]]",
+            "commentIds": [
+              49575307,
+              49577045,
+              49576755,
+              49578128
+            ],
+            "explanation": "Axis 5 supports warnings about publicity and one recommendation for small authenticated instances, not the exclusive conclusion that only private hosting can endure. Other comments defend public redirection, and even a strong publicity critic contemplates durable public hosting in resistant jurisdictions. The sample caveat does not qualify this categorical conclusion."
+          },
+          {
+            "severity": "major",
+            "claim": "or favor proxy domains for reader privacy and accessibility[[axis:3]]",
+            "commentIds": [
+              49576628,
+              49576688,
+              49572553,
+              49575985,
+              49576062
+            ],
+            "explanation": "The link-practice replies defend proxy URLs because their domains can easily be replaced, not because submissions should prioritize privacy or accessibility. Those benefits appear elsewhere as reasons to use Nitter. Importing them into the citation-practice dispute invents a cross-topic position and replaces its actual supporting argument."
+          }
+        ],
+        "omissions": [
+          "The central rebuttal to link-rot concerns: changing the domain restores the original URL.",
+          "Concrete resilience evidence, especially working redirect services versus LibRedirect's reported lack of availability checking.",
+          "Consequential reasons for continued access beyond defiance, particularly observing and archiving influential users, alongside the contested speech advantages of alternative platforms.",
+          "Trust and safety qualifications concerning purchased sessions and malicious public instances."
+        ],
+        "rationale": "The summary identifies most major disputes and remains readable within the intended narrative length. However, it substitutes an unsupported rationale in the linking debate and turns private hosting advice into an exclusive durability claim. Coverage is broad but abstract, spending overlapping sentences on instability while missing important mechanisms and counterarguments. The caveats acknowledge sampling limitations without repairing these defects."
+      }
+    },
+    {
+      "id": "49571634",
+      "title": "Nitter has more working instances than before the takedowns",
+      "repeat": 1,
+      "requestHash": "5f027591f45920f96be92869b5da6e1ea27abb6be457ba83c13ed421800dadd7",
+      "themes": [
+        {
+          "point": "Nitter's appeal is disputed: supporters prefer lightweight pages, account-free access and privacy, while others praise X's feed, features or faster app. Privacy is explicitly defended as a reason independent of interface quality, and the deployed algorithm's openness is questioned.",
+          "commentIds": [
+            49573035,
+            49573707,
+            49575985,
+            49573653,
+            49574548,
+            49575580
+          ]
+        },
+        {
+          "point": "Boycott advocates argue that even proxy readership sustains X; opponents defend circumvention and dispute alternatives' speech policies. A consequential minority argues that influential people's activity should remain observable and archivable, rather than treating all readership as endorsement.",
+          "commentIds": [
+            49575411,
+            49576403,
+            49576717,
+            49575635,
+            49576660,
+            49577227,
+            49578185
+          ]
+        },
+        {
+          "point": "Interchangeable instances and redirectors support optimism about resilience, but others report continual shutdowns and question whether increased instance counts mean useful public access. Working redirect services are offered, LibRedirect's health-checking limitations are noted, and small authenticated instances are proposed as a workaround.",
+          "commentIds": [
+            49573435,
+            49573190,
+            49576437,
+            49575166,
+            49574526,
+            49575307,
+            49576755
+          ]
+        },
+        {
+          "point": "Publicity is portrayed both as evidence of a backfiring crackdown and as exposure that invites further takedowns or legal danger. The surviving XCancel RSS feeds sharpen this disagreement: critics emphasize risks to operators, while the discloser argues their continued availability was trivial to discover.",
+          "commentIds": [
+            49572505,
+            49578307,
+            49578128,
+            49575178,
+            49578342,
+            49578417
+          ]
+        },
+        {
+          "point": "Canonical-link advocates cite already-broken Nitter/XCancel links. The direct rebuttal is that Nitter preserves the original path, so replacing the domain repairs the link—not that aggregator submissions should prioritize privacy over permanence.",
+          "commentIds": [
+            49572369,
+            49572553,
+            49576628,
+            49576688
+          ]
+        }
+      ],
+      "grade": {
+        "variant": "V1",
+        "faithfulness": 70,
+        "coverage": 74,
+        "clarity": 90,
+        "issues": [
+          {
+            "severity": "major",
+            "claim": "leaving private hosting as the only durable option[[axis:5]]",
+            "commentIds": [
+              49575307,
+              49577045,
+              49576755,
+              49578128,
+              49574639
+            ],
+            "explanation": "Axis 5 supports recommending small authenticated instances and concerns about exposing surviving feeds, not an exclusive conclusion about durability. Other comments defend redirect-based availability or low-profile public hosting; even a strong publicity critic entertains durable public hosting in less cooperative jurisdictions. The summary converts a proposed mitigation into the only viable outcome."
+          },
+          {
+            "severity": "major",
+            "claim": "or favor proxy domains for reader privacy and accessibility[[axis:3]]",
+            "commentIds": [
+              49576628,
+              49576688,
+              49572553,
+              49575985
+            ],
+            "explanation": "The cited linking debate's pro-proxy response is that domain replacement restores the original URL. Privacy appears elsewhere as a reason to use Nitter, in a reply disputing that UI is its only benefit. No cited evidence connects that position to preferring proxy URLs in aggregator submissions. This imports motives across separate debates and replaces the actual counterargument."
+          }
+        ],
+        "omissions": [
+          "Concrete resilience mechanisms and limitations: commenters supply working redirect services, distinguish them from LibRedirect's manual fallback, and describe account-backed authenticated hosting (49575166, 49574526, 49575307).",
+          "Important reasons for continued access beyond defiance, especially observing and archiving influential people, alongside contested claims about speech and moderation on alternatives (49578185, 49575635, 49576660, 49577227).",
+          "Publicity concerns include legal exposure for operators, not merely service blocking; the RSS exchange also contains a direct rebuttal that the surviving functionality was not secret (49578342, 49578417)."
+        ],
+        "rationale": "The summary identifies the main fault lines and presents them coherently within the intended narrative length. However, two central formulations materially distort the source: exclusive reliance on private hosting and invented reasons for proxy-link submissions. Coverage is broad but thin on practical mechanisms and consequential minority reasoning. The sampling caveats disclose limitations but do not repair these errors."
+      }
+    },
+    {
+      "id": "49574167",
+      "title": "AI handles incidents, engineers lose touch with their systems",
+      "repeat": 0,
+      "requestHash": "330011a82b24a5d1d1b8faf0bbcb490223722bc1778ee906fbd9a2d216d986fa",
+      "themes": [
+        {
+          "point": "Commenters report lost intuition and debugging skills, but disagree whether AI causes new deterioration or amplifies longstanding copy-paste habits and organizational problems. Deliberate questioning and review may preserve learning, while the pathway from junior to expert remains vulnerable.",
+          "commentIds": [
+            49574585,
+            49574900,
+            49574949,
+            49575979,
+            49575368,
+            49575169
+          ]
+        },
+        {
+          "point": "AI can diagnose observable systems quickly, but finding an issue is not equivalent to proposing a correct fix. Success depends on operational data, model capabilities and knowledgeable steering; hallucinated evidence and uneven performance complicate trust.",
+          "commentIds": [
+            49575128,
+            49575312,
+            49574760,
+            49575451,
+            49576365
+          ]
+        },
+        {
+          "point": "Generated code is criticized for overengineering, duplication and accumulating technical debt. Others report measured quality improvements and much faster refactoring, while emphasizing architectural boundaries and expert direction.",
+          "commentIds": [
+            49574696,
+            49574943,
+            49576054,
+            49577145,
+            49576057,
+            49575052
+          ]
+        },
+        {
+          "point": "Drills could preserve response skills or teach hypothesis formation, but changing software and unknown failure modes limit aviation analogies. Funding and licensing matter; AI might make testing affordable, although automated backup checks can still miss meaningful recovery requirements.",
+          "commentIds": [
+            49574772,
+            49575167,
+            49576171,
+            49575215,
+            49576216,
+            49576319
+          ]
+        },
+        {
+          "point": "Some prioritize business outcomes and rapid infrastructure recreation over system familiarity. Others stress continuing responsibility, constrained tools and verification, especially where employers mandate AI speed while leaving engineers accountable for failures.",
+          "commentIds": [
+            49574650,
+            49575259,
+            49574735,
+            49575509,
+            49578590,
+            49574755
+          ]
+        },
+        {
+          "point": "Predictions of eventual engineering replacement meet arguments that AI remains an engineer-operated commodity. Related disagreements concern whether probabilistic generation is genuinely a higher abstraction or merely outsourcing that still requires someone to understand the system.",
+          "commentIds": [
+            49574444,
+            49574495,
+            49574658,
+            49574968,
+            49575170
+          ]
+        }
+      ],
+      "grade": {
+        "variant": "V1",
+        "faithfulness": 85,
+        "coverage": 66,
+        "clarity": 90,
+        "issues": [
+          {
+            "severity": "minor",
+            "claim": "lead responders down erroneous paths during high-pressure outages",
+            "commentIds": [
+              49575451,
+              49575599,
+              49576177,
+              49576365,
+              49574781
+            ],
+            "explanation": "This imports an outage setting into hallucination anecdotes concerning load testing, development and bug investigation. The production-pressure anecdote describes a suboptimal fix, not hallucinated mechanisms. The broader reliability concern is supported, but this specific setting is overstated."
+          },
+          {
+            "severity": "minor",
+            "claim": "Several related themes, such as junior developer mentorship and comparative code quality, had minimal representation in the analyzed set.",
+            "commentIds": [
+              49575133,
+              49575368,
+              49575721,
+              49576057,
+              49574696,
+              49576054,
+              49577145
+            ],
+            "explanation": "This understates the evidence inventory. Comparative code quality is a populated supplied axis, and mentoring and skill development recur across substantive exchanges. Selective analysis explains limited coverage, but does not establish that these themes had minimal representation."
+          }
+        ],
+        "omissions": [
+          "Whether deskilling is specifically AI-induced or reflects older copying and leadership problems; how active questioning, design and review can sustain expertise, particularly compared with junior developers' learning needs.",
+          "The substantial code-quality dispute: excessive abstraction and duplicate incorrect logic versus measured improvements and AI-assisted cleanup under knowledgeable direction.",
+          "The consequential argument that AI makes diligence, recovery testing and drills cheaper, alongside concerns about inadequate verification and organizational incentives that discourage training or mandate unsafe speed."
+        ],
+        "rationale": "The narrative clearly captures the broad disputes over atrophy, reliability, drills, business outcomes and replacement. Most assertions are grounded, with two localized overstatements. Its larger weakness is coverage: it favors broad opposing positions over conditional workflows, code-quality arguments and institutional explanations that occupy substantial discussion. The prose is coherent and concise despite those substantive gaps."
+      }
+    },
+    {
+      "id": "49574167",
+      "title": "AI handles incidents, engineers lose touch with their systems",
+      "repeat": 1,
+      "requestHash": "2f85350663e53815e4eb55fa1852589ae8b7dbb77aa32b52ca94ab58d1cee336",
+      "themes": [
+        {
+          "point": "Deskilling is disputed as both a new AI effect and an amplification of older copy-paste habits. Commenters distinguish losing existing intuition from destroying the path that produces future experts; others argue that questioning and reviewing AI work can preserve learning.",
+          "commentIds": [
+            49574585,
+            49574900,
+            49574949,
+            49575169,
+            49575979,
+            49576057
+          ]
+        },
+        {
+          "point": "AI can diagnose observable systems quickly, but diagnosis is not necessarily a correct fix. Hallucinated evidence and misleading investigations motivate demands for grounded data, active supervision, and domain expertise rather than merely better prompting.",
+          "commentIds": [
+            49575128,
+            49575451,
+            49575312,
+            49575513,
+            49576365
+          ]
+        },
+        {
+          "point": "Generated-code quality is a substantial disagreement: critics report excessive abstraction, duplicated incorrect logic, and accumulating technical debt; defenders cite poor human baselines, measured improvements, and benefits from guidance and architectural guardrails.",
+          "commentIds": [
+            49574696,
+            49574943,
+            49575353,
+            49575527,
+            49576054,
+            49577145
+          ]
+        },
+        {
+          "point": "Drills attract support, including AI-generated exercises for hypothesis formation. Objections concern rapidly changing software, unique root causes, uncertain simulation effectiveness, and unknown unknowns—not simply a preference for redesign over rehearsal.",
+          "commentIds": [
+            49574772,
+            49574778,
+            49575209,
+            49575167,
+            49575245,
+            49576171
+          ]
+        },
+        {
+          "point": "Organizational incentives can discourage training and pressure engineers into uncritical AI use while leaving them accountable. Conversely, AI may make previously neglected verification affordable; critics insist that meaningful recovery testing and human responsibility still matter.",
+          "commentIds": [
+            49574781,
+            49575509,
+            49575215,
+            49575094,
+            49576216,
+            49576319,
+            49578590
+          ]
+        },
+        {
+          "point": "Some prioritize business outcomes or foresee engineering replacement; others see tools requiring skilled operators. Claims that AI is another abstraction layer are challenged because probabilistic outsourcing lacks stable interfaces and can obscure system understanding.",
+          "commentIds": [
+            49574650,
+            49575259,
+            49574444,
+            49574495,
+            49575052,
+            49574968,
+            49575170
+          ]
+        }
+      ],
+      "grade": {
+        "variant": "V1",
+        "faithfulness": 74,
+        "coverage": 65,
+        "clarity": 88,
+        "issues": [
+          {
+            "severity": "major",
+            "claim": "Several related themes, such as junior developer mentorship and comparative code quality, had minimal representation in the analyzed set.",
+            "commentIds": [
+              49575133,
+              49575368,
+              49575169,
+              49576057,
+              49574696,
+              49574943,
+              49576054,
+              49577145
+            ],
+            "explanation": "This caveat misleadingly marginalizes substantial discussion. Code quality receives extended opposing arguments, including reported measurements, and the future-expert pipeline and mentorship recur across several branches. Even the supplied evidence context gives comparative code quality a sizable dedicated axis. This is an affirmative mischaracterization of representation, not merely an omission."
+          },
+          {
+            "severity": "minor",
+            "claim": "creating fragile environments where subtle operational errors pass into production uncorrected[[axis:6]]",
+            "commentIds": [
+              49574730,
+              49575174,
+              49574781,
+              49576319
+            ],
+            "explanation": "The cited axis supports concerns about unreflective copying and weakening understanding, but not this definite downstream outcome. The closest concrete incident account says the suboptimal fix was subsequently revised. Uncorrected production errors should be presented as a risk, rather than an established consequence."
+          }
+        ],
+        "omissions": [
+          "The dispute over whether AI causes new competence loss or amplifies pre-existing behavior, and the distinction between incumbent skill atrophy and the future-expert pipeline.",
+          "The substantial code-quality and technical-debt disagreement, including excessive generated complexity versus reported improvements over human-written baselines.",
+          "The consequential middle position: active investigation, planning, review, and explanation can retain understanding, while cheaper AI-assisted verification may improve operational diligence.",
+          "Important reasons behind simulation skepticism—changing systems and unknown unknowns—and the incentive problem surrounding whether organizations will fund training."
+        ],
+        "rationale": "The narrative captures genuine disagreements about deskilling, incident reliability, drills, and replacement, usually with clear attribution. However, it favors broad oppositions over important mechanisms and conditional positions, leaving substantial discussion unrepresented. Its caveat incorrectly portrays two significant topics as marginal. The prose is coherent and concise, although somewhat abstract; clarity is stronger than coverage."
+      }
+    }
+  ]
+}

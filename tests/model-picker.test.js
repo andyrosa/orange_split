@@ -14,6 +14,7 @@ test('compact model pickers retain metrics, selection events and keyboard contro
             this.children = [];
             this.dataset = {};
             this.attributes = {};
+            this.style = {};
             this.hidden = true;
         }
         replaceChildren(...children) { this.children = children; }
@@ -26,12 +27,18 @@ test('compact model pickers retain metrics, selection events and keyboard contro
     const pickers = [
         [core.VOLUME_MODELS, core.VOLUME_METRIC_COLUMNS, core.volumeMetrics, 'volume'],
         [core.CONSOLIDATION_MODELS, core.CONSOLIDATION_METRIC_COLUMNS, core.consolidationMetrics, 'consolidation'],
+        [core.SUMMARY_MODELS, core.SUMMARY_METRIC_COLUMNS, core.summaryMetrics, 'summary'],
     ].map(([choices, columns, metrics, role]) => ({
         choices, columns, metrics, gridClass: `${role}-grid`, metricKeys: new Set(),
         select: Object.assign(new Element(), { value: Object.keys(choices)[0] }),
         header: new Element(), button: new Element(), options: new Element(),
     }));
-    const sandbox = { document, makeElement, Event, modelPickers: pickers, elements: { volumeModel: pickers[0].select } };
+    pickers[2].metrics = choice => core.summaryMetrics(choice, pickers[1].select.value, pickers[0].select.value);
+    const selectedQuality = () => core.summaryQualityText(pickers[2].choices[pickers[2].select.value], pickers[1].select.value, pickers[0].select.value);
+    const sandbox = { document, makeElement, Event, modelPickers: pickers, summaryQualityText: core.summaryQualityText,
+        perThousandCommentsRates: core.perThousandCommentsRates,
+        elements: { volumeModel: pickers[0].select, consolidationModel: pickers[1].select, summaryModel: pickers[2].select,
+            summaryQualityLabel: new Element(), summaryQualityScores: new Element(), summaryQualityMethod: new Element() } };
     const start = source.indexOf('function renderModelGrid(');
     const end = source.indexOf('// The thread box holds', start);
     assert.ok(start > 0 && end > start);
@@ -49,6 +56,7 @@ test('compact model pickers retain metrics, selection events and keyboard contro
             sandbox.syncModelPicker(picker);
         });
         sandbox.initializeModelPicker(picker);
+        if (picker === pickers[2]) assert.equal(sandbox.elements.summaryQualityLabel.textContent, selectedQuality().label);
         assert.equal(picker.button.textContent, picker.choices[picker.select.value].name);
         assert.equal(picker.options.hidden, true);
         assert.equal(picker.options.children[0], picker.header);
@@ -64,6 +72,12 @@ test('compact model pickers retain metrics, selection events and keyboard contro
         options[1].dispatchEvent(new Event('click'));
         assert.equal(changes, 1);
         assert.equal(picker.select.value, options[1].dataset.key);
+        if (picker === pickers[2]) {
+            const quality = selectedQuality();
+            assert.equal(sandbox.elements.summaryQualityLabel.textContent, quality.label);
+            assert.equal(sandbox.elements.summaryQualityScores.textContent, quality.scores);
+            assert.equal(sandbox.elements.summaryQualityMethod.textContent, quality.method);
+        }
         assert.equal(picker.button.textContent, picker.choices[picker.select.value].name);
         assert.equal(options[1].getAttribute('aria-selected'), 'true');
         assert.equal(picker.options.hidden, true);

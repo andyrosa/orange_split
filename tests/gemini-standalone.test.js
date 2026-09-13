@@ -1,0 +1,22 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { summarize, schema, rubric } = require('../scripts/eval_gemini_standalone');
+const { validateReview } = require('../scripts/eval_summary_quality');
+test('standalone grading contains only one anonymous output and never assigns ranks', () => {
+    assert.equal(schema.properties.grades.minItems, 1);
+    assert.equal(schema.properties.grades.maxItems, 1);
+    assert.deepEqual(schema.properties.grades.items.properties.variant.enum, ['V1']);
+    assert.match(rubric, /Evaluate ONE anonymous summary/);
+    assert.doesNotMatch(rubric, /Evaluate two anonymous summaries/);
+    const grade = { variant: 'V1', faithfulness: 90, coverage: 70, clarity: 80, issues: [], omissions: [], rationale: 'Supported.' };
+    const review = { themes: [{ point: 'Theme', commentIds: [1] }], grades: [grade] };
+    const variants = [{ label: 'V1', summary: { sections: [{ text: 'Claim.' }], caveats: [] } }];
+    assert.doesNotThrow(() => validateReview(review, { thread: { comments: [{ id: 1 }] } }, variants));
+    assert.throws(() => validateReview({ ...review, grades: [grade, grade] }, { thread: { comments: [{ id: 1 }] } }, variants), /Incomplete/);
+    const reviews = Array.from({ length: 5 }, (_, n) => [0, 1].map(repeat => ({ id: String(n), repeat, response: { json: review } }))).flat();
+    const result = summarize(reviews);
+    assert.equal(result.threads, 5); assert.equal(result.pipelineRuns, 5); assert.equal(result.reviews, 10);
+    assert.equal(result.weighted, 83); assert.equal('rank' in result, false);
+    assert.throws(() => summarize(reviews.slice(1)), /Incomplete/);
+    assert.throws(() => summarize([...reviews, reviews[0]]), /duplicate/);
+});

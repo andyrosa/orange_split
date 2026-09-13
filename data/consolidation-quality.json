@@ -1,0 +1,114 @@
+{
+  "method": "Same five frozen HN sources; Luna-low extraction and two-pass scoring. Pool counts across threads. Opus 5 anonymously reviewed Astra and Sonnet consolidation; Gemini has no equivalent review.",
+  "definitions": {
+    "twoSidedPer1k": "1000 * two-sided axes / comments",
+    "twoSidedPercent": "100 * two-sided axes / all axes",
+    "flaggedPercent": "100 * distinct axes named in consolidation issues / all axes; count each axis once per thread. Model-flagged issues are not a calibrated accuracy grade.",
+    "preservedPercent": "100 * fully preserved input candidates / (all candidates minus legitimately excluded candidates). Partial and missing candidates remain in the denominator. Measures extracted-candidate preservation, not full-discussion coverage."
+  },
+  "models": {
+    "astraLow": {
+      "benchmark": {
+        "comments": 1234,
+        "axes": 151,
+        "twoSided": 110,
+        "review": {
+          "candidates": 233,
+          "fullyPreserved": 208,
+          "partial": 16,
+          "missing": 2,
+          "excluded": 7,
+          "flaggedAxes": 13
+        }
+      },
+      "sources": [
+        {
+          "thread": "22866284",
+          "sourceHash": "bd648399c3972f037028531d3e9ba29cddda8e7f78b05826e8d11d94bb84aa4c"
+        },
+        {
+          "thread": "49571634",
+          "sourceHash": "9010c148283371c1d10e3d1146d72102875b4eeef80129c14b6d6574a33b06e8"
+        },
+        {
+          "thread": "47155526",
+          "sourceHash": "92ab6f1d3c4e8210f101af4a18c1b3f3fa3e30466db83e5e289b13d53c250489"
+        },
+        {
+          "thread": "49574167",
+          "sourceHash": "6fc4ae684fb6ef4db2f936820366ecb950a5f315176385e2a1a0fd9038e0cdb7"
+        },
+        {
+          "thread": "49568506",
+          "sourceHash": "932de4759687b9f7c1e99f9ac7a64898bbf82d58c784ac3b61282d033e7d2451"
+        }
+      ]
+    },
+    "sonnet5": {
+      "benchmark": {
+        "comments": 1234,
+        "axes": 110,
+        "twoSided": 90,
+        "review": {
+          "candidates": 233,
+          "fullyPreserved": 173,
+          "partial": 47,
+          "missing": 10,
+          "excluded": 3,
+          "flaggedAxes": 24
+        }
+      },
+      "sources": [
+        {
+          "thread": "22866284",
+          "sourceHash": "bd648399c3972f037028531d3e9ba29cddda8e7f78b05826e8d11d94bb84aa4c"
+        },
+        {
+          "thread": "49571634",
+          "sourceHash": "9010c148283371c1d10e3d1146d72102875b4eeef80129c14b6d6574a33b06e8"
+        },
+        {
+          "thread": "47155526",
+          "sourceHash": "92ab6f1d3c4e8210f101af4a18c1b3f3fa3e30466db83e5e289b13d53c250489"
+        },
+        {
+          "thread": "49574167",
+          "sourceHash": "6fc4ae684fb6ef4db2f936820366ecb950a5f315176385e2a1a0fd9038e0cdb7"
+        },
+        {
+          "thread": "49568506",
+          "sourceHash": "932de4759687b9f7c1e99f9ac7a64898bbf82d58c784ac3b61282d033e7d2451"
+        }
+      ]
+    },
+    "geminiFlash": {
+      "benchmark": {
+        "comments": 1234,
+        "axes": 60,
+        "twoSided": 55
+      },
+      "sources": [
+        {
+          "thread": "22866284",
+          "sourceHash": "bd648399c3972f037028531d3e9ba29cddda8e7f78b05826e8d11d94bb84aa4c"
+        },
+        {
+          "thread": "49571634",
+          "sourceHash": "9010c148283371c1d10e3d1146d72102875b4eeef80129c14b6d6574a33b06e8"
+        },
+        {
+          "thread": "47155526",
+          "sourceHash": "92ab6f1d3c4e8210f101af4a18c1b3f3fa3e30466db83e5e289b13d53c250489"
+        },
+        {
+          "thread": "49574167",
+          "sourceHash": "6fc4ae684fb6ef4db2f936820366ecb950a5f315176385e2a1a0fd9038e0cdb7"
+        },
+        {
+          "thread": "49568506",
+          "sourceHash": "932de4759687b9f7c1e99f9ac7a64898bbf82d58c784ac3b61282d033e7d2451"
+        }
+      ]
+    }
+  }
+}

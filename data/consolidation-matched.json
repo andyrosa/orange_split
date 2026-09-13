@@ -1,0 +1,4809 @@
+{
+  "experiment": "consolidation-matched-v2",
+  "completedAt": "2026-09-13T02:37:27.955Z",
+  "spent": 5.243006719999998,
+  "coreHash": "e4fb0b16f451e455accf008e5b37bce15aab5069da2f526ce5c60b88900c94bb",
+  "reviewer": "anthropic/claude-sonnet-5",
+  "reviewSettings": {
+    "reasoning": {
+      "effort": "medium"
+    },
+    "maxTokens": 32000,
+    "concurrency": 2
+  },
+  "adjustments": [
+    {
+      "at": "2026-09-13T02:18:55.181Z",
+      "reason": "The first Sonnet default-effort review used all 24,000 output tokens for reasoning and returned no grade. Before any completed review, all five reviews were set to medium effort with a 32,000-token output ceiling. Scoring and up to two reviews run concurrently after isolated consolidation calls finish."
+    }
+  ],
+  "prices": {
+    "fetchedAt": "2026-09-13T01:42:22.402Z",
+    "source": "https://openrouter.ai/api/v1/models",
+    "models": {
+      "openai/gpt-6-astra": {
+        "prompt": "0.00001",
+        "completion": "0.00005",
+        "web_search": "0.01",
+        "input_cache_read": "0.000001",
+        "input_cache_write": "0.0000125",
+        "overrides": [
+          {
+            "min_prompt_tokens": 272000,
+            "prompt": "0.00002",
+            "completion": "0.000075",
+            "input_cache_read": "0.000002",
+            "input_cache_write": "0.000025"
+          }
+        ]
+      },
+      "google/gemini-3.8-flash": {
+        "prompt": "0.00000075",
+        "completion": "0.00000375",
+        "image": "0.00000075",
+        "audio": "0.00000075",
+        "input_audio_cache": "0.000000075",
+        "web_search": "0.014",
+        "internal_reasoning": "0.00000375",
+        "input_cache_read": "0.000000075",
+        "input_cache_write": "0.0000000416666666666667"
+      },
+      "anthropic/claude-opus-5": {
+        "prompt": "0.000005",
+        "completion": "0.000025",
+        "web_search": "0.01",
+        "input_cache_read": "0.0000005",
+        "input_cache_write": "0.00000625",
+        "input_cache_write_1h": "0.00001"
+      },
+      "openai/gpt-5.6-sol": {
+        "prompt": "0.000002",
+        "completion": "0.00001",
+        "web_search": "0.01",
+        "input_cache_read": "0.0000002",
+        "input_cache_write": "0.0000025",
+        "overrides": [
+          {
+            "min_prompt_tokens": 272000,
+            "prompt": "0.000004",
+            "completion": "0.000015",
+            "input_cache_read": "0.0000004",
+            "input_cache_write": "0.000005"
+          }
+        ]
+      },
+      "anthropic/claude-sonnet-5": {
+        "prompt": "0.000002",
+        "completion": "0.00001",
+        "web_search": "0.01",
+        "input_cache_read": "0.0000002",
+        "input_cache_write": "0.0000025",
+        "input_cache_write_1h": "0.000004"
+      },
+      "openai/gpt-5.6-luna": {
+        "prompt": "0.0000002",
+        "completion": "0.0000012",
+        "web_search": "0.01",
+        "input_cache_read": "0.00000002",
+        "input_cache_write": "0.00000025",
+        "overrides": [
+          {
+            "min_prompt_tokens": 272000,
+            "prompt": "0.0000004",
+            "completion": "0.0000018",
+            "input_cache_read": "0.00000004",
+            "input_cache_write": "0.0000005"
+          }
+        ]
+      }
+    }
+  },
+  "method": "One fresh consolidation per model on each of the same five frozen HN threads, with identical Luna-low extracted candidates and production prompts. Isolated sequential consolidation calls with rotated model order. The same Luna-low scorer runs two passes per output with shuffled axes and swapped poles, at concurrency 10. One Sonnet 5 medium-effort review per thread sees all 4 anonymous variants in rotated order and uses one common eligibility list. Reviews run at concurrency 2 alongside scoring after all consolidation timing is complete.",
+  "definitions": {
+    "cost": "Consolidation only, including format repairs. Token usage repriced at the same dated catalog: uncached input rate plus output rate (including billed reasoning tokens). Divide total by total source comments and multiply by 1000. Excludes extraction, scoring, summaries and evaluation reviews.",
+    "time": "Consolidation service wall seconds including format repairs, summed over threads, divided by total comments and multiplied by 1000. No local response-cache hits or concurrent generation calls. Provider caching/routing and ordinary latency variation remain.",
+    "twoSided": "1000 * total axes with verified people on both poles / total source comments.",
+    "flagged": "100 * distinct output axes with at least one concrete review issue / total output axes; count an axis only once per thread.",
+    "preserved": "100 * fully preserved candidates / (all candidates minus common legitimate exclusions). Partial and missing candidates remain in the denominator. The same denominator applies to every model."
+  },
+  "limitations": [
+    "Five threads, one generation per model per thread; repeatability and article quality are not measured.",
+    "The common Sonnet reviewer is an uncalibrated model judge and shares a provider/model family with Opus.",
+    "Candidate preservation measures the frozen extractor output, not all disagreements in the original discussion.",
+    "Other selector models retain earlier measurements and are outside this matched experiment."
+  ],
+  "models": {
+    "astraLow": {
+      "name": "GPT-6 Astra",
+      "effort": "low",
+      "benchmark": {
+        "comments": 1234,
+        "axes": 150,
+        "twoSided": 107,
+        "review": {
+          "candidates": 233,
+          "fullyPreserved": 164,
+          "partial": 25,
+          "missing": 34,
+          "excluded": 10,
+          "flaggedAxes": 5
+        },
+        "costPer1k": 0.48953808752025935,
+        "secondsPer1k": 122.00891410048622
+      },
+      "threads": 5,
+      "runsPerThread": 1,
+      "cost": {
+        "noCache": 0.60409,
+        "billed": 0.644025,
+        "usdPerMillionChars": 1.3272823548281492
+      },
+      "time": {
+        "seconds": 150.559,
+        "secondsPerMillionChars": 330.8022050697269,
+        "minimumSeconds": 14.593
+      },
+      "runs": [
+        {
+          "thread": "22866284",
+          "title": "The Wolfram Physics Project",
+          "sourceHash": "bd648399c3972f037028531d3e9ba29cddda8e7f78b05826e8d11d94bb84aa4c",
+          "candidatesHash": "83eaa36cc7fb81c7bd49e461a7c9ed9df403d2ce54a59146b9d020e562fb62d2",
+          "comments": 323,
+          "chars": 165268,
+          "axes": 49,
+          "twoSided": 31,
+          "noCacheCost": 0.19805,
+          "billed": 0.21083,
+          "seconds": 42.291,
+          "review": {
+            "candidates": 76,
+            "fullyPreserved": 55,
+            "partial": 19,
+            "missing": 1,
+            "excluded": 1,
+            "flaggedAxes": 1
+          },
+          "warnings": [],
+          "traces": [
+            "37529a3bb4aaae971422c20e308a5e9f52280cc0df898b90f04df7ae076f5c59"
+          ],
+          "scoringTraces": [
+            "034a02b5e8b2704527890fc59ffe7b27859571035f4c2091c7e22540c1a27099",
+            "b8767dd12e2f6c004fc6fe9d0d5d9b58153834d2f3109d81156422c8910df8ce",
+            "2bd4b393e735a12f1fa0f11a884e89546ce21f484ae2e09bde277578d3270601",
+            "1aab3b6da84cb76969e42a960f0b7a929b9c041a242990a6154afa598e6aa9e2",
+            "5aefce1ce624eeb0775e18831f9b3fdf7532ccc9b9c4cd487220ac61c24607a1",
+            "f949924dc90b3e0aa64d9f093b60b6547e7bc6aa35ebe74802a8353ea9022947",
+            "67bbb3c890b69215ed8e1a295e60b84570c20f18082bc3d7235793df58e0929e",
+            "8a6900e572799e1d8c57f695864c98f73efd56a1e040de94517646d2c1da88f0",
+            "936d37c573d5ee825b46d86c1dfdd22acd3d3a96bf4865ba79e7ff96646c87bc",
+            "b43cd0245492c1d98461dc8d8f565ad2329398c6a34ea1fde3185e5d5355e4d6",
+            "bba4f700f3420cde34e46c38836695a0c001cf984db085ba7a94c1e4778ab62a",
+            "d1bccfa6e33c5fe9524412f2b0ae9c86bd68f9252d895ea006ad50913037e579",
+            "c799c0d5a7d67ea53435144377cc1001fd1b2e2cc05e60e16b1943304800f022",
+            "c77a71652fa94bbfb0f1e22bf484d0d320027b5e97616ae2e4bd97181f8a7dc1",
+            "2aead8884260304b599b1d3b53cdf8fd51ea321934273fb517814a4ad0a71abe",
+            "68b49ecaa29c0be25a5d42eec92cfe55227caaec6e4d1322f35b13501421b5c1",
+            "4dc193393db22b7f1cfdc559826bc043387c4960f7be00a495b56540e76fde7f",
+            "95f1cfa5fa2f3c405f1d1bbef6984fd8fbf93c24e13269283ea05df6d71cf8a3",
+            "a65d4c07ba3afae9bffc08aae901b981dc034fa5f5b3db313478f2948db37b2b",
+            "dfbf6a697ebd0c2c2c30b31726fc40a057e3d54209467e0dacf8abb0afbece74",
+            "3e19e3d4e8db58072bd8c16b7d6fcbacdda7c6f17fb22a7897c1af6ebed9a7e7",
+            "b4cd48cb46d6e5e2d4438d89a523112967a6e4793baa7187fcdd46704ad5cfbb",
+            "95c720dcf17ba518c60f71f627e85741f470b4df5713f0db9a9e6e7bbbe2876b",
+            "cb4a5583fed075e8cd2ea7c9cffc9bb5a5d9b779784770cd7fbf6ba964ae6216",
+            "c4b4be3adc90516128e6792a71c81634a668798662ea7ad3f7cacf557aa92eba",
+            "13a0ea9703e907a64624ca123d0025166a5158a5efb8aff2de08c84caa7f2ea1",
+            "3a6800ea115cac83472545967822a87289de77322eded8a040da3099b3d27702",
+            "52d0d77b2fc44eef0a6cbc48f1d057a1e61c5167c393b2d695c83ecad09129cf",
+            "9d68354aaa1dc974dc54643a4706810a62b220889e9207a477a5570af82d182d",
+            "409585bd815bb2eb1f5bce47107c08d8487e66abb02ae836c3d3ecb0242d8d68",
+            "a39a99c1a3f7ad0d5202e6f595d6916b162e57bc80f8f39defddebc3a32f0718",
+            "03051874d5b7bdeeadc4f29d8c45e002dc82ea4c91ffc2081a9fe1e894c58fee",
+            "d35053a3b4d5815a0f8199965836b692750a758f02924356797923b3461828fe",
+            "ce7fc5a78d1098a150c9132e8a93e3ac70465bf56628d3286e5cd1210ff909b7"
+          ]
+        },
+        {
+          "thread": "49571634",
+          "title": "Nitter has more working instances than before the takedowns",
+          "sourceHash": "9010c148283371c1d10e3d1146d72102875b4eeef80129c14b6d6574a33b06e8",
+          "candidatesHash": "48cba40b961e857244e06aec349a9850ceedcfdf51a61fce7d1d4dd96ed25279",
+          "comments": 173,
+          "chars": 43359,
+          "axes": 24,
+          "twoSided": 17,
+          "noCacheCost": 0.08796,
+          "billed": 0.093305,
+          "seconds": 24.473,
+          "review": {
+            "candidates": 31,
+            "fullyPreserved": 24,
+            "partial": 2,
+            "missing": 4,
+            "excluded": 1,
+            "flaggedAxes": 0
+          },
+          "warnings": [],
+          "traces": [
+            "1dae63324b6cc5c462b200dcd7a480c7febda8887dee2651db8b1e8ce59faf47"
+          ],
+          "scoringTraces": [
+            "96abb906ed8fa6ff9a3df028b6e3c8a52455c86de2739ae4af7c50aa85216fc7",
+            "e5339709bbc28a06196dde3508bff2c8b60f34351bc148a7bf29d40ce1580d99",
+            "8516749e292c6360ba6c9072c5e69227f31f5b76c76c67f05b8d039445a26ae1",
+            "f107e4e0fbacce608d8221423d6726350ee89cf5cd5fecf0d7d53b212ead7b9b",
+            "49ea32bf28a0c7c787d44495420dd28d5f60e7ebf076ac9a37c986f634404e02",
+            "5dfcdcfaaf635dd78c87781029966427f32e66d4d9d580eb1c81965c8b975a2f",
+            "d5d9667333e83be595a913d08447fb6bf3d60a264bf7f3c8b6e57ec716fd702f",
+            "3b678b41d77847b3909b6c1fec622163ea6abdafe6045d269b9d53dce7e60f63",
+            "05da9528163e809dcce8f083c3a84443c641bd9c3688f881bcc89aa26751635f",
+            "942fb6f8caeddb675654aaf4a34740827a76842fcfd161a2af666a2c1bc099ac",
+            "89b6f03106ec81a7b61ef9a9b36901fe01a320e343d305814205ad9a6e35b483",
+            "84c1333483a4e8388ec0f07ee88196484ab7d819cef65cda24f46ed6f3c6f0fd",
+            "d4c4b7c49ad075d5bf11950e2a4c755fd244acd64eb97a7babba9e6644bfea8b",
+            "9deca76a71ded1ebf7b38b51ec36f4aa01ad9e6426631789e78e4c99cdc37f58",
+            "5eb99cbf1cb948aac1515b9ef1069f12d6ba2a9323c577fa8ba7cbdfcc0256b9",
+            "f4af57a1d24a507c334fcd7c9efa013bc8a53e7035cd87693fe0cf87683fdcb1",
+            "85cab1908073bfb462fccb940c33fcfcdf70cbcc0c20863d5a7a8d5eee17e107",
+            "1e71d288347d8251d317854bf8818ad3ccb0db5ef1b270c6d593538947c495f9"
+          ]
+        },
+        {
+          "thread": "47155526",
+          "title": "Woxi: Wolfram Mathematica Reimplementation in Rust",
+          "sourceHash": "92ab6f1d3c4e8210f101af4a18c1b3f3fa3e30466db83e5e289b13d53c250489",
+          "candidatesHash": "6223c2f97f182edbfc17c3b05a60725351c537af070b51e7fa0c471ce4612a57",
+          "comments": 137,
+          "chars": 35512,
+          "axes": 13,
+          "twoSided": 12,
+          "noCacheCost": 0.053540000000000004,
+          "billed": 0.0572675,
+          "seconds": 14.593,
+          "review": {
+            "candidates": 19,
+            "fullyPreserved": 16,
+            "partial": 1,
+            "missing": 1,
+            "excluded": 1,
+            "flaggedAxes": 0
+          },
+          "warnings": [],
+          "traces": [
+            "19dc05ad8552ade73353ff6406e80bd5cb94cf89612259536f12ddc25b7c3000"
+          ],
+          "scoringTraces": [
+            "a67e1e976718bfb567661a14e6bd822e8d1d39488452d6dc94156cfeef304287",
+            "104636672f3af79a20ec9816f9e4aa36e71a19d0ea25b6663af4d54bc9f6cc18",
+            "fcac5a4acc6ff4ceaf5ce7fd897f97bfa20902571e469e14a1e03b9533aa5bd6",
+            "b109bdcb95770ad29e29382d23b135828b6439af3aa4a477298c4d14a4f33067",
+            "0375c243f653d335f25cae6dc9ecb7a71dbc33d2788bdf3a330ce45233f65219",
+            "c7d282f2621efc2052c1a0ed9587c70a35c2d4952620ac213998fa0e1a9e2336",
+            "9ef6c2bc0b5078e46482963844ebf2ddf0f43316d1f98e1729d8f70b7c18611d",
+            "b975f811f26dc1e1a917c893004ab26992fa799ceae9efd083b0cdff026f7aea",
+            "be968dae1a88582986cc0ef3aada1239476201aa389ba207f4ced4ec94f0b4e3",
+            "c4909c28c0f6a58b8af6d3ee547ac8745d69c3fd0f7aa63f8f2e3f3297a06a41",
+            "893125a09f62e3fe41154a3ba0a6df60b83854ee2a50abf1a061e3e7d0771294",
+            "02d8341c295f0c910797479d004598c950998c6973287d42e4affaf34d97e86e",
+            "3367114dabcf68a5233919ffe08b6df6eb21338099003e69b0134af8719ff714",
+            "eb6df642a4c4fd7d29c683ab45b5419eab6ed9905c85c517b999829dea405e7d"
+          ]
+        },
+        {
+          "thread": "49574167",
+          "title": "AI handles incidents, engineers lose touch with their systems",
+          "sourceHash": "6fc4ae684fb6ef4db2f936820366ecb950a5f315176385e2a1a0fd9038e0cdb7",
+          "candidatesHash": "d4189ea79d7bc9f5a38d910949c83d07605b3cda98215eaf6e844437caa3535f",
+          "comments": 264,
+          "chars": 111007,
+          "axes": 31,
+          "twoSided": 22,
+          "noCacheCost": 0.12889,
+          "billed": 0.13903,
+          "seconds": 33.321,
+          "review": {
+            "candidates": 61,
+            "fullyPreserved": 27,
+            "partial": 0,
+            "missing": 28,
+            "excluded": 6,
+            "flaggedAxes": 2
+          },
+          "warnings": [],
+          "traces": [
+            "8060fcdfbfadd1965ea7902691aa6c9218dba13a800c250bf19c8cd5f78b52b4"
+          ],
+          "scoringTraces": [
+            "da7c346a14caa80affc4b610c90f028d633053b0c465549b66c721348b5c296c",
+            "6f8f1d9f958fe23b5980c03b828f28b3e44d006b669ab3c73e3ebbb144ba4cc2",
+            "db8e779305a478dd1a04cad7643e39c6bc07f06f37913d6c8fd5ee5fddb0fe64",
+            "e9371cd1fb6be163e89394e0e73b40c29ae57d198b30c7c655f1bb3e4ec5b7cf",
+            "9d18dddfbf51cb0ea4717c5bb49b4b91b1cd13f23cad03318602e300706eb00c",
+            "c546798cd4ec019faaf9f2a0ee0636f325667517414383cf06acab6662a431ee",
+            "562579ed0d96e71e415001bc3bbffdf92cf22fdafc2d31f2a8265aec5b08a4a6",
+            "3dc9ededea4bbfaaddee72502bd0b0a14056718e0250fde3b91340b9031d5890",
+            "9ba666be6ed0c161a8809e21c54220c46befd3ed789748913fe73eb032dce23f",
+            "daebb54674668768d1bec4d80457ea453e0a0a43c48a9e65a3890fbe7ba8a505",
+            "bd4920c9698129ea6a1a8d3093c3fa110df384cb0fb22b9126e37f2cfa1e936b",
+            "a60405549afb7cebb8089298bb7dc3c0b04937640c2ba9c6b2da456d8118f132",
+            "cb459061f7e16e48cff717895ec4677f62f43dbcd3987ad01f933fe5ae223bd1",
+            "893d08e13c0be33ef83c5dfa6d33075d79198d0b05d1b9f2819a32109056ddcb",
+            "73007664861eefd72352da1e5895a5e872d5ca54484e19f6bb7222a4472498b2",
+            "0de94d718ea5297d05a9a836ff79f26bfb2d60af9b81a2a07e10e756afe317ab",
+            "bbbecbb3dae6301891a5dd024dff748e937c91f3a3227c52f6dcd1945cc734dc",
+            "5a35d338cb78aebe86ab7bcbff36c917bfc9eb4c1c6593a41674c8388f7ca60a",
+            "ed4299fe5941484ae7619a145714b8255b09e8e9bf3582d7b7c0da7d1bfbe092",
+            "1849d4f7f6b539665c349342d3c85d4ca4fd8e5e2c97ec6b678d77c4cdd32091",
+            "41812abaee61ce73f0b6c69b2ccc6f6684fd70e9fca1a781020a7e60a718b900",
+            "cd0942eb6ed9a2772d0a15e4de2afe22d427865afc94d22f128242206e84eb00",
+            "37a4ad96e419491ad6cc118227f22162b5a88f9987a29e3c91a9a82a40027b2f",
+            "c803c50527eb0dc787375b1824f1d34c5267d7adcf5a689b4a270e42c522000b",
+            "9ed0498c3ef4c0b661bd48f56e98fdf201084a9221315f41139f53d72f58c801",
+            "73a4ecd9ceb50231205e65838d3ff11966cc858c13d308085c17a8d179cc64c7",
+            "01bd36d89b42b2f581483ca47ac93108a71dba5c2495939b3b6cb0744dc6b64c",
+            "35e2fc6309e7ee155270d6cf72ff384e9e6c2835a62f9b4ac40d13939aeec6e9"
+          ]
+        },
+        {
+          "thread": "49568506",
+          "title": "Formalizing Fermat's Last Theorem",
+          "sourceHash": "932de4759687b9f7c1e99f9ac7a64898bbf82d58c784ac3b61282d033e7d2451",
+          "candidatesHash": "7ccf75cb18188b5c09f5f24718d9d5d2d6b1a6f8bf27db95afb4eb9390df37a8",
+          "comments": 337,
+          "chars": 99987,
+          "axes": 33,
+          "twoSided": 25,
+          "noCacheCost": 0.13565000000000002,
+          "billed": 0.1435925,
+          "seconds": 35.881,
+          "review": {
+            "candidates": 46,
+            "fullyPreserved": 42,
+            "partial": 3,
+            "missing": 0,
+            "excluded": 1,
+            "flaggedAxes": 2
+          },
+          "warnings": [],
+          "traces": [
+            "ead4c2b5dde90c4ebec4d09cb542b9db0886da0d8ca19831f6ead5b9ee306241"
+          ],
+          "scoringTraces": [
+            "b44fc6fead724a18d04ca99eb9617a4351c2d06de0b99f449a800c771aabf319",
+            "3508747bf7a3f73a155e078126b7deeb3d4e851d2c6317e728c3ae81e3c8f190",
+            "2d44ac7c2746ef5e04ada4635489aebd69ee10c5ffcfc8096e94d0d0bceb6448",
+            "95512a0cdd20115d7b3523ea9d4e802b590f5cce92f9392e638ec71d8ecf59c0",
+            "84a15612bff933df3778c33f9196d01154cfc030321be6fe306c9e4b13a63326",
+            "70a28d476a5e70e8ed4e5c71bfeef15bec55a3b9213e516c22e17b096ba51cf1",
+            "eedf7045e27c8756e85e11963b27a443722c8b66789f6c397e1a7cd2be3470cc",
+            "9950cf2a4f501f8bab33b52bf1759002abe2deb813485406444ba9c298a0a3b7",
+            "c73f967942dd0ab08d926ca1d8688ea398ee98f461b3d34fa81aed67faf45bec",
+            "469b902ecd46d754e6ecc1f487b2106956ae917f6b2566b244b4108a12e0c23e",
+            "8682ec788883ac801b002ef853d500c7b01712b4b89ab946abb45bf91154a5f4",
+            "bebcbb1b83bd9402b22ecde5c60a0f6bc6bdd1269c8793dedb6fb920dfdb074e",
+            "73f1cb68c6633b62ce893c6476ed78bcfbbeeba6267ec8b892435bf23918de6e",
+            "8ad73eaa02cadab356f62a7f2e07feadd325e5cafffb64a18458caf79585858e",
+            "c78f1df59c352848a8743be3a763c6c6487e08a296097d118f5294d73a8c2756",
+            "eac1577af4317f4665fd82adae4774273f1fe1c3649c96f0196fa1171adad41e",
+            "763ebe9814cd2fd44c46b873f57ed9441ae29f9a1e77fd313bfa17c3dd921071",
+            "ba5c237bee3e2f85476ae76a5c82f25ef5201f5589d7ee7c863e07879d594e4a",
+            "a0de3ce992099f6d23bdf3c6525a1d7ee5b7c8a8825d0a4b6ffcde713410e06d",
+            "34044aeab1134411130f31b6b6c903af4b95c8f69e0ad5ec6f0490d95933425f",
+            "20a439721d70a7bf1b83d4a3436080dc7b65fb42e5c3ddead192c8cafaff385a",
+            "6de3ef1745d828c8038782fcde541cc48eb6991f242869dca959f0dad026a5f3",
+            "ae09c5b85bf1d8f469d3c9fba32c26818ff6de3420ee9ab8dfde148ecbb2348b",
+            "3afc1c0952026f3262229bad65fae32b546836d803eeb90f03b2db5414d335a7",
+            "fbe209272c14bdae9d2b5a109f6b758aa4948ec9f792675f86d803f76e9be295",
+            "6eec9b42e3cf4dfd2388a45ff8d8a71a4af240dbe8afa7ffb7959249548abd5e",
+            "d9e1f2c171540938d69e0df82d81b0adece0b81500c97d294287f1a85837923e",
+            "1420551910114d1f01e8ab100c99d7376501f0897b32a7ea7d64c78b3e2f50c8",
+            "3219ab0dec05a524da9c0e827d37b054d9980bbb3871403588eabd5948cbc0d3",
+            "7bf6bb15443eb8a1a1b225fd635b021cd2af0ce3bdfd4a4bfecd914af9870920",
+            "fa8329fddda37b36293e770e05a328fe8b6080caded3275988f5abeaf89f2879",
+            "3fb01b0861321558e6aaec4b1873ef31e0271ac3f6fdf1fbf6680a235e184513",
+            "588a85d8d074928ef12230a2f197c6529572b9f712fa0d8a032bb2fa26166678",
+            "1f3dc27cdafc68d7855dff380297d3a9f71e0a9f07ae6fbfef3ab1ada7efc51b"
+          ]
+        }
+      ]
+    },
+    "geminiFlash": {
+      "name": "Gemini 3.8 Flash",
+      "effort": "default",
+      "benchmark": {
+        "comments": 1234,
+        "axes": 64,
+        "twoSided": 59,
+        "review": {
+          "candidates": 233,
+          "fullyPreserved": 76,
+          "partial": 17,
+          "missing": 130,
+          "excluded": 10,
+          "flaggedAxes": 5
+        },
+        "costPer1k": 0.15687277147487846,
+        "secondsPer1k": 109.50891410048622
+      },
+      "threads": 5,
+      "runsPerThread": 1,
+      "cost": {
+        "noCache": 0.193581,
+        "billed": 0.193581,
+        "usdPerMillionChars": 0.4253284204836828
+      },
+      "time": {
+        "seconds": 135.13400000000001,
+        "secondsPerMillionChars": 296.91101282482265,
+        "minimumSeconds": 18.591
+      },
+      "runs": [
+        {
+          "thread": "22866284",
+          "title": "The Wolfram Physics Project",
+          "sourceHash": "bd648399c3972f037028531d3e9ba29cddda8e7f78b05826e8d11d94bb84aa4c",
+          "candidatesHash": "83eaa36cc7fb81c7bd49e461a7c9ed9df403d2ce54a59146b9d020e562fb62d2",
+          "comments": 323,
+          "chars": 165268,
+          "axes": 12,
+          "twoSided": 12,
+          "noCacheCost": 0.0313035,
+          "billed": 0.0313035,
+          "seconds": 18.591,
+          "review": {
+            "candidates": 76,
+            "fullyPreserved": 16,
+            "partial": 3,
+            "missing": 56,
+            "excluded": 1,
+            "flaggedAxes": 0
+          },
+          "warnings": [],
+          "traces": [
+            "ba70088c402ecd69a1626527e8c0d07b82721108d8ddde70d277c0a9266ac74c"
+          ],
+          "scoringTraces": [
+            "a87acc6f9e3967b560b5019f51a021cc309b1644055c0fa096f428f9d1decf84",
+            "3e9681eb45c86e3ae0145b384c93a4bf9c1f422fd1995f95a0d7490665287d92",
+            "03f1800a48bbf995ad12794f50929df432931ec38e034a862cfde2923bde2c79",
+            "8ab5e04b6c299e9a78df7971bc824d007203a6142c0bc84e7c8c00e9abc7af03",
+            "bf5c9bb42fb8585ce7d06384ed8ca1f6187a8fabb35d9d0799d8118645b89b45",
+            "c648a864e5ea546395208164e423442cc3e7714e03224208e2d20727d02ef7b5",
+            "66437e16fe2b35f1e4f3ba3788d94b61bf5ffbf67eed65a8df627995aba71e77",
+            "793319de8e94faa2e50d9276b8ee17c16f0708e0f329326ff70ba27ee1e9a3d7",
+            "ddbeef83141bdf031fc87f9c7947b03fc719073ecfcdcc9e5caae2ccba66b21d",
+            "b3652f60de6abf4398f99047447905004535a0f8d057271b3c274f8fe49649df",
+            "fded16f2f89291f23ebf0ee340e80deb3b67387f178c784f6677f3e4ae0931eb",
+            "fab3c60a617019679cd1ffc6eaca3c279568991525969d65dc2da2a25d9281d2",
+            "0ff90d8fcb93a6c95f95c56bc758922e91a3f15be7697def1ce97d6c7c956774",
+            "9eee72d1ac01d40a8039ed9085f30b8ebf5fb6529d2808e6d4b467bb3cc30221",
+            "2ffef35044e8794531db99d739af5498908ebd8399c8bfb5b35b5add82d6d669",
+            "a21482f2b4a424c49ed47236e164adfd95d3d43ef3246882205f577f8717fcca",
+            "dae7bc1119787b7a971f1d8a92066f64cf5608129feb9a31ee44fcf242929d63",
+            "e96fa2d60527a64b638b82f024d23d9c5048b8e5a9ce78d753127003418d8212",
+            "d51cebb9a0d53dafca51aad549f847b3dc08bcf0fede1f966210d642dc61444a",
+            "92deda4f55ceb027314342317d4ccd198409d43f0df2f18975bcf22f9d0cbf99",
+            "8fc98972c7563431463c14df076085c373b83ac7357cb3d1be605b3282fbfd0c",
+            "fc33e5a7772f45d1352490ddb8b6e1655813769a4673b25c24c5245b23301d4c",
+            "f8acefe3c57c4df9ac44cad3f9ece27d902b61577fabdb7d16563eda6bce51f2",
+            "7f47516466e9525e7b7bb49beb9905e761109f284e7d147dc6cd1b7d138e4667",
+            "3f12f75614a856697b01ab633aba0c5f21720e649098518842b783032ca23100",
+            "babfc38f8c8b45af455f8e0a92c1a6dd5cce2b5fe4d6d6c31cb6f5901bcc4ab0",
+            "7789a7999ba07aca0a8e1b25d22684a2ad63c75c5f5f9c0123d9a8a33795d3fb",
+            "e46eaa159db0bde12fcf99fcc3aa28ef0bfc3cdd8379fec540d8c177f964ea7f",
+            "dd15ab0e4dcfa23d0cae3684e5f0d7894e255f34b2c9eea3d6a8f6a29dfc6bc2",
+            "864720a0f71783ed0d734cb1759d71935e3bb32509054a5e3bbdc801818a5957",
+            "8ba328ab951dee1837a8e3520c55bac7f16c30e847d18ad036e139c742b6a0f7",
+            "0080e4d6a106192072f901da90bdfa0def4ca43c480473726efbb7626bbeff85",
+            "7269974906c770509d55b7f1f6448690635d870d21e2bff3fffbe836de715ed1",
+            "3aa558c8cf1f892b44b625a4185b3409b1183cea015a0f72ed030411773678df"
+          ]
+        },
+        {
+          "thread": "49571634",
+          "title": "Nitter has more working instances than before the takedowns",
+          "sourceHash": "9010c148283371c1d10e3d1146d72102875b4eeef80129c14b6d6574a33b06e8",
+          "candidatesHash": "48cba40b961e857244e06aec349a9850ceedcfdf51a61fce7d1d4dd96ed25279",
+          "comments": 173,
+          "chars": 43359,
+          "axes": 20,
+          "twoSided": 17,
+          "noCacheCost": 0.026189249999999997,
+          "billed": 0.02618925,
+          "seconds": 20.16,
+          "review": {
+            "candidates": 31,
+            "fullyPreserved": 19,
+            "partial": 6,
+            "missing": 5,
+            "excluded": 1,
+            "flaggedAxes": 3
+          },
+          "warnings": [],
+          "traces": [
+            "944a86e2d5af3150e88e970a4fcd5f0ff71597bf2bf2d0cae3f7e158414efd81"
+          ],
+          "scoringTraces": [
+            "26e0b863f93555a896cef6ca39c190d50e5bef3639287859a81975b54b4609d5",
+            "1606b645a28b1aa15216633de5ea626aabe9ecfe0f7ffedefa55ccc5410d3c90",
+            "4dd37e7a0670d49bb619f847d153a756478f065de025c9baaecf69befe9073bb",
+            "6c7cee5cb8248cde7c30928bd08ae980a5b6c786b3b7b5fa7a00c9d7393f4442",
+            "e1da20ac4fe23c40107cb9fd52ad745ac895f6636fb788e746b8bfb754cd9051",
+            "6bdfbffdc24df27ac93a08467749c1d9d656ed1e3b8977614dd63f06719d4ef8",
+            "8f3a0b3bcc773d68b9de08ab5b7a3d9aebd922151717df4195d3cc4324c0df78",
+            "2384e894eae9755237eafe409244a07b91449f4ba35060b79969ef1a8a2e957e",
+            "4d70b457ea62c3ff533436c995e36bb056a44a11c06d82477de888ae731d5dc9",
+            "355f5ef401d93f139be027b9c69b9dea6fb3bae8b80910ee81488cbd0a0e9f8d",
+            "2065d7d138b0e2faa8b2d61a129595ec9e9c58ea919649848e6a59cd05db7ffb",
+            "18fb333344f9b03e69085bc49c6d5c379445042be6ebdeff7cc64e72adc36b15",
+            "24d45b4c9c5ef119e539ddb9383c6a34de52d49b558606a03aa233dd6df9d514",
+            "48a0a5f24ca12167334fbe964e2617e844d58ab2b80ccba0b51e65f2e7d8da9a",
+            "8e9ba9d8b4cda5446aca0ca4f80f95649df54eb97da6e9fb3b67d38ec14f7a19",
+            "4b7239a42e6b326333276797a928ea98da239b0cfaaf215b62513ada6fb18d65",
+            "20d9a7b11426953f49b8be75f718e05f551d5766426bff8b34f5c2f8974e9497",
+            "defec1e4f211ea7169996bf56e616029e93025e7fc7788ad0b6f0fd4c6ac948f"
+          ]
+        },
+        {
+          "thread": "47155526",
+          "title": "Woxi: Wolfram Mathematica Reimplementation in Rust",
+          "sourceHash": "92ab6f1d3c4e8210f101af4a18c1b3f3fa3e30466db83e5e289b13d53c250489",
+          "candidatesHash": "6223c2f97f182edbfc17c3b05a60725351c537af070b51e7fa0c471ce4612a57",
+          "comments": 137,
+          "chars": 35512,
+          "axes": 7,
+          "twoSided": 6,
+          "noCacheCost": 0.02683275,
+          "billed": 0.02683275,
+          "seconds": 18.732,
+          "review": {
+            "candidates": 19,
+            "fullyPreserved": 8,
+            "partial": 3,
+            "missing": 7,
+            "excluded": 1,
+            "flaggedAxes": 0
+          },
+          "warnings": [],
+          "traces": [
+            "94b40fed54d2b30e97cd6ba144f57256c88973aacf98b1e0b49f59017a827230"
+          ],
+          "scoringTraces": [
+            "faeada42f3962350c2792fb1140fb1952a84b021b9ed7c4aa466f9a9cfc9a845",
+            "e0e6cc31a4279191c973a09a9a8a9ab814f9440a01b3ee2eebd8b1489ffee2b8",
+            "acc5ff3503f925b180f1e4ee1846f00ec71f2204df3195d6656cb1a8b9227ca8",
+            "d907c65c28670097c4cfea1a8e9e406b35655daeac45cffa0fda0a118ef3010b",
+            "dcb38cffe0067cd34c51da3d572afce2e365298f3fd710731b48c3c4e39d8ea5",
+            "531bf86803d3c320e93516baf5888eb8169de916ebfe0a36bc8dc8cad7ab1f1e",
+            "7d3c32161cafeaa7076391cc72071303f8d04324607ef55731e91a3e0df7a1be",
+            "8cbe580b0cd83cbe45119245ca164fdd111fc260ec77e0206821e6e7b2f2d4e2",
+            "2d432b965511a4d93ae8db3df2f533588be7b89f19bc9505dca1ef7a6ab6dd7e",
+            "b96735728ac0322e2c2b518374e7fa03f208bd4bd1aa4612995c5292572da3d8",
+            "29fc9b7c8ec376e0bdbaab4fe0da58cd9c22221573e846d8f6dea4bba4b20ab8",
+            "818f86ebeb83c25dc1e01a22c6b8a2acbfc7fd76ed2ec77a76a2973450552ca5",
+            "ec786d9b453f9af65a9b2a4f0566b61fdb86921899a0bfb800451ca79192dde2",
+            "9717e20b939e988a0a6adb4fa1fb3b4d8bb7f7785132d24f45af7d6452e0a483"
+          ]
+        },
+        {
+          "thread": "49574167",
+          "title": "AI handles incidents, engineers lose touch with their systems",
+          "sourceHash": "6fc4ae684fb6ef4db2f936820366ecb950a5f315176385e2a1a0fd9038e0cdb7",
+          "candidatesHash": "d4189ea79d7bc9f5a38d910949c83d07605b3cda98215eaf6e844437caa3535f",
+          "comments": 264,
+          "chars": 111007,
+          "axes": 9,
+          "twoSided": 9,
+          "noCacheCost": 0.06322875,
+          "billed": 0.06322875,
+          "seconds": 46.202,
+          "review": {
+            "candidates": 61,
+            "fullyPreserved": 9,
+            "partial": 0,
+            "missing": 46,
+            "excluded": 6,
+            "flaggedAxes": 0
+          },
+          "warnings": [],
+          "traces": [
+            "169a2714bf023eb6f294587c8aaf1d69a4e9439413a4c6800dcaa0eba8be8f73"
+          ],
+          "scoringTraces": [
+            "df7a9bf7181ac210314531cf537f107aab44db893d59b07a4064f0a37d58cdd0",
+            "4da59afb9ea3271ec0928e6ad850cd2dd67b9aedd9929f134551e8fb9349602a",
+            "1ed473960bb8f2ed97e255305bcbcce637895446f06ad4709620fae48b64cd04",
+            "936294fe7883d3b0c295be00d082c286c1b5949a47a3e709c16417b632db181d",
+            "74963d81b09d3570baa5b4d3d341335b44852af9c74db3d493335a8dd0caa892",
+            "07e716b0faed7674a89f529adb4ff5a170bb76987dbe2867c1991dfc6bcd0615",
+            "35ff5b98ce308db5489dfbda8cc6ee5851fceb9c723737b2f9e429669a696579",
+            "d0cbbb4978c78f657bfe2685d4a775e6cb90b478b0def5831c7256d41f4e4c4f",
+            "4e2982010c62fbd807d60f803562257def9c12386c34152550bbad37eeca8a87",
+            "dfefe6efc4f9be8393f3f221f0932c963e5e7fd56f1f6ea96bced2a950f0c7fd",
+            "ee51a67bc046285f87745e1a57227374ec05374e321ce0722c440310218b3f05",
+            "37b7d88e47f0aeeab930fba91baa45aa23aaf2de5244009950ec6d89479e02df",
+            "f28bb91f40d06b2e988aba050e5497d0047c39a8f41286dfa28a4426482eceb9",
+            "b7d664ca866a06170bc93d7e88e5e4f00ba23faafbc995254e779dbf6bfc53b2",
+            "79b2ca155dc3dd59f9f7f450f41b8cad7534c541f99c41c55d00e780577ef305",
+            "985a221b979a17a53122f0b59eb6cf8faa4c18974adc09676852f547af6ce51d",
+            "ee7284a6acaad9030b522e6a0df83edaa829b5b4f7f95891eb06e45d16d12017",
+            "74270c1d754d7694588b399be85ee5af0c0a44cce0305fb0a443dd5b9159cbcf",
+            "c1d54eaf982bec2201932b77b8125f555d66ecf54788933f7d98341be82b557c",
+            "068deb8b262595c53fc65ffcb43a792b4cee668f4293c3695dbd2e6deccf9d99",
+            "0bc76da9bbe096c454c92ef9c13c50c8383cc7cd25216fae2ae8eb9022ba78cd",
+            "e71feb003039088b0058fd7ea328a79a5ce5ce6eea8f42cf83f3cc4ae3adedbb",
+            "c80d0c27d456ef00c917975c992d3a46e4e11fc97c0feba6175889e9f02294fc",
+            "5bdb8452fcbcfa7ff53f513a6f7b199e61e492167f2f9fc6a03a52d6ed67b3cd",
+            "e74747af7b1b6d1e5bdf8c846423ff623ac7b96c595a38083d197c7432569d6a",
+            "fdbe549692b83d3a19713f86390b5815f307a79787f65e7a5542fa87bedc6a95",
+            "3862a0501ce244099d11672ac71d6ae1d977c5fb609dd2f8b492457b8972e176",
+            "870777a56837daa7a9c708153a87b539933edd37bc3c1674c6ef00c63f6394d6"
+          ]
+        },
+        {
+          "thread": "49568506",
+          "title": "Formalizing Fermat's Last Theorem",
+          "sourceHash": "932de4759687b9f7c1e99f9ac7a64898bbf82d58c784ac3b61282d033e7d2451",
+          "candidatesHash": "7ccf75cb18188b5c09f5f24718d9d5d2d6b1a6f8bf27db95afb4eb9390df37a8",
+          "comments": 337,
+          "chars": 99987,
+          "axes": 16,
+          "twoSided": 15,
+          "noCacheCost": 0.04602675,
+          "billed": 0.04602675,
+          "seconds": 31.449,
+          "review": {
+            "candidates": 46,
+            "fullyPreserved": 24,
+            "partial": 5,
+            "missing": 16,
+            "excluded": 1,
+            "flaggedAxes": 2
+          },
+          "warnings": [],
+          "traces": [
+            "c7781d21adaefd36c8d6c091c1d2d1db7294ebda163f5448ab715cfa992e8660"
+          ],
+          "scoringTraces": [
+            "685dc5552497cf1b012fde9cdc3d6846c51ab377015240b220bd1cbe25818be5",
+            "c834ea561ff76fcb937b0dd80ae19f63928378a8640e256bd2cb0668a3e9ab45",
+            "9bd378777c622696e4f6f631b58a1206dc20d7bf91f72c0429146d1ec3f31de7",
+            "7e5f9f9f272e26931c9bbdf292974867aad5b3965e4465de1e66bf030a66cf85",
+            "f97b89b071bda56f54b9e54d1b0650927f2a18cb3dfab21d123f263b5cace1ad",
+            "658409e912fe58fb18610302661a3c822b4be1373646b3a246efa300ca3e69fa",
+            "8dc4ce4f76a755cd6d05b714e43c1c60f3aed88ce5c2efeab632b19d4a103434",
+            "301ee33521c955a200df352f6bf66b7a2803bf08387ea7673bdc071d22abf3fd",
+            "9a75045251ea0e252cdfd66074488648a1d0be9234c5235af9dd8878f993c549",
+            "f95a7e664a828f9639e5eb1d672c0583e6b084166b557b7a49773392403de21d",
+            "c6623e0dcf94deb5e211aecb04e6a47640818ba113d9bf770c5654be38691518",
+            "39fa06185bcdd3892b02845162122656fc1893ebacac4d0b4cf48cff6eec31f0",
+            "497eff68d373d8de8c79c13d21bd7b21cb6f00fd676b66d8b8830b82f86926bb",
+            "8b1725282766aec29608a48c78d14808f36d0e66656832fc80c0a767fa147454",
+            "a4a1b6f480e1de1b57ec25448baecf8238a9bc0cc4d4fa302bb4d1bb2055bb8c",
+            "f1792930b02155a6cb3d6b563932297d792d6f3c65612d9b3a7d88229ac48ec8",
+            "75b5f4a06476db13022d88192812b9c22109a35f31aecbe36e8f295fa247b037",
+            "546b6d4df5d1bcc9b13dea42504f6bf03333d514296ce568b0d2affe005a6f07",
+            "d2b57115fa17c222c1522ac27bd3a6d786620c0672c3128ee9c1afb3ca68fe23",
+            "cf16657f61896121175718c9932bc05aef9ab82bb57349e949c2b18f11f07801",
+            "4eb4a0eda243ea7a22c04d32eef75807f788e605020a0e4611ac58cbf6ed972b",
+            "c68d42fc21d6efe8db03f316ee7fb0a59fd81f4d923103041c8749de66bcc8e9",
+            "56ed801740eb6ae211259d19b0ee9a8436ca613e6202c34f18da6731ca8f87d9",
+            "6f4288a09c6fb15505186f0ffc931a41c21201bce85e19a93c41d330133c6505",
+            "bcda73edd8775cb8341cb1ca2b6b5755eada16edf14adc1de7e240aae739a8ec",
+            "acc90c4e1c14dcef546198ce6c22f3602f85d003ef6d592dfbdf447cef39a75d",
+            "189eb78e43261932e5652e9a159825435712a2b811f6dd1fe1100c82653d1cfb",
+            "f44597b7f7276b6a77e8c40cc8bf95ddf71215860b10cf5c8bd71102ed74bd86",
+            "6c940455f22add599860fbb9625b87fb09dc20a713514608ed0614e22a3d5953",
+            "7d1036499c61b00d4395d568055f128f4ce7f804890074639d3ae67d8fa463af",
+            "d5e57b4ac09c44344bdf37fad5b2374f0d3656ee2037e520facb93c6cbd643ee",
+            "c42d20a54f725273300c11663d3811f5c0bea5906befebe5ad80c7078fcc89c6",
+            "2178645a301521807ea819740139b87c7bdb94c4994305c01c20e12ec48b950a",
+            "d982e3ec508c07bc11b827b473b565d47bf8510657471283c15eb599b8f6b458"
+          ]
+        }
+      ]
+    },
+    "opus5": {
+      "name": "Claude Opus 5",
+      "effort": "adaptive",
+      "benchmark": {
+        "comments": 1234,
+        "axes": 120,
+        "twoSided": 103,
+        "review": {
+          "candidates": 233,
+          "fullyPreserved": 138,
+          "partial": 61,
+          "missing": 24,
+          "excluded": 10,
+          "flaggedAxes": 9
+        },
+        "costPer1k": 0.8714789303079418,
+        "secondsPer1k": 364.9149108589951
+      },
+      "threads": 5,
+      "runsPerThread": 1,
+      "cost": {
+        "noCache": 1.0754050000000002,
+        "billed": 1.08022,
+        "usdPerMillionChars": 2.3628367971559965
+      },
+      "time": {
+        "seconds": 450.30499999999995,
+        "secondsPerMillionChars": 989.3921117563436,
+        "minimumSeconds": 45.144
+      },
+      "runs": [
+        {
+          "thread": "22866284",
+          "title": "The Wolfram Physics Project",
+          "sourceHash": "bd648399c3972f037028531d3e9ba29cddda8e7f78b05826e8d11d94bb84aa4c",
+          "candidatesHash": "83eaa36cc7fb81c7bd49e461a7c9ed9df403d2ce54a59146b9d020e562fb62d2",
+          "comments": 323,
+          "chars": 165268,
+          "axes": 32,
+          "twoSided": 27,
+          "noCacheCost": 0.364275,
+          "billed": 0.36523,
+          "seconds": 152.42,
+          "review": {
+            "candidates": 76,
+            "fullyPreserved": 45,
+            "partial": 22,
+            "missing": 8,
+            "excluded": 1,
+            "flaggedAxes": 2
+          },
+          "warnings": [],
+          "traces": [
+            "fd6bb8c2f6a86f8237f50bdd1e321410933680938532d1ad6a01db6e73f53656"
+          ],
+          "scoringTraces": [
+            "e133d75890c47b3e289f94886e9d56163b9208de928d71694d11bf44c1adbcf0",
+            "cfde93d442e582ba411d4da64e1793f558238f815afef341c7f2bccfe99df81e",
+            "df812545c4b37e6bb20ca071991e93b6c48f63643724d7c4f0615c7c8eed7902",
+            "8f24879aa80a0d965b3bb1891c9abafceb6578be55a9f2cf52bfc1c619e67879",
+            "f358d16c65458d8e0ba92d3ca3512e168255b87626a2897c809a4d171ebd7de3",
+            "2aad986788c9a4a59bfab5c47a2ae5c82385d95c2a8ee30425475a0820abaa79",
+            "05b800b7b4d4bb0185e02d318f79ce430e2c2891553c94ee5627505117771c5e",
+            "5494c3d7eb2c1d03fa2467663181e38b4f331c8ccd57aaab6b65126615f00e75",
+            "b31ba1d4ad0f94c56418e4114681767db74c7874bd47b449d47b6e9bea3fc480",
+            "6a9c37f79574f43ae05dd0ce4e86018d47245710eff8a7ece987e0912ae9a70d",
+            "595b47d49689630f27ff99a3fb409b3a8cb27faf8070b1166354d71fdff5ec50",
+            "0b57060048e0f39726b82fac45088dc740738634aafecfb687544be474b6e2ad",
+            "ae0084f7d3ed2337c79faf2a168c2e94dd01a716a8575e9ab164d7082973209a",
+            "3fe21b7d8ccc9f7cba731da5d8be24c15c00da4c14d05c9b842b5345617d24e8",
+            "9f2b002925a492c6b5c0fe0be42ce6e250fbab4e954d8253bc89ab26a52dca0a",
+            "1e2cc9298c5f76b53c1e544d40cef5c1f2067e20b415191bd26b45ebfceb1c09",
+            "04bdd338d505024703e4a8b981b9b1bab42d651d28d043cd82c2138e0b101f2f",
+            "78574d9818a6949711c3d4a1226bf0da9c99cac597afb4e899bdd7bc1592bcc9",
+            "7b7647617375c58ba46ec12cc9ad255631c2882e13ea83d53ce08d5fe663cebc",
+            "c1b4d83152cfd60d85d1694f055cda9ae3f782570b7bf6b9db4c578d3d47ff08",
+            "1a1b4ac9648b803112f2df40a415e989c0dc3a485468e41903a57f506e0f40ed",
+            "1ebf7197d6f52015e8999c8a2c4b11c2ba7afe672ae480381d7a997a7b859c35",
+            "46183116eb7218b51818fda192e42ea6217960dfc22305315e3ec4130d3667f9",
+            "a30eb1ee0102d58a2691c8ec9b6a9493dfedb55091f5e85ee42aa793a12e1640",
+            "fa76d87ec4f91a7e98a0fe9fdac94f9a4d709d8aa64aacb4ad3e82f76c600dd2",
+            "4a536db895d935c27591a49c740583eb2f0b396049b837b60246d6151d514a97",
+            "81bdb4c564908f54a0e3b338a7d2359bfcba6657a56c0a76ff03c5504b4fe5f4",
+            "665fb7b5a33827741ff7c2de10f8e21ee499eb129ee427923d786d9aaf128ad6",
+            "32b753a6f34a84b7a960734406e2dc3b1e0cfb48372f5ab331aed4bb25de321b",
+            "859e37251f48fa0a639ec6b141954a7aab24db6d7bf95e7bfcf513a29da727a7",
+            "f89e314512b45c0ca7d7f35da24455ed65b999dd40a708f12dfd1bc58e94186a",
+            "88c04a2e66b9e4742ae9995f3f472a6bd44086b3deff7b6d6de722056afb049d",
+            "bbad0566964d31a85f4a205377e448c975e3ba47a1e30b552b11f7a5176351e9",
+            "62e7cb2aed2a66dc70ccef268d26a9ebe21b6321b42d361933c7fe6e7474ae94"
+          ]
+        },
+        {
+          "thread": "49571634",
+          "title": "Nitter has more working instances than before the takedowns",
+          "sourceHash": "9010c148283371c1d10e3d1146d72102875b4eeef80129c14b6d6574a33b06e8",
+          "candidatesHash": "48cba40b961e857244e06aec349a9850ceedcfdf51a61fce7d1d4dd96ed25279",
+          "comments": 173,
+          "chars": 43359,
+          "axes": 22,
+          "twoSided": 19,
+          "noCacheCost": 0.15632000000000001,
+          "billed": 0.15728125,
+          "seconds": 66.096,
+          "review": {
+            "candidates": 31,
+            "fullyPreserved": 22,
+            "partial": 5,
+            "missing": 3,
+            "excluded": 1,
+            "flaggedAxes": 2
+          },
+          "warnings": [],
+          "traces": [
+            "dfa5d35a7b6741f7ea9df7640093b6e50ebb1566caf4fdfaf7894efdc7b16dbe"
+          ],
+          "scoringTraces": [
+            "ed0e506f32f8f3866769dba3b95b81cb1972c658ef62f91ac33938b810134e48",
+            "4b152cb09a0fb6ece89ae769d4e18cfd551bf56981429442584c78e19ea7b0a4",
+            "9457a1bbffea7e5c56f853f5a96f9d79b3aa1c72bde27774773be0354d80943b",
+            "68ae6305d6a2fb99345d9074c3d4ad8ce001b6d027c8ac48895999e13e8a2bb3",
+            "0505f3bcb636c7dbd6af2f0964a78369f1a4eda43b10ea138e4d8ee4c384ce5d",
+            "12f30d04f7e0090f742f578a82830266f0022541d60cdf2ad5c18f1c2603afa0",
+            "35030634cd13b6cc1a051778811d8997e957e6879b31426d783d4bc05563d956",
+            "f091438ba0e8ff742685e3109b13eb7894be5d1b5237ca29c57c8904ff651403",
+            "f8a110b510d23ccde63c277e480f7b6502adb618eb2149a1704c816fc5356c0b",
+            "ebe8de4b4ec31fd1fe8529144a190d395949da066650e0e4801103c24a9782c5",
+            "5e18708a1652f4dcd99e7bca9d620b5b1ac45489e6a8f35c41999b915de921a4",
+            "d704069cf28508c922cde729b2becad0684bdf6e107c585e29d8ff8f97413fc8",
+            "97362f10ee0834b6c4001c49dd0a8867141d0d8147a6a2bc8778de6f6b0e6210",
+            "277774e0dd9422fcb5e2015349007ba4dc4f036de993844e43e5f8e63ecfc661",
+            "841f399c97d70449e84ed6fc4536e077b59e154e9506a4346cea0d16f5001231",
+            "106c2500979f162012f1976f5df535ea2ca3f3f91e5f9b928800b1ed823dd192",
+            "562919e9aaa3a34725eddf34e34730a5ad9bbfa05ede8d8b06ab1cb649447449",
+            "c269cb4f0b84193c45e80680111154e915dcf2bdff50172b23d681678c4641a7"
+          ]
+        },
+        {
+          "thread": "47155526",
+          "title": "Woxi: Wolfram Mathematica Reimplementation in Rust",
+          "sourceHash": "92ab6f1d3c4e8210f101af4a18c1b3f3fa3e30466db83e5e289b13d53c250489",
+          "candidatesHash": "6223c2f97f182edbfc17c3b05a60725351c537af070b51e7fa0c471ce4612a57",
+          "comments": 137,
+          "chars": 35512,
+          "axes": 13,
+          "twoSided": 11,
+          "noCacheCost": 0.10713,
+          "billed": 0.1081025,
+          "seconds": 45.144,
+          "review": {
+            "candidates": 19,
+            "fullyPreserved": 15,
+            "partial": 2,
+            "missing": 1,
+            "excluded": 1,
+            "flaggedAxes": 2
+          },
+          "warnings": [],
+          "traces": [
+            "7a1f348abec586f2592b4077263b2c63e58dd5cf90439649fb0e955c1222d76d"
+          ],
+          "scoringTraces": [
+            "13070fc5cf4184a743aa40148f23cfe49c573af0bb4bba5e2a4d9c97039bc929",
+            "f1a7d2a3c6308cd7b4a5e828df30c1cc46f417ef19ad6ea1c7c021caddca3dca",
+            "ac40619580118de79e675aef787735ffd444f200fc2cb5c377bbe7b09cd32312",
+            "b85cc625c79dc01788dcfbf9f6c54b04a76ca8a7f21d325a16a17356d2249221",
+            "f0104cd76545889038c45c8110321996eb6a085eb189cbf5c3861541954dd98d",
+            "171a44cb036947a3bc23cc046d2d6652989fa0d4e63908ca790de9f536a01528",
+            "3f21cdceeef50c1dee42d97d3f45f5de5794276e94e8b4461ca5ec4b80dba5f2",
+            "cb6750213014329780c26e02dc4e3b1d2ce1974ff6198dfc10e47deeeec488e8",
+            "b09fcc5d52ca70a8ae3a09a64c0c3768159556c593195daf34fd5353842e3263",
+            "5d5bbb802814eee61dd9b095fb00e83b78abeb28b3f6208dcdbb4bded308a7c1",
+            "af66df8b9208cb760f6c9ee0a90c4de69167d0f9266016614e0572c09a2fc1c2",
+            "93feec269b37caae51be87de9f20d2f4ae0942a5d8d6bed9b1233ebc569bf5ed",
+            "38f2f4670e30a4f7c9593daa1f812fe87a22493505a721596f449cc487586c1a",
+            "c2bfa568177dcbde2d4de3d968466b9bf8dd5f5c0af4fa7edf2163e00a9d8df6"
+          ]
+        },
+        {
+          "thread": "49574167",
+          "title": "AI handles incidents, engineers lose touch with their systems",
+          "sourceHash": "6fc4ae684fb6ef4db2f936820366ecb950a5f315176385e2a1a0fd9038e0cdb7",
+          "candidatesHash": "d4189ea79d7bc9f5a38d910949c83d07605b3cda98215eaf6e844437caa3535f",
+          "comments": 264,
+          "chars": 111007,
+          "axes": 24,
+          "twoSided": 21,
+          "noCacheCost": 0.248425,
+          "billed": 0.24939,
+          "seconds": 106.76,
+          "review": {
+            "candidates": 61,
+            "fullyPreserved": 20,
+            "partial": 27,
+            "missing": 8,
+            "excluded": 6,
+            "flaggedAxes": 1
+          },
+          "warnings": [],
+          "traces": [
+            "a1eebb1dd2d567773b7e67e72c4dec83d8f8e2ad8d917c4b4219fd52c9c7316c"
+          ],
+          "scoringTraces": [
+            "d171e2636890a45a62bc94486cac60611507234064fdc59cf1133cf46684d878",
+            "16f90719a110917098c6d8b6b1f146355cad91070d88d4058575d7fb6d0ec7da",
+            "b69fa103551f04096402ad9c15fc9f4574c3a0d9811e0bb78c12e1d8a1059dff",
+            "78bfb4f3f05e33b07a43fe1197ed0a3edd5a0fd327a9df0a32d0b070f9eaabaa",
+            "7b200a3c11fd275d997d61198d67596f7dc704cfd1a8944a1593a216f6c31c68",
+            "8a62f5a02b28edd74f010ced1cab908affe75d344fed1772674d4984532b9cf1",
+            "04a6f3ee3032a975d2aed72be08dffe2134efc7ea9a4af1621ca3db02c1248ca",
+            "85000d92949f84035377d8b4be02150e4a3eb32cb0d393d6afdbd06103830a4f",
+            "070fd6345f300eec6cdcc0b66efaefca785cb76689d0b7cd4e7314d4efdb84ca",
+            "80e80d30e7d9ac65f2d8125f1af67992441d42138a0165aad01d36c6e6fb5dd8",
+            "5b8664a0838350794716289591eb105737c6adcb9dcf6a1c2a77030bf08c10bf",
+            "f2f8087b64706a244ae28d7794081970478d82d85be41d7baac3c5aa622f6bee",
+            "eb18d834daf784032578c55cc7d4faf865e9a97c01b697d36bc57320cf042d47",
+            "17e2415f8a35d1fc1ab4b2ffaedf84da1044c156cd084f6f0186cdea15b42bd2",
+            "8529bf5ceeadc2cf01a9eb4cf3dac8d97c2eb096abbd4deb3744215bc151597c",
+            "fd60aef894034581ca9bbb3790cf863e35b802a05f47a0d883199705be244fa6",
+            "9286ce40ed6695f00cc94bd39dfa2fa1c6052a94ddda0c207110c92d1ce42c70",
+            "81e005ce36d79f34a5ce51aba7d9017ea7a2e5ee2cb95147aa7991a7e051e3db",
+            "3ee02f6178854a3a2f4669db2785fe5fb5b281f55a4c14eff01816c01b3f86e1",
+            "7f2ac4e5fe5ba473959d2fd417abcc8252e15775ee4000272dfc7c6c3f88c1cd",
+            "4a00482bab99dc5570736717e8cc511e49242ddca96e383e9e76fcf2d4ae0819",
+            "f7a56164060ec9a333ae1619de6a3bbbfec78b2493db0ad043fbc392ef71095c",
+            "3651dd32d25478552fabf7b69162ce060845213709c08287349d4d38ec2155f8",
+            "6b642c55025567daad1782a8687249a21dae65c89ee13d1356d9b497d19ca22f",
+            "8ebe6279d0c6e2b97f9601ddbfdae02c2f08455208b65f1bfd832f29759e9ef9",
+            "8ccca89de052d362d467165971001cc288b0cf6fcaeb2b394654bf658914ddd3",
+            "54bfb0cfa7c2371532e7952e306e647fe1521a5c5024ee438e6c1e5b2ee773da",
+            "34d40e64edb72a6c03c10200302970ea4ecb8bbcfe9e407a2be9daaca5d9993f"
+          ]
+        },
+        {
+          "thread": "49568506",
+          "title": "Formalizing Fermat's Last Theorem",
+          "sourceHash": "932de4759687b9f7c1e99f9ac7a64898bbf82d58c784ac3b61282d033e7d2451",
+          "candidatesHash": "7ccf75cb18188b5c09f5f24718d9d5d2d6b1a6f8bf27db95afb4eb9390df37a8",
+          "comments": 337,
+          "chars": 99987,
+          "axes": 29,
+          "twoSided": 25,
+          "noCacheCost": 0.19925500000000002,
+          "billed": 0.20021625,
+          "seconds": 79.885,
+          "review": {
+            "candidates": 46,
+            "fullyPreserved": 36,
+            "partial": 5,
+            "missing": 4,
+            "excluded": 1,
+            "flaggedAxes": 2
+          },
+          "warnings": [],
+          "traces": [
+            "d0676e9ef940ee54e9854cbc8bb30ccfa5b1de477cb7b3008c30e8941144c31f"
+          ],
+          "scoringTraces": [
+            "43a276fbd0c6c7f25388ddb5df8ee99b93273d26bd73be03c9048f9a4f42728f",
+            "b70614b4a6363639897675ea15d8b451bd5d3c5e338c2908e3313dc36c7653ab",
+            "b0de3adffbcc39e2f7fe32148f0864a60a78ab9734147f83b545a771b1987be4",
+            "821f876837f6675f67063098ec8645712fad9460dc7747b249e7e52b792a8bf5",
+            "afc1aa757a521f13c737e18e437c39a804acc5e99c3a4966f847ce7e54288e8f",
+            "8a4365a1b963df1b05bd5f5cb742a275d9924e6ddb2cddf6bdcee22954b1e131",
+            "ec7b24a6bb7fbf349bff2d7c105a750138bc1c5566c85128a61c2308149a1ff7",
+            "f0d049edb551084d4601d32f304fe7700ec51c826c13cef53818f7d3df8d1c05",
+            "f9b91cc73b7c013def2e5f420ba0ae16ac1f6e9a5c551219b94774830094e4f3",
+            "a4c478ae36831ccb661154a5c65e5a4d2b541a9c27baae8f36aa13fff9ac1c0a",
+            "37c8d1dfa6c369ee762d54368c81ece0a5817a72e213c483d876b93f296d8884",
+            "85a968610c6b80ad278d1f337b3b96460e0c2139375433bf6bfd9be7bfba98cf",
+            "58fc0cc37df69c7a6d01cc7b91757c51224e9665b752591f47cfd4d29ade139e",
+            "9cd839660087a6cd3ab00e4b5b08a6b78af26cb0d61ddc7cd6e2d5dfcb511f35",
+            "78a1efc55cb50807633e1e16a47206863f65b540a3b1c62ad72163db675c2615",
+            "f878c76ef64d138239238e0c7d2dce2db6c0f7939f698ca75041f3fbb2e7592e",
+            "254b4484ce90d180afb40c7c95b2353c8efe34b149d5e3b552798dc83156b996",
+            "b3c94e1956e1eb8346543fa8a7f2105193f376bb2add847ff4af504026b33fe3",
+            "16d1e72fda344ed362fb42c74be31e8bd5a14bfa6ab2a7cc998ced43fcb560c5",
+            "b0314008df0bbdf19739b2ddeb69934922321da1e887ee73ae1139d4db3a5c36",
+            "a6bea737c265043aa5b121b407de84800f4b445c56993c8cfff48965beae8560",
+            "3daa8605f27d367e9ca434320220c0e9e01546b143ef7d805f9e6eac8d3b649a",
+            "ff5d2479f108631c0718101a5f93909b365902b285abd779101efb4ed781f67f",
+            "b7aef13089dee3f6a142f53ee0500283b2604472cb6526913db65658d0f7d311",
+            "7e2cec8532a34a10282d469885e5ca0c57d211572365fcdb0d263c522e588829",
+            "21c4cb8a343926f47d74bae427dfc3114711f9901bf9c033e0a6e12edc286d69",
+            "0fbfbb6a154c67a9e18c6862d7a9c2583fdb1d935c19e58bcc81f416f5f85a0e",
+            "716dac17db673b18ba48e02b90d961d4585e3a8bc905a27a530c49bd50468633",
+            "e7f82e668ffdbfe7334aa4aad7392df79e3c8642edf837ac159e9884dec4320f",
+            "742015e6499757563e65d8d401a9484f833f9aa8522d552d41ada6ae9af970e9",
+            "4e011bd50232a6ee3f160ee75ce3cbc1106287cf4e69543b510cc553939b2a6c",
+            "e17df2fa9452d4b78b8f5954d0f2f07cd70290dfc43d0b11ee6229045fc23351",
+            "386906f6fd5aae54ffed707df7fd9d080f0159d4fe30e0a79284ecb9b96e2b10",
+            "faec058d30a7509fb6e5c7e85eb82c110c9c32cb564dbc10d728e64f679f0536"
+          ]
+        }
+      ]
+    },
+    "solLow": {
+      "name": "GPT-5.6 Sol",
+      "effort": "low",
+      "benchmark": {
+        "comments": 1234,
+        "axes": 164,
+        "twoSided": 125,
+        "review": {
+          "candidates": 233,
+          "fullyPreserved": 177,
+          "partial": 22,
+          "missing": 24,
+          "excluded": 10,
+          "flaggedAxes": 4
+        },
+        "costPer1k": 0.11313452188006483,
+        "secondsPer1k": 115.41004862236629
+      },
+      "threads": 5,
+      "runsPerThread": 1,
+      "cost": {
+        "noCache": 0.139608,
+        "billed": 0.147595,
+        "usdPerMillionChars": 0.30674110644580815
+      },
+      "time": {
+        "seconds": 142.416,
+        "secondsPerMillionChars": 312.9107315883489,
+        "minimumSeconds": 24.651
+      },
+      "runs": [
+        {
+          "thread": "22866284",
+          "title": "The Wolfram Physics Project",
+          "sourceHash": "bd648399c3972f037028531d3e9ba29cddda8e7f78b05826e8d11d94bb84aa4c",
+          "candidatesHash": "83eaa36cc7fb81c7bd49e461a7c9ed9df403d2ce54a59146b9d020e562fb62d2",
+          "comments": 323,
+          "chars": 165268,
+          "axes": 50,
+          "twoSided": 32,
+          "noCacheCost": 0.037250000000000005,
+          "billed": 0.039806,
+          "seconds": 28.927,
+          "review": {
+            "candidates": 76,
+            "fullyPreserved": 56,
+            "partial": 16,
+            "missing": 3,
+            "excluded": 1,
+            "flaggedAxes": 0
+          },
+          "warnings": [],
+          "traces": [
+            "4f30017de40b1fd0244b185551253e1f5306f6b05365a60a7caaa9d4cbe8006d"
+          ],
+          "scoringTraces": [
+            "160f5947baa8294ef60df058a6dadd67e9d5ec99e25baa014690306e578074c8",
+            "7de2ef06178d00e72d6e2f6d7015247cddaf01c662751397b4bb3b1991c8c104",
+            "22b176fed99ff312fc8c8176ee7af6400f0c6c6d23d25780c41f4e4a8b7bc1da",
+            "2292a9b003b380f274eb1912250f0cc3efad7d6997f0bef72a97ca07fdf2708f",
+            "a63f0375a940c494424f6e3b367be0cb70e8028a576f173c2adb05a0203ca09e",
+            "7f494186d61fbc472105af7e5a0905b19a42e342670aa65bf57cab8aba006109",
+            "d40ce4d5b01e3681c924d80950ded6ee1d28970b66301e2f3973b0019892e94e",
+            "56a3b22f8cfc1cbd634c1986bf93887f427c646e972859db04fe716cf7b58625",
+            "f08aaf2981736d25c203897115affa87370dfe6f586800796f9ed2ef81e646ef",
+            "a8635eb429dfc005aaedfcc47a675ebe64fb89e1495b7d49ad0db899c7524cc2",
+            "e40d154f52982d81469d9ee2f7b9f4ff10519e948c8db407876fcc46e037aea4",
+            "0546b2b45e261cd04c9385157e01da312b25cd6965f500953b89dd3535589a65",
+            "f4d5563775ab35c25c287d6c2a9e61c65f3c55e980c808765f2a2db6d38a9d90",
+            "621ca441c03db2804be66ff92a8e4e25d0c4416fdb86d6917bde8c17d1b5f8c8",
+            "9b3126be409736282036b4dddd7d1943491b6a1facbe294e1d82520f9d1de797",
+            "1a6da94656fc273257983e2f6028e02fe416b5c268fb5ab6cd5841fa4699cd5a",
+            "bd8e915ec8cfdd3fe2aeebfe4fdb316aeb4cfd7805c700ad126e6a0535e8e93a",
+            "ab1bba41873b62f55dc0a4754775da7aa2be8fc5c981591f17935c9bacc13651",
+            "2c6a75f956961f22979170c7a06db76a67de254dbe5ad3eef9f05ca9ed682788",
+            "dbeb7f7778e9292d2cb824a8f406d3c426662c89a794195ee08c20aac91bb3b5",
+            "eb63ed23dc5e80f5aa56a77815fcd3f6152bf27f8d2bd71c59781c194392e506",
+            "670b400b0e1197c04d8612d3709f606d30a379e19f9126e2d982ebcfaaee578e",
+            "488068196c9953708be6d54c507579d91433d4c3169ee375c1f3b46f128c8421",
+            "242427e051f27945b646b728b3472672a1524ba8d2816ede8263e3849adee473",
+            "650d8905715f67ff81650a5033efca2dc304892e16b808e1ce8462a8071f824c",
+            "cf951e53a85d0b30b71066bf4cd17faf336eb815b0c9b6032b1ca83ae133b50e",
+            "ffc2a36868ade1af672ec0871ab9689f9005ec40406b09c45f722adbf451969c",
+            "3abfdf73637e65175164abd48b6dce3344cc6c4af28a3a156a6d9ea91aa2e78c",
+            "3419b9650cb949500a6406d7595080f1df37e884aa4034dfe219e2541326476d",
+            "df3b731d0d198d58c2244b2b9313854489bdf25f23a8a5bac37d4d198a657232",
+            "aaa7bb3ef483f6f486f1e4a9dccfc066b361fac34043aeb40289057530273553",
+            "ce9dd8d8848a77b67ae1532f4587960433afc50df2930baec666d1dfb0d4df2c",
+            "45f8a7c3df6c9d06d1206a597843e512194d68b1507e4a095f540bbf97557862",
+            "05e72b5fcde35452bf1df009069a04a171ac0cc93effcbe01b15f2f2efed6a26"
+          ]
+        },
+        {
+          "thread": "49571634",
+          "title": "Nitter has more working instances than before the takedowns",
+          "sourceHash": "9010c148283371c1d10e3d1146d72102875b4eeef80129c14b6d6574a33b06e8",
+          "candidatesHash": "48cba40b961e857244e06aec349a9850ceedcfdf51a61fce7d1d4dd96ed25279",
+          "comments": 173,
+          "chars": 43359,
+          "axes": 26,
+          "twoSided": 22,
+          "noCacheCost": 0.021882000000000002,
+          "billed": 0.022951,
+          "seconds": 28.408,
+          "review": {
+            "candidates": 31,
+            "fullyPreserved": 25,
+            "partial": 2,
+            "missing": 3,
+            "excluded": 1,
+            "flaggedAxes": 1
+          },
+          "warnings": [],
+          "traces": [
+            "9b028f93a3adbde93da2ca481b24128973698c2dbe75d529f52db6196dc82148"
+          ],
+          "scoringTraces": [
+            "f6ecc267782200b7e851cdd1d25c23cddb31f151d47aac15c38ff4da8c958cca",
+            "f2e4423cee04dd3ef327967899bfea4790e88e34854b9a47a36112c9d9d2c597",
+            "b3902f33bd686fb7b6414d7364bcb4ee05c6a92078d63c4d0d3e87e08fe2c17e",
+            "61f431081b3bdfbbee8cb4904e68f95d69f80e8a4717dbd5dac7cb8b11b6711c",
+            "5430652a46361e92ecdad827b041e6ef7d982ceb3670ddd541396cd05fb4bef5",
+            "31c07848130dde3a0e9ebdae79e8cc47721e26fc0fd6e6b639c81ca45abc91ec",
+            "4bbfe811e53554d0e7ffcbd678e0b18bf807e6b989fedff4bcd247fa7b2c80a1",
+            "660410bbde50a00355139603be96b27c6cbc83eb4a92bdde83e7d458b9435fe3",
+            "c7d7f56e2d64a4eba7355d533e308e6f2f02cc143a721bdf17f2897b3ca27ecd",
+            "bf738879730da077d3c7e73ac680ecde4cc0a113f408f043b4f2142bbfb0b7be",
+            "7962a5537f34eed60a9e73df017671ed42235195119618e2ce679443a50a32a9",
+            "9642d8cabf9599506e1a8aef671f8abab70cb933a447991e8324d0703b857618",
+            "1342223193948bab05cd5be062c291c82fdfe911a7cbf5ea005853ef9d4460f3",
+            "4275f3ed8e952aa7e03a8239c61a2819ff2e3d7a50ad9f5302dbdf091246bd9a",
+            "dec1a2e1cd2d83b7fa68d945ab85d9b9e7283a25a5ed310ea8be0792ca338611",
+            "ae43c912edd199b6a284743c4d80cc4a1941f57e3a6c71b195166cda60582a5b",
+            "5df531733abe4d8ca122a82cc1a7b3d17f6bf729c47e95b67caec10dd3ebfa55",
+            "599fa2339eda6a1f6649cb259afcac5cd8c612480543030e0e1f0a8eddf75da3"
+          ]
+        },
+        {
+          "thread": "47155526",
+          "title": "Woxi: Wolfram Mathematica Reimplementation in Rust",
+          "sourceHash": "92ab6f1d3c4e8210f101af4a18c1b3f3fa3e30466db83e5e289b13d53c250489",
+          "candidatesHash": "6223c2f97f182edbfc17c3b05a60725351c537af070b51e7fa0c471ce4612a57",
+          "comments": 137,
+          "chars": 35512,
+          "axes": 15,
+          "twoSided": 12,
+          "noCacheCost": 0.019868000000000004,
+          "billed": 0.0206135,
+          "seconds": 24.651,
+          "review": {
+            "candidates": 19,
+            "fullyPreserved": 18,
+            "partial": 0,
+            "missing": 0,
+            "excluded": 1,
+            "flaggedAxes": 2
+          },
+          "warnings": [],
+          "traces": [
+            "c519ebfc4b540019578580428f862a083ab3f3cb6b92f7423773d3ee6d46a64a"
+          ],
+          "scoringTraces": [
+            "633761dae4a514d744f2201b1a9a2606813658825e762ac6d7b9ea1591479b6e",
+            "6ab6a5aeb231d222748f631becf7ab99acbd452c4b5632de1d6053683c9074f2",
+            "281ce85c246b6c5e987ffb2715cdcc15c5bd0da0626b4ffb5c648d2fa2647c60",
+            "50827b8d84fb367414738eb6f375c1aa0afede19ae1b07aa60e3ae1675992769",
+            "71d849eaf473e79795af229147ac2d62774805d3ec759714badf45cb487d1f9a",
+            "19e73fc876f46159c8a3754cd7f636e16719c0d183aa37d821e8e0e634723759",
+            "dcd8fbc899ef208b14ffbdbdc8af15c88ff47e15edb9592564f5cafd2fcff0a7",
+            "70622785df5abd67aaeed0d4fb21de869538ec18df37c444ce21f8726bbaefe3",
+            "c8fc997edc90c6bcee44bbd4ff63f4c39df07b237d713b57bc2129843b396292",
+            "293fb4ea39465c2bee923c9db4078546c0c12cb302ecf06e5b31b5f9b15ae9f5",
+            "e901e24045d721638a0b735f8f054f055e05c4f411f39acd89d3b99ee804f2f9",
+            "0482cbb77cc4a34f7ace3825d25b94db9838d4341529ffa7c237582584b0e5b0",
+            "f6c8c9a4b1a69f34fc758bd1ccde0f4f4f5a51825b5b0380f16977da4b80e2c3",
+            "5beca5be911b44e5c45d0a53f65ab864a1e4d6452ba6ec32e47e33a39bf1ae60"
+          ]
+        },
+        {
+          "thread": "49574167",
+          "title": "AI handles incidents, engineers lose touch with their systems",
+          "sourceHash": "6fc4ae684fb6ef4db2f936820366ecb950a5f315176385e2a1a0fd9038e0cdb7",
+          "candidatesHash": "d4189ea79d7bc9f5a38d910949c83d07605b3cda98215eaf6e844437caa3535f",
+          "comments": 264,
+          "chars": 111007,
+          "axes": 37,
+          "twoSided": 32,
+          "noCacheCost": 0.033298,
+          "billed": 0.035326,
+          "seconds": 35.102,
+          "review": {
+            "candidates": 61,
+            "fullyPreserved": 34,
+            "partial": 3,
+            "missing": 18,
+            "excluded": 6,
+            "flaggedAxes": 0
+          },
+          "warnings": [],
+          "traces": [
+            "09c2b980fcd870c54f59e8022d96f4f85927041659c4abef8d9a56d0f5cfdc79"
+          ],
+          "scoringTraces": [
+            "2a2cad57d5e18b5cd54b92b795068bde4fd16a931be9c471247e46ac9c357f73",
+            "f5509f40603c8ee95359cdf9a6689daf101f48df34132c9f3a0971ea48019ec6",
+            "5008197dfd73e21780145edea9a59fb6da95cb8647e2b54d47866355a6b2f5ce",
+            "eb444e9e47959a16246a55bcde95992f1ec89f4f20fc0dcf8383c1a74e47c787",
+            "a0de6a77133307c19654ce25f0755a9f3d271a3d36e0324c10ae3034e5b854d1",
+            "df4edcff4a20e483382af96d3f2933d831348fb4582982cacf548f31523b4049",
+            "999e3bd12dc209a7f853b8fb68fa2345bf68893db3c7dfe4de92b882f378e494",
+            "505c1bd4776bbd20ce20769fcc9a30370d465639dab67e22cdbe6271e265c0f5",
+            "a75994fb4cf0c1ccb99a5387437f45d212b2d36c39ee06dc015c4cdafcd9c85b",
+            "03c76d30aef163e24c5b911545fe6a4bf8617ee81228d9139ba33da3743b5455",
+            "9109c16ff037e89121e4ef0f14ccc653111112cc34347e11e9826a6f4b8d291c",
+            "68677d7f96fffb88b5c5ba5d0d5e85a0c44d907efc88195713ab6736712759f1",
+            "284efb4f078e2628ad73e7bc63176712f7bb20ff00a8348970fb22709651527f",
+            "ac3b8a12d82df74e8546f06d6aaca0d17db9cac4a7cde08fbe5f6e432f5eba75",
+            "02283d1cb8978e7f961ed107bd02dbc8d1d76eb77a60574661371494201bcabb",
+            "cbe1900adc698cc348255fb66df94e127dc6fccc4d03b017dc27806182e295f6",
+            "d052093151d6b9023bd2c75dd3fe92ab57235b895d544faa3c363f48bcf21e92",
+            "a053772496a6123e98a0eb85b057d75bd7b7547a7233f05f2102cc73e2ba6883",
+            "64b22787bf637dce5ec858a8d084a83ad072d1fd715b8f6b1bc6da8f987df425",
+            "36aa6a96ae44e04b1a1a61042c5860bda56025ee5f33e98c31591cc7611734e7",
+            "a945a0ae0e7849bdc09d65b840954e17da005c5ff26486895d2b73bedfdfa853",
+            "49100ea2d45e485f242813924107a4dd7dd8b5e2577c65e5f86760a859f8bfb8",
+            "654d41ab5af99af18da64ab3e36b0820bdf381722f00740185ef3aebe063c972",
+            "7b2247c6c50fa761693e67285deed5b6541d32df6b5bf4f649bf34057060224b",
+            "2886c8f9194cc8a6be2cc61f9d44a048ce5f39193aca65a812ef36ec87795334",
+            "88cb38ddc79e4c25d04e0781f50267fbee91e434f496d80b10540701ae0703fa",
+            "f610a0a566a45328e03424237bf077f307782bde0a13e0354b90c200ba3b62ed",
+            "dc7440c6b148119d85e1dff94b7f278f0635ed572bd57efc770fa3ae94d964d0"
+          ]
+        },
+        {
+          "thread": "49568506",
+          "title": "Formalizing Fermat's Last Theorem",
+          "sourceHash": "932de4759687b9f7c1e99f9ac7a64898bbf82d58c784ac3b61282d033e7d2451",
+          "candidatesHash": "7ccf75cb18188b5c09f5f24718d9d5d2d6b1a6f8bf27db95afb4eb9390df37a8",
+          "comments": 337,
+          "chars": 99987,
+          "axes": 36,
+          "twoSided": 27,
+          "noCacheCost": 0.02731,
+          "billed": 0.0288985,
+          "seconds": 25.328,
+          "review": {
+            "candidates": 46,
+            "fullyPreserved": 44,
+            "partial": 1,
+            "missing": 0,
+            "excluded": 1,
+            "flaggedAxes": 1
+          },
+          "warnings": [],
+          "traces": [
+            "217ce416399b2c1addda386ea5edf9142e539ae3e8222abd420c04a2e9f0f7f1"
+          ],
+          "scoringTraces": [
+            "be4043ce63d6f83aeb332045218b0a0331ea2a23fad581c191eaaf9f4515a771",
+            "e6e719802d7a0494fd60d49afde53f1fbaa356d4d8ffa6c3300e5333fd3cb92b",
+            "43028fd6da74d8b7a72a7ba4a9dc6f076da8ffe64ae9d8cff662c35f8f601ed8",
+            "2c09771a91b662bc19243f0ad4df18dd2f866600323775c4b902a2d94d4a36e3",
+            "485d4258db9cf9f22419edf21f0488f42544b6e20048109a349bc7d0eea27bf6",
+            "f3b29543359ce8c64cb30e18fcafb91d0e2f021e05a90a7566343c384584fb18",
+            "31bd5adf5c5d51378f318114388d022a72ee943393b510a2d0f476943a9da688",
+            "6a81e5d49643030d3d61e6c2ab2c18e1c10632f9a3d993381a293a0973981f61",
+            "c6da1fb7c702b1dc1b8e38c96954f0f9b3508356479a8f83bbc792a54374a156",
+            "d5e36bbdb86f045e53ecdc9586a2e0f03a8107598e5e15a2bb7c49fb37f22cc0",
+            "cc8e174b1f581ca4183bb762d8ac30cb7a7ccdac4a38d511aeb71e074dd49e63",
+            "4d6bc0d5fc8672b537c32dbeed6685570671079be69abec02e4833c43e1976ea",
+            "7efdd5cdb1f5e782a6f0f388ead5616c191728ffa3546a198855d9d20424e12d",
+            "a63ae98ae782dabef2b21caf9ad08f0e0343444773710e0b27ada70325d1b303",
+            "4fdfd68dde170dc16cf457215893d1a3d7b53c5b11400542d2e0ceb7035a64b9",
+            "9eb85b50d2514a0021afb59ec70c4df56e550fe90ff7f08d06e62e6993e66fee",
+            "100608d42f11d98d4ba83629c781194d2113d1f414db5811f4a0d29753744c90",
+            "f2cf4a8b017e96829093e7ab400008b2148f768946166fb78f0c7ad4f917f7ad",
+            "442624da6c71be884c548a4d150c2bb49ec5aa9ca18275d3b6eee3375978aa85",
+            "7f67532c3ffe408927320903aed8e346a2df10137b167f5f9fd1ff77bdbadf15",
+            "19b7edb846153fe939955dd1aaab8073d6384436234b1be7d710d0e65bb81efe",
+            "dc2aea9896e27ba19288ecfabb60e2d09021fd759ed6bb19519f528003b6b9e3",
+            "3dfe5a40769243e098c835d4fc0a601b2788f7fd7416f0c3bbee2bae45e62f2f",
+            "eaa0d7cb356bcf32bfcbd714d3f1f4c239abada0d582d9881c111f85d077283e",
+            "de53cbc7627c7e7c695454e69796d1aca15e5f091b8a958292440bc3f4b720e5",
+            "7a1f9c8e1794b49f9e05e4d866a500a84d4a9081a7cc23177f66bd749d89550c",
+            "e11f3d320ffd5287ed3ed1c1bae0c7b89c40ac84f2bf27c0b966ca8c29175124",
+            "981caeb9a230f065679193e6381e7e12ea5fc072684b7d2f6e2f9eec6a8b799a",
+            "9155074edfe68c4e063ac3e7e69da8f5b1b7cd9a84aa8723593167d24e017d52",
+            "46ac7be7d1f6660bb17f1099009792144fc6967e25b9109b75fd6b9f1edde04d",
+            "26d2fa1149fc7815733950e48a67a73eb0c8f618217039e56622cd4e0ed539e6",
+            "6cbc620a79cf8446c7e60d965cb52a93b8e399ab3bc60e5e3579a4860bc72260",
+            "03363127a7d2cb82e98c5ec5086a42f4f528c69125b3ff8c096ef97f16d88c7d",
+            "9f5d5bd1cb64d2a82fe5f2ae737cb2bf4b4da2e49cf4b7370d4d36a07dbde28c"
+          ]
+        }
+      ]
+    }
+  },
+  "reviews": [
+    {
+      "thread": "22866284",
+      "id": "22866284",
+      "mapping": {
+        "V1": "solLow",
+        "V2": "opus5",
+        "V3": "geminiFlash",
+        "V4": "astraLow"
+      },
+      "reviewer": "anthropic/claude-sonnet-5",
+      "settings": {
+        "reasoning": {
+          "effort": "medium"
+        },
+        "maxTokens": 32000,
+        "concurrency": 2
+      },
+      "review": {
+        "exclusions": [
+          {
+            "candidateId": 37,
+            "reason": "Compatible poles: believing Wolfram has already shared substantial open work does not preclude also believing more peer engagement is needed; both can be true simultaneously."
+          }
+        ],
+        "reviews": [
+          {
+            "variant": "V1",
+            "fullyPreservedCandidateIds": [
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              16,
+              17,
+              19,
+              20,
+              21,
+              24,
+              25,
+              26,
+              27,
+              28,
+              29,
+              30,
+              32,
+              33,
+              34,
+              35,
+              36,
+              39,
+              40,
+              41,
+              42,
+              44,
+              46,
+              47,
+              48,
+              49,
+              50,
+              51,
+              53,
+              54,
+              55,
+              58,
+              59,
+              60,
+              61,
+              62,
+              63,
+              64,
+              65,
+              66,
+              67,
+              68,
+              69,
+              70,
+              73,
+              75,
+              76
+            ],
+            "partialCandidateIds": [
+              1,
+              2,
+              3,
+              4,
+              14,
+              15,
+              22,
+              23,
+              38,
+              43,
+              45,
+              52,
+              57,
+              71,
+              72,
+              74
+            ],
+            "missingCandidateIds": [
+              18,
+              31,
+              56
+            ],
+            "coverageIssues": [
+              {
+                "candidateId": 1,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "Folded into generic verdict axis; loses specific 'cellular automata expansion vs diversion' framing."
+              },
+              {
+                "candidateId": 2,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "Practical-usefulness-as-modeling-foundation claim only implied by broad verdict axis."
+              },
+              {
+                "candidateId": 3,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "Merged into general verdict; 'grandiose bloviation' characterization diluted."
+              },
+              {
+                "candidateId": 4,
+                "axisIds": [
+                  1,
+                  16
+                ],
+                "explanation": "Specific automata/graph-explains-connections claim spread across generic verdict and software-substance axes."
+              },
+              {
+                "candidateId": 14,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "Press-release/hype framing absorbed into general verdict without presentation-vs-substance angle."
+              },
+              {
+                "candidateId": 15,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "Revolutionary-vs-vacuous extremity softened inside general verdict."
+              },
+              {
+                "candidateId": 22,
+                "axisIds": [
+                  2
+                ],
+                "explanation": "Publishing-venue claim merged with announcement-timing axis, losing 'traditional academic venues' framing."
+              },
+              {
+                "candidateId": 23,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "Specific lack-of-novel-relationships claim absorbed into generic verdict."
+              },
+              {
+                "candidateId": 38,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "Ego-specific suspicion reasoning not captured by generic verdict axis."
+              },
+              {
+                "candidateId": 43,
+                "axisIds": [
+                  2
+                ],
+                "explanation": "Claim about breadth of public criticism vs peer review merged into announcement-timing axis, losing distinct focus."
+              },
+              {
+                "candidateId": 45,
+                "axisIds": [
+                  13
+                ],
+                "explanation": "Folded into hypergraph-exciting axis; specific 'weakly connected to physics' framing lost."
+              },
+              {
+                "candidateId": 52,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "'Worth exploring despite defects' vs 'stop taking seriously' framing diluted inside generic verdict."
+              },
+              {
+                "candidateId": 57,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "Specific claim about exploring a candidate model before predictions not distinctly represented."
+              },
+              {
+                "candidateId": 71,
+                "axisIds": [
+                  12
+                ],
+                "explanation": "'Infinitely many untestable rules, aesthetic choice' framing folded into general computational-language-testability axis."
+              },
+              {
+                "candidateId": 72,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "'Quackery/marketing white paper' framing absorbed into generic verdict wording."
+              },
+              {
+                "candidateId": 74,
+                "axisIds": [
+                  16
+                ],
+                "explanation": "Claim that visualization appearance is irrelevant folded into general software-substance axis."
+              },
+              {
+                "candidateId": 18,
+                "axisIds": [],
+                "explanation": "No V1 axis captures the specific distinction between Wolfram being unaware of the political/interpersonal fallout of his self-promotion versus being fully aware but choosing not to change; the closest axis (41) only addresses whether personality should affect evaluation of his work, not his awareness/intent."
+              },
+              {
+                "candidateId": 31,
+                "axisIds": [],
+                "explanation": "V1 has no axis addressing Eric Weinstein's public exploration versus his claims resembling publicity-driven bullshit; this disagreement about Weinstein specifically is entirely absent from the V1 axis set."
+              },
+              {
+                "candidateId": 56,
+                "axisIds": [],
+                "explanation": "V1 lacks any axis about whether the project's introduction is useful background versus objectionably grandiose presentation of an unoriginal idea; this distinct disagreement is not represented."
+              }
+            ],
+            "consolidationIssues": []
+          },
+          {
+            "variant": "V2",
+            "fullyPreservedCandidateIds": [
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              24,
+              26,
+              27,
+              28,
+              29,
+              30,
+              31,
+              32,
+              33,
+              36,
+              39,
+              40,
+              44,
+              45,
+              46,
+              47,
+              48,
+              49,
+              52,
+              54,
+              57,
+              58,
+              59,
+              60,
+              65,
+              67,
+              69,
+              71
+            ],
+            "partialCandidateIds": [
+              1,
+              2,
+              13,
+              14,
+              22,
+              23,
+              35,
+              38,
+              41,
+              42,
+              43,
+              50,
+              55,
+              61,
+              62,
+              63,
+              66,
+              68,
+              72,
+              73,
+              74,
+              76
+            ],
+            "missingCandidateIds": [
+              25,
+              34,
+              51,
+              53,
+              56,
+              64,
+              70,
+              75
+            ],
+            "coverageIssues": [
+              {
+                "candidateId": 1,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "Absorbed into broad verdict axis; loses 'cellular automata expansion/diversion' framing."
+              },
+              {
+                "candidateId": 2,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "Practical-usefulness claim only implied by generic verdict."
+              },
+              {
+                "candidateId": 13,
+                "axisIds": [
+                  4
+                ],
+                "explanation": "Vagueness-vs-clarity dispute not represented; axis 4 only addresses renaming of existing theory."
+              },
+              {
+                "candidateId": 14,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "Press-release/hype framing folded into generic verdict."
+              },
+              {
+                "candidateId": 22,
+                "axisIds": [
+                  2
+                ],
+                "explanation": "Publication-venue claim merged into announcement-timing axis, losing 'traditional venues' framing."
+              },
+              {
+                "candidateId": 23,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "Novel-relationships/predictive-utility claim folded into generic verdict."
+              },
+              {
+                "candidateId": 35,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "'Alternative notation' framing not distinctly represented."
+              },
+              {
+                "candidateId": 38,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "Ego-based suspicion reasoning not captured by generic verdict axis."
+              },
+              {
+                "candidateId": 41,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "'Merely packaging without physical content' claim not distinctly represented."
+              },
+              {
+                "candidateId": 42,
+                "axisIds": [
+                  2
+                ],
+                "explanation": "Peer-review timing nuance generalized, losing specificity."
+              },
+              {
+                "candidateId": 43,
+                "axisIds": [
+                  2
+                ],
+                "explanation": "Claim about public criticism vs narrow peer review lost inside announcement-timing axis."
+              },
+              {
+                "candidateId": 50,
+                "axisIds": [
+                  9
+                ],
+                "explanation": "Merged with unrelated rule-uniqueness dispute (#61), blurring distinct bottom-level-structure claim."
+              },
+              {
+                "candidateId": 55,
+                "axisIds": [
+                  7
+                ],
+                "explanation": "'Sufficiently motivated if produces relativity/QM behavior' framing not distinctly represented in general search-strategy axis."
+              },
+              {
+                "candidateId": 61,
+                "axisIds": [
+                  9
+                ],
+                "explanation": "Merged with unrelated bottom-level-structure dispute (#50), losing distinct focus on rule uniqueness."
+              },
+              {
+                "candidateId": 62,
+                "axisIds": [
+                  3
+                ],
+                "explanation": "Merged with on-topic/off-topic dispute (#63) despite obsession-framing and topic-relevance being independently holdable."
+              },
+              {
+                "candidateId": 63,
+                "axisIds": [
+                  3
+                ],
+                "explanation": "Merged with obsession-framing dispute (#62), losing distinct focus on topic relevance."
+              },
+              {
+                "candidateId": 66,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "'t Hooft priority' claim folded into generic verdict axis without specific content."
+              },
+              {
+                "candidateId": 68,
+                "axisIds": [
+                  20
+                ],
+                "explanation": "Causal-convergence claim folded into nondeterminism axis, obscuring distinct focus."
+              },
+              {
+                "candidateId": 72,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "'Quackery/marketing white paper' framing folded into generic verdict wording."
+              },
+              {
+                "candidateId": 73,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "'Restates old deterministic ideas' claim not distinctly represented."
+              },
+              {
+                "candidateId": 74,
+                "axisIds": [
+                  10
+                ],
+                "explanation": "Claim that visualization appearance is irrelevant folded into general hypergraph-substance axis."
+              },
+              {
+                "candidateId": 76,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "Originality-vs-prior-work claim folded into generic verdict axis without specific content."
+              },
+              {
+                "candidateId": 25,
+                "axisIds": [
+                  8
+                ],
+                "explanation": "Axis 8 conflates the ontological claim that reality is literally a graph/automaton with the narrower evidentiary claim that successful CA models of phenomena constitute evidence for discreteness; the specific 'evidence' framing of candidate 25 is lost."
+              },
+              {
+                "candidateId": 34,
+                "axisIds": [
+                  7
+                ],
+                "explanation": "Axis 7 discusses motivation for searching term-rewriting hypergraphs but does not capture the specific claim about Wolfram's general computational language being too unconstrained to yield finite-experiment predictions, nor the optimistic 'sharp important result' framing."
+              },
+              {
+                "candidateId": 51,
+                "axisIds": [],
+                "explanation": "No V2 axis preserves the distinction between a theory perfectly matching experiment becoming the practical bottom level versus such agreement failing to establish it as the ultimate bottom of reality."
+              },
+              {
+                "candidateId": 53,
+                "axisIds": [
+                  7
+                ],
+                "explanation": "Axis 7 addresses whether assuming a simple universal rule is motivated, but omits the more general claim about fewer rules/free parameters being preferable for constrained predictions versus no requirement for simplicity/elegance."
+              },
+              {
+                "candidateId": 56,
+                "axisIds": [],
+                "explanation": "V2 contains no axis on whether the project's introduction is useful background versus unnecessarily grandiose presentation of an unoriginal idea."
+              },
+              {
+                "candidateId": 64,
+                "axisIds": [],
+                "explanation": "V2 lacks an axis addressing whether the Wolfram discussion is one-sided/misleading versus substantially critical even after removing low-quality comments."
+              },
+              {
+                "candidateId": 70,
+                "axisIds": [],
+                "explanation": "No V2 axis preserves the disagreement over whether Wolfram's framework must be generated from a single rule versus not needing such a single-rule origin."
+              },
+              {
+                "candidateId": 75,
+                "axisIds": [],
+                "explanation": "V2 has no axis on whether the unweighted graph model risks collapse into a singularity versus being sufficient to produce a stable model of space."
+              }
+            ],
+            "consolidationIssues": [
+              {
+                "kind": "unrelated_merge",
+                "axisIds": [
+                  9
+                ],
+                "candidateIds": [
+                  50,
+                  61
+                ],
+                "explanation": "Axis 9 merges the dispute over whether a theory needs a bottom-level base structure (#50) with the separate dispute over whether there is one uniquely correct rule (#61). A commenter could hold one position without the other."
+              },
+              {
+                "kind": "unrelated_merge",
+                "axisIds": [
+                  3
+                ],
+                "candidateIds": [
+                  62,
+                  63
+                ],
+                "explanation": "Axis 3 merges the topic-relevance dispute (#63) with the obsession-framing dispute (#62). A commenter could find the discussion on-topic yet excessive, or off-topic without calling it an 'obsession'; these are separable."
+              }
+            ]
+          },
+          {
+            "variant": "V3",
+            "fullyPreservedCandidateIds": [
+              1,
+              5,
+              6,
+              9,
+              11,
+              16,
+              19,
+              20,
+              30,
+              36,
+              40,
+              42,
+              46,
+              48,
+              59,
+              63
+            ],
+            "partialCandidateIds": [
+              10,
+              22,
+              43
+            ],
+            "missingCandidateIds": [
+              2,
+              3,
+              4,
+              7,
+              8,
+              12,
+              13,
+              14,
+              15,
+              17,
+              18,
+              21,
+              23,
+              24,
+              25,
+              26,
+              27,
+              28,
+              29,
+              31,
+              32,
+              33,
+              34,
+              35,
+              38,
+              39,
+              41,
+              44,
+              45,
+              47,
+              49,
+              50,
+              51,
+              52,
+              53,
+              54,
+              55,
+              56,
+              57,
+              58,
+              60,
+              61,
+              62,
+              64,
+              65,
+              66,
+              67,
+              68,
+              69,
+              70,
+              71,
+              72,
+              73,
+              74,
+              75,
+              76
+            ],
+            "coverageIssues": [
+              {
+                "candidateId": 10,
+                "axisIds": [
+                  10
+                ],
+                "explanation": "Axis 10 covers spacetime-derivation dispute but omits the 'Lorentz covariance/low-energy limit' specifics present in the source candidate, generalizing it."
+              },
+              {
+                "candidateId": 22,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "Publication-venue claim only loosely implied by peer-review-announcement axis, losing 'traditional venues' framing."
+              },
+              {
+                "candidateId": 43,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "Claim about relative value of public criticism vs peer review folded into announcement-timing axis without distinct focus."
+              },
+              {
+                "candidateId": 2,
+                "axisIds": [],
+                "explanation": "No axis addresses current practical usefulness of the project as a modeling foundation."
+              },
+              {
+                "candidateId": 3,
+                "axisIds": [],
+                "explanation": "Genuine-science-vs-bloviation verdict not represented as its own axis."
+              },
+              {
+                "candidateId": 4,
+                "axisIds": [],
+                "explanation": "No axis addresses whether automata/graph visualizations explain essential physical connections."
+              },
+              {
+                "candidateId": 7,
+                "axisIds": [],
+                "explanation": "Reinventing-established-ideas efficiency dispute not represented."
+              },
+              {
+                "candidateId": 8,
+                "axisIds": [],
+                "explanation": "Humility/civility-and-progress dispute not represented."
+              },
+              {
+                "candidateId": 12,
+                "axisIds": [],
+                "explanation": "Emulation-cones/rulial-space originality dispute not represented."
+              },
+              {
+                "candidateId": 13,
+                "axisIds": [],
+                "explanation": "Vagueness-of-definitions dispute not represented."
+              },
+              {
+                "candidateId": 14,
+                "axisIds": [],
+                "explanation": "Press-release-hype-vs-substance dispute not represented."
+              },
+              {
+                "candidateId": 15,
+                "axisIds": [],
+                "explanation": "Vacuous-vs-revolutionary verdict not represented."
+              },
+              {
+                "candidateId": 17,
+                "axisIds": [],
+                "explanation": "Determinism/randomness dispute about Turing machines not represented."
+              },
+              {
+                "candidateId": 18,
+                "axisIds": [],
+                "explanation": "Dispute over whether Wolfram recognizes political concerns of self-promotion not represented."
+              },
+              {
+                "candidateId": 21,
+                "axisIds": [],
+                "explanation": "Bret Weinstein concreteness dispute not represented."
+              },
+              {
+                "candidateId": 23,
+                "axisIds": [],
+                "explanation": "Novel-relationships/predictive-utility dispute not represented."
+              },
+              {
+                "candidateId": 24,
+                "axisIds": [],
+                "explanation": "CA-simplicity-vs-vagueness dispute not represented."
+              },
+              {
+                "candidateId": 25,
+                "axisIds": [],
+                "explanation": "CA-models-as-evidence-of-discreteness dispute not represented."
+              },
+              {
+                "candidateId": 26,
+                "axisIds": [],
+                "explanation": "Personality-relevance dispute not represented."
+              },
+              {
+                "candidateId": 27,
+                "axisIds": [],
+                "explanation": "NKS-worth-reading dispute not represented."
+              },
+              {
+                "candidateId": 28,
+                "axisIds": [],
+                "explanation": "Misconduct/history dispute not represented."
+              },
+              {
+                "candidateId": 29,
+                "axisIds": [],
+                "explanation": "Creative-legacy dispute not represented."
+              },
+              {
+                "candidateId": 31,
+                "axisIds": [],
+                "explanation": "Eric Weinstein scam-vs-exploration dispute not represented."
+              },
+              {
+                "candidateId": 32,
+                "axisIds": [],
+                "explanation": "Graph-grammar-literature dispute not represented."
+              },
+              {
+                "candidateId": 33,
+                "axisIds": [],
+                "explanation": "Mouse telomere hyperbole dispute not represented."
+              },
+              {
+                "candidateId": 34,
+                "axisIds": [],
+                "explanation": "General computational language usefulness dispute not represented."
+              },
+              {
+                "candidateId": 35,
+                "axisIds": [],
+                "explanation": "Alternative-notation-vs-substantive-content dispute not represented."
+              },
+              {
+                "candidateId": 38,
+                "axisIds": [],
+                "explanation": "Ego-vs-seriousness dispute not represented."
+              },
+              {
+                "candidateId": 39,
+                "axisIds": [],
+                "explanation": "Flashy-graphs-vs-substance dispute not represented."
+              },
+              {
+                "candidateId": 41,
+                "axisIds": [],
+                "explanation": "Formalism-usefulness-vs-repackaging dispute not represented."
+              },
+              {
+                "candidateId": 44,
+                "axisIds": [],
+                "explanation": "Mathematica-vs-Maple dispute not represented."
+              },
+              {
+                "candidateId": 45,
+                "axisIds": [],
+                "explanation": "Hypergraph-worthwhile-vs-weakly-connected dispute not represented."
+              },
+              {
+                "candidateId": 47,
+                "axisIds": [],
+                "explanation": "Quantum-computer-statement-interpretation dispute not represented."
+              },
+              {
+                "candidateId": 49,
+                "axisIds": [],
+                "explanation": "Spacetime-literally-a-graph dispute not represented."
+              },
+              {
+                "candidateId": 50,
+                "axisIds": [],
+                "explanation": "Bottom-level-structure-requirement dispute not represented."
+              },
+              {
+                "candidateId": 51,
+                "axisIds": [],
+                "explanation": "Perfect-consistency-as-bottom-level dispute not represented."
+              },
+              {
+                "candidateId": 52,
+                "axisIds": [],
+                "explanation": "Worth-exploring-despite-defects-vs-stop-taking-seriously dispute not represented."
+              },
+              {
+                "candidateId": 53,
+                "axisIds": [],
+                "explanation": "Simplicity-preference dispute not represented."
+              },
+              {
+                "candidateId": 54,
+                "axisIds": [],
+                "explanation": "Rule-execution-explanation-requirement dispute not represented."
+              },
+              {
+                "candidateId": 55,
+                "axisIds": [],
+                "explanation": "Hypergraph-motivation dispute not represented."
+              },
+              {
+                "candidateId": 56,
+                "axisIds": [],
+                "explanation": "Introduction-grandiosity dispute not represented."
+              },
+              {
+                "candidateId": 57,
+                "axisIds": [],
+                "explanation": "Explore-before-predictions dispute not represented."
+              },
+              {
+                "candidateId": 58,
+                "axisIds": [],
+                "explanation": "Search-strategy-realism dispute not represented."
+              },
+              {
+                "candidateId": 60,
+                "axisIds": [],
+                "explanation": "Resemblance-as-merit-before-predictions dispute not represented."
+              },
+              {
+                "candidateId": 61,
+                "axisIds": [],
+                "explanation": "Rule-uniqueness dispute not represented."
+              },
+              {
+                "candidateId": 62,
+                "axisIds": [],
+                "explanation": "Obsession-framing dispute not represented."
+              },
+              {
+                "candidateId": 64,
+                "axisIds": [],
+                "explanation": "One-sidedness-of-discussion dispute not represented."
+              },
+              {
+                "candidateId": 65,
+                "axisIds": [],
+                "explanation": "Hypergraph-excitement-vs-justification dispute not represented."
+              },
+              {
+                "candidateId": 66,
+                "axisIds": [],
+                "explanation": "'t Hooft priority dispute not represented."
+              },
+              {
+                "candidateId": 67,
+                "axisIds": [],
+                "explanation": "Rule-system-nondeterminism dispute not represented."
+              },
+              {
+                "candidateId": 68,
+                "axisIds": [],
+                "explanation": "Causal-path-convergence dispute not represented."
+              },
+              {
+                "candidateId": 69,
+                "axisIds": [],
+                "explanation": "Graph-vs-reality-identity dispute not represented."
+              },
+              {
+                "candidateId": 70,
+                "axisIds": [],
+                "explanation": "Single-rule-generation-requirement dispute not represented."
+              },
+              {
+                "candidateId": 71,
+                "axisIds": [],
+                "explanation": "Rule-set-aesthetic-choice dispute not represented."
+              },
+              {
+                "candidateId": 72,
+                "axisIds": [],
+                "explanation": "Quackery-vs-worthwhile-avenue dispute not represented."
+              },
+              {
+                "candidateId": 73,
+                "axisIds": [],
+                "explanation": "New-insights-vs-restatement dispute not represented."
+              },
+              {
+                "candidateId": 74,
+                "axisIds": [],
+                "explanation": "Visualization-relevance dispute not represented."
+              },
+              {
+                "candidateId": 75,
+                "axisIds": [],
+                "explanation": "Unweighted-graph-stability dispute not represented."
+              },
+              {
+                "candidateId": 76,
+                "axisIds": [],
+                "explanation": "Originality-vs-prior-ordered-set-work dispute not represented."
+              }
+            ],
+            "consolidationIssues": []
+          },
+          {
+            "variant": "V4",
+            "fullyPreservedCandidateIds": [
+              1,
+              2,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              14,
+              15,
+              17,
+              18,
+              19,
+              20,
+              21,
+              24,
+              25,
+              26,
+              27,
+              28,
+              29,
+              30,
+              31,
+              32,
+              33,
+              34,
+              35,
+              36,
+              40,
+              41,
+              44,
+              45,
+              46,
+              47,
+              48,
+              49,
+              50,
+              51,
+              53,
+              54,
+              55,
+              58,
+              59,
+              60,
+              61,
+              65,
+              67,
+              68,
+              69,
+              70,
+              73,
+              75,
+              76
+            ],
+            "partialCandidateIds": [
+              3,
+              4,
+              13,
+              22,
+              23,
+              38,
+              39,
+              42,
+              43,
+              52,
+              56,
+              57,
+              62,
+              63,
+              64,
+              66,
+              71,
+              72,
+              74
+            ],
+            "missingCandidateIds": [
+              16
+            ],
+            "coverageIssues": [
+              {
+                "candidateId": 3,
+                "axisIds": [
+                  3
+                ],
+                "explanation": "Merged with topic-focus dispute; 'necessary to prevent uncritical endorsement' framing lost."
+              },
+              {
+                "candidateId": 4,
+                "axisIds": [
+                  4
+                ],
+                "explanation": "Merged with peer-review axis; distinct 'justified in pursuing outside channels' nuance narrowed."
+              },
+              {
+                "candidateId": 13,
+                "axisIds": [
+                  13
+                ],
+                "explanation": "'Chooses not to change' framing preserved but 'political and interpersonal concerns' specificity slightly generalized."
+              },
+              {
+                "candidateId": 22,
+                "axisIds": [
+                  13
+                ],
+                "explanation": "Overlaps heavily with axis 13; distinct 'omissions' framing softened."
+              },
+              {
+                "candidateId": 23,
+                "axisIds": [
+                  9
+                ],
+                "explanation": "Absorbed into humility/civility axis; the disruptive-researcher framing generalized."
+              },
+              {
+                "candidateId": 38,
+                "axisIds": [
+                  42
+                ],
+                "explanation": "Ego-vs-seriousness claim folded into introduction-grandiosity axis, losing broader project-seriousness scope."
+              },
+              {
+                "candidateId": 39,
+                "axisIds": [
+                  36
+                ],
+                "explanation": "Folded into software-substance axis; slight wording shift from 'flashy graphs' framing."
+              },
+              {
+                "candidateId": 42,
+                "axisIds": [
+                  2
+                ],
+                "explanation": "Peer-review timing nuance generalized within announcement axis."
+              },
+              {
+                "candidateId": 43,
+                "axisIds": [
+                  3
+                ],
+                "explanation": "Public-criticism-vs-peer-review distinction merged into reputation-discussion axis, losing focus on criticism source quality."
+              },
+              {
+                "candidateId": 52,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "'Worth exploring despite defects' framing folded into general verdict axis."
+              },
+              {
+                "candidateId": 56,
+                "axisIds": [
+                  42
+                ],
+                "explanation": "'Objectionably grandiose' framing largely matches but source nuance about 'unoriginal idea' slightly narrowed."
+              },
+              {
+                "candidateId": 57,
+                "axisIds": [
+                  11
+                ],
+                "explanation": "Explore-before-predictions claim folded into resemblance-merit axis, narrowing scope."
+              },
+              {
+                "candidateId": 62,
+                "axisIds": [
+                  3
+                ],
+                "explanation": "Obsession-framing merged with reputation-discussion-necessity axis, blurring distinct claim."
+              },
+              {
+                "candidateId": 63,
+                "axisIds": [
+                  3
+                ],
+                "explanation": "Topic-relevance dispute merged with obsession-framing dispute (#62)."
+              },
+              {
+                "candidateId": 64,
+                "axisIds": [
+                  43
+                ],
+                "explanation": "One-sidedness claim generalized slightly differently from source wording but core distinction retained partially."
+              },
+              {
+                "candidateId": 66,
+                "axisIds": [
+                  44
+                ],
+                "explanation": "'t Hooft priority claim preserved but originality nuance softened."
+              },
+              {
+                "candidateId": 71,
+                "axisIds": [
+                  15
+                ],
+                "explanation": "Aesthetic-choice-among-infinite-rules framing folded into general powerful-framework axis, narrowing scope."
+              },
+              {
+                "candidateId": 72,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "'Quackery/marketing white paper' framing folded into generic verdict axis."
+              },
+              {
+                "candidateId": 74,
+                "axisIds": [
+                  36
+                ],
+                "explanation": "Visualization-irrelevance claim folded into general software-substance axis."
+              },
+              {
+                "candidateId": 16,
+                "axisIds": [
+                  5
+                ],
+                "explanation": "Axis 5 captures the general dead-end-versus-advancing framing but drops the specific evidentiary emphasis on 'successful interaction with experiment' and the particular comment threads cited, so the fuller condition of the original disagreement is only partially preserved."
+              }
+            ],
+            "consolidationIssues": [
+              {
+                "kind": "unrelated_merge",
+                "axisIds": [
+                  3
+                ],
+                "candidateIds": [
+                  62,
+                  63
+                ],
+                "explanation": "Axis 3 merges the topic-relevance dispute (#63) with the obsession-framing dispute (#62). A commenter could believe discussion of Wolfram's conduct is necessary yet still think criticism has become disproportionate, or vice versa; these are separable positions."
+              }
+            ]
+          }
+        ]
+      },
+      "log": [
+        "1eece918f21c1b850adcffcc66568506a6351a97eab21cf7863e3f77a11451e0",
+        "60eebd15558e58bc612e5625792a12d744651fb163c28f48d78fb06b643cb7ea",
+        "138dcd02ff8b50f059a0104c2801877c61e0245c490aefe86c5bd148bf634aaa"
+      ]
+    },
+    {
+      "thread": "49571634",
+      "id": "49571634",
+      "mapping": {
+        "V1": "astraLow",
+        "V2": "solLow",
+        "V3": "opus5",
+        "V4": "geminiFlash"
+      },
+      "reviewer": "anthropic/claude-sonnet-5",
+      "settings": {
+        "reasoning": {
+          "effort": "medium"
+        },
+        "maxTokens": 32000,
+        "concurrency": 2
+      },
+      "review": {
+        "exclusions": [
+          {
+            "candidateId": 20,
+            "reason": "Candidate 20's poles are not truly incompatible: pole A ('XCancel's RSS feeds remained functional after shutdown') is a factual claim, while pole B ('leaving the RSS feeds running is unwise and creates the same liability') is a risk judgment; a commenter could hold both simultaneously. This is a compatible-poles pair rather than a genuine disagreement and is excluded from required coverage in all variants."
+          }
+        ],
+        "reviews": [
+          {
+            "variant": "V1",
+            "fullyPreservedCandidateIds": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              12,
+              13,
+              14,
+              16,
+              17,
+              18,
+              19,
+              23,
+              24,
+              27,
+              28,
+              29,
+              30,
+              31
+            ],
+            "partialCandidateIds": [
+              21,
+              26
+            ],
+            "missingCandidateIds": [
+              11,
+              15,
+              22,
+              25
+            ],
+            "coverageIssues": [
+              {
+                "candidateId": 21,
+                "axisIds": [
+                  4
+                ],
+                "explanation": "Axis 4 merges candidate 21 (publicizing RSS feeds; risk framed as XCancel's own responsibility) with candidate 27, losing candidate 21's distinct claim about where responsibility for resulting risk lies."
+              },
+              {
+                "candidateId": 26,
+                "axisIds": [
+                  2
+                ],
+                "explanation": "Axis 2 merges candidate 26's specific claim that circumventing access restrictions is worthwhile with candidate 28's broader claim about decent people using Twitter/X, blurring the circumvention-specific framing."
+              },
+              {
+                "candidateId": 11,
+                "axisIds": [],
+                "explanation": "No axis represents the disagreement over whether many substitute Nitter instances keep it usable versus users needing to continually replace disappearing instances."
+              },
+              {
+                "candidateId": 15,
+                "axisIds": [],
+                "explanation": "No axis represents the disagreement over torrents being a poor fit for music versus Soulseek being a satisfactory alternative."
+              },
+              {
+                "candidateId": 22,
+                "axisIds": [],
+                "explanation": "No axis represents the disagreement over whether Nitter instances should be kept online (preserving free speech) versus shut down in favor of Bluesky/Mastodon."
+              },
+              {
+                "candidateId": 25,
+                "axisIds": [],
+                "explanation": "No axis represents the disagreement over whether XCancel reliably redirects to a working instance versus LibRedirect merely cycling a list without checking."
+              }
+            ],
+            "consolidationIssues": []
+          },
+          {
+            "variant": "V2",
+            "fullyPreservedCandidateIds": [
+              1,
+              2,
+              3,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              16,
+              17,
+              18,
+              19,
+              21,
+              23,
+              26,
+              27,
+              28,
+              29,
+              30,
+              31
+            ],
+            "partialCandidateIds": [
+              4,
+              24
+            ],
+            "missingCandidateIds": [
+              15,
+              22,
+              25
+            ],
+            "coverageIssues": [
+              {
+                "candidateId": 4,
+                "axisIds": [
+                  4
+                ],
+                "explanation": "Axis 4 blends candidate 4's specific claim about Elon Musk personally becoming immune to the Streisand effect into a generic claim about the Streisand effect being ineffective, losing the distinct personal-immunity mechanism."
+              },
+              {
+                "candidateId": 24,
+                "axisIds": [
+                  4
+                ],
+                "explanation": "Axis 4 blends candidate 24's specific claim that Twitter's supporters actively help suppress links into a vaguer disjunctive B pole, losing the distinct suppression mechanism."
+              },
+              {
+                "candidateId": 15,
+                "axisIds": [],
+                "explanation": "No axis represents the disagreement over torrents being a poor fit for music versus Soulseek being satisfactory."
+              },
+              {
+                "candidateId": 22,
+                "axisIds": [],
+                "explanation": "No axis represents the disagreement over whether Nitter instances should stay online versus be shut down in favor of Bluesky/Mastodon."
+              },
+              {
+                "candidateId": 25,
+                "axisIds": [],
+                "explanation": "No axis represents the disagreement over XCancel's redirect reliability versus LibRedirect's lack of live checking."
+              }
+            ],
+            "consolidationIssues": [
+              {
+                "kind": "unrelated_merge",
+                "axisIds": [
+                  4
+                ],
+                "candidateIds": [
+                  4,
+                  24
+                ],
+                "explanation": "Axis 4 merges candidate 4 (Elon Musk's personal immunity to backlash) with candidate 24 (Nitter takedowns backfiring due to active supporter suppression). A commenter could hold either view independently of the other, so merging them loses two separable disagreements."
+              }
+            ]
+          },
+          {
+            "variant": "V3",
+            "fullyPreservedCandidateIds": [
+              2,
+              3,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              23,
+              24,
+              25,
+              26,
+              27,
+              28,
+              29
+            ],
+            "partialCandidateIds": [
+              1,
+              11,
+              21,
+              30,
+              31
+            ],
+            "missingCandidateIds": [
+              4,
+              19,
+              22
+            ],
+            "coverageIssues": [
+              {
+                "candidateId": 1,
+                "axisIds": [
+                  4
+                ],
+                "explanation": "Axis 4 conflates candidate 1's link-rot claim with candidates 11 and 30 into one compound statement, losing its distinct scope."
+              },
+              {
+                "candidateId": 11,
+                "axisIds": [
+                  4
+                ],
+                "explanation": "Axis 4 conflates candidate 11's claim about substitute-instance availability with candidates 1 and 30, losing its distinct scope."
+              },
+              {
+                "candidateId": 30,
+                "axisIds": [
+                  4
+                ],
+                "explanation": "Axis 4 conflates candidate 30's link-preference claim with candidates 1 and 11, and reframes the justification specifically around link rot, changing its original neutral framing."
+              },
+              {
+                "candidateId": 21,
+                "axisIds": [
+                  6
+                ],
+                "explanation": "Axis 6 merges candidate 21 (RSS feed publicizing; responsibility framing) with candidate 27, losing candidate 21's distinct responsibility claim."
+              },
+              {
+                "candidateId": 31,
+                "axisIds": [
+                  11
+                ],
+                "explanation": "Axis 11 merges candidate 31's claim about Mastodon's usability/censorship into a generic 'alternatives such as Bluesky or Mastodon are preferable' clause, losing its distinct claim and specific opposing pole."
+              },
+              {
+                "candidateId": 4,
+                "axisIds": [],
+                "explanation": "No axis represents candidate 4's specific claim that Elon Musk has become personally immune to the Streisand effect because negative attention increases his popularity; axis 7 only covers Nitter-takedown backfire (candidate 24)."
+              },
+              {
+                "candidateId": 19,
+                "axisIds": [
+                  3
+                ],
+                "explanation": "No axis preserves candidate 19's specific disagreement over whether old Reddit still allows unconditional anonymous access versus requiring login in certain regions/mobile contexts; axis 3 only addresses general Reddit access restrictions (candidate 10)."
+              },
+              {
+                "candidateId": 22,
+                "axisIds": [],
+                "explanation": "No axis represents the disagreement over whether Nitter instances should be kept online versus shut down in favor of Bluesky/Mastodon."
+              }
+            ],
+            "consolidationIssues": [
+              {
+                "kind": "unrelated_merge",
+                "axisIds": [
+                  4
+                ],
+                "candidateIds": [
+                  1,
+                  11,
+                  30
+                ],
+                "explanation": "Axis 4 combines three independently holdable disagreements: whether Nitter/HN links become broken (candidate 1), whether substitute instances keep Nitter generally usable (candidate 11), and whether links should point to primary vs proxy sources (candidate 30)."
+              },
+              {
+                "kind": "unrelated_merge",
+                "axisIds": [
+                  11
+                ],
+                "candidateIds": [
+                  23,
+                  31
+                ],
+                "explanation": "Axis 11 merges candidate 23 (Twitter's free-speech claim vs Bluesky) with candidate 31 (Mastodon's usability/censorship vs Twitter). A commenter could hold a view on Twitter's free-speech merits independent of any view on Mastodon's usability, so these are separable disagreements."
+              }
+            ]
+          },
+          {
+            "variant": "V4",
+            "fullyPreservedCandidateIds": [
+              2,
+              5,
+              6,
+              7,
+              8,
+              11,
+              12,
+              13,
+              14,
+              16,
+              17,
+              18,
+              19,
+              23,
+              26,
+              27,
+              28,
+              29,
+              31
+            ],
+            "partialCandidateIds": [
+              1,
+              9,
+              10,
+              21,
+              24,
+              30
+            ],
+            "missingCandidateIds": [
+              3,
+              4,
+              15,
+              22,
+              25
+            ],
+            "coverageIssues": [
+              {
+                "candidateId": 1,
+                "axisIds": [
+                  4
+                ],
+                "explanation": "Axis 4 merges candidate 1's link-rot claim with candidate 30's link-preference claim, losing candidate 1's distinct scope."
+              },
+              {
+                "candidateId": 30,
+                "axisIds": [
+                  4
+                ],
+                "explanation": "Axis 4 merges candidate 30 with candidate 1 and reframes the primary-vs-proxy preference specifically around avoiding link rot, changing its original framing."
+              },
+              {
+                "candidateId": 9,
+                "axisIds": [
+                  7
+                ],
+                "explanation": "Axis 7 merges candidate 9 (Reddit's occasional value for technical answers vs being drained of value) with candidate 10 (access restrictions), losing candidate 9's distinct claim."
+              },
+              {
+                "candidateId": 10,
+                "axisIds": [
+                  7
+                ],
+                "explanation": "Axis 7 merges candidate 10 (access restrictions making Reddit unattractive) with candidate 9 (general value/drained-of-value claim), losing candidate 10's distinct scope."
+              },
+              {
+                "candidateId": 21,
+                "axisIds": [
+                  6
+                ],
+                "explanation": "Axis 6 merges candidate 21 (RSS feed publicizing; responsibility framing) with candidate 27, losing candidate 21's distinct responsibility claim."
+              },
+              {
+                "candidateId": 24,
+                "axisIds": [
+                  5
+                ],
+                "explanation": "Axis 5's B pole ('most users will simply comply with platform restrictions') materially changes candidate 24's actual claim that Twitter's supporters actively help suppress links, replacing it with an unsupported, different claim."
+              },
+              {
+                "candidateId": 3,
+                "axisIds": [],
+                "explanation": "No axis represents the disagreement over when Eternal September began relative to Hacker News's classic-view cutoff."
+              },
+              {
+                "candidateId": 4,
+                "axisIds": [],
+                "explanation": "No axis represents candidate 4's claim that Elon Musk has become personally immune to the Streisand effect; axis 5 only covers Nitter-takedown backfire in a changed form."
+              },
+              {
+                "candidateId": 15,
+                "axisIds": [],
+                "explanation": "No axis represents the disagreement over torrents being a poor fit for music versus Soulseek being satisfactory."
+              },
+              {
+                "candidateId": 22,
+                "axisIds": [],
+                "explanation": "No axis represents the disagreement over whether Nitter instances should be kept online versus shut down in favor of Bluesky/Mastodon."
+              },
+              {
+                "candidateId": 25,
+                "axisIds": [],
+                "explanation": "No axis represents the disagreement over XCancel's redirect reliability versus LibRedirect's lack of live checking."
+              }
+            ],
+            "consolidationIssues": [
+              {
+                "kind": "unrelated_merge",
+                "axisIds": [
+                  4
+                ],
+                "candidateIds": [
+                  1,
+                  30
+                ],
+                "explanation": "Axis 4 merges candidate 1 (whether Nitter links become broken) with candidate 30 (whether links should point to primary vs proxy sources), which are independently holdable positions, and reframes candidate 30's justification specifically around link rot."
+              },
+              {
+                "kind": "unsupported_claim",
+                "axisIds": [
+                  5
+                ],
+                "candidateIds": [
+                  24
+                ],
+                "explanation": "Axis 5's B pole asserts that takedowns are unlikely to backfire 'because most users will simply comply with platform restrictions,' a claim not present in candidate 24, which instead argued that Twitter's supporters actively help suppress links."
+              },
+              {
+                "kind": "unrelated_merge",
+                "axisIds": [
+                  7
+                ],
+                "candidateIds": [
+                  9,
+                  10
+                ],
+                "explanation": "Axis 7 merges candidate 9 (Reddit's occasional technical value vs being drained of value) with candidate 10 (access restrictions making Reddit unattractive), which are independently holdable positions about different aspects of Reddit's worth."
+              }
+            ]
+          }
+        ]
+      },
+      "log": [
+        "d62a97847ca14c88734969e513479698d4e01f57d1516991fb3191c6b9b3b9e1",
+        "c3e14f5a148b052df41dfd741575b9c20a59ce614790f072b4b72f4864b6aae7"
+      ]
+    },
+    {
+      "thread": "47155526",
+      "id": "47155526",
+      "mapping": {
+        "V1": "geminiFlash",
+        "V2": "astraLow",
+        "V3": "solLow",
+        "V4": "opus5"
+      },
+      "reviewer": "anthropic/claude-sonnet-5",
+      "settings": {
+        "reasoning": {
+          "effort": "medium"
+        },
+        "maxTokens": 32000,
+        "concurrency": 2
+      },
+      "review": {
+        "exclusions": [
+          {
+            "candidateId": 15,
+            "reason": "Statement A (patenting confers ownership) and statement B (no owner unless patented) are logically compatible rather than opposing poles — a commenter can hold both simultaneously, so this is not a genuine disagreement and is excluded under the compatible-poles rule."
+          }
+        ],
+        "reviews": [
+          {
+            "variant": "V1",
+            "fullyPreservedCandidateIds": [
+              1,
+              4,
+              5,
+              6,
+              7,
+              11,
+              12,
+              16
+            ],
+            "partialCandidateIds": [
+              9,
+              10,
+              13
+            ],
+            "missingCandidateIds": [
+              2,
+              3,
+              8,
+              14,
+              17,
+              18,
+              19
+            ],
+            "coverageIssues": [
+              {
+                "candidateId": 9,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "Axis 1 generalizes to 'polish and technology' and omits the specific claim that a useful replacement must reproduce optimized algorithms and an extensive standard library, losing that scope condition."
+              },
+              {
+                "candidateId": 10,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "Axis 1 never addresses the FOSS-specific argument (open source being better than nothing for people avoiding proprietary software, versus FOSS not redeeming an otherwise useless clone)."
+              },
+              {
+                "candidateId": 13,
+                "axisIds": [
+                  2
+                ],
+                "explanation": "Axis 2 reproduces candidate 7's wording verbatim but drops the specific claim that plentiful tests/documentation make review adequate versus review being harder than writing correct code and concealing faulty assumptions."
+              },
+              {
+                "candidateId": 2,
+                "axisIds": [],
+                "explanation": "No axis addresses whether the Wolfram Language's syntax/imports make it ergonomic versus unwieldy with poor debugging."
+              },
+              {
+                "candidateId": 3,
+                "axisIds": [],
+                "explanation": "No axis addresses the disagreement over example-driven iteration versus LLM-agent automation for developing Woxi's functions."
+              },
+              {
+                "candidateId": 8,
+                "axisIds": [],
+                "explanation": "No axis addresses whether ~5,000 tests is meaningful evidence of quality versus insufficient without review."
+              },
+              {
+                "candidateId": 14,
+                "axisIds": [],
+                "explanation": "No axis addresses whether hand-written code is meaningful evidence of author review versus third parties being unable to verify this."
+              },
+              {
+                "candidateId": 17,
+                "axisIds": [],
+                "explanation": "No axis addresses whether a JIT meaningfully improves efficiency over interpretation for symbolic/arbitrary-precision operations."
+              },
+              {
+                "candidateId": 18,
+                "axisIds": [],
+                "explanation": "No axis addresses whether implementing a useful JIT would be a modest or massive undertaking."
+              },
+              {
+                "candidateId": 19,
+                "axisIds": [],
+                "explanation": "No axis addresses whether Woxi's planned CLI/notebook subset is useful independent of Mathematica."
+              }
+            ],
+            "consolidationIssues": []
+          },
+          {
+            "variant": "V2",
+            "fullyPreservedCandidateIds": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              11,
+              12,
+              13,
+              14,
+              16,
+              17,
+              18
+            ],
+            "partialCandidateIds": [
+              10
+            ],
+            "missingCandidateIds": [
+              19
+            ],
+            "coverageIssues": [
+              {
+                "candidateId": 10,
+                "axisIds": [
+                  2
+                ],
+                "explanation": "Axis 2 explicitly covers incomplete coverage and the need to reproduce algorithms/library, but never mentions the FOSS-specific claim that being open source is (or isn't) enough to redeem/justify an otherwise incomplete reimplementation."
+              },
+              {
+                "candidateId": 19,
+                "axisIds": [],
+                "explanation": "No axis addresses whether Woxi's planned CLI-scripting/notebook subset is a compelling reason to use it independent of Mathematica."
+              }
+            ],
+            "consolidationIssues": []
+          },
+          {
+            "variant": "V3",
+            "fullyPreservedCandidateIds": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              16,
+              17,
+              18,
+              19
+            ],
+            "partialCandidateIds": [],
+            "missingCandidateIds": [],
+            "coverageIssues": [],
+            "consolidationIssues": [
+              {
+                "kind": "duplicate",
+                "axisIds": [
+                  1,
+                  4
+                ],
+                "candidateIds": [
+                  1,
+                  4,
+                  9,
+                  10
+                ],
+                "explanation": "Axis 1 (Woxi likely to be useful despite rough start / open-source status) and axis 4 (reimplementation can be a useful substitute without reproducing all of Mathematica's technology) restate the same underlying disagreement — a commenter who thinks Woxi is likely to become useful would almost certainly agree partial reimplementation can suffice, and vice versa for the negative poles — so these should have been merged into one axis instead of split into two."
+              }
+            ]
+          },
+          {
+            "variant": "V4",
+            "fullyPreservedCandidateIds": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              16
+            ],
+            "partialCandidateIds": [
+              17,
+              18
+            ],
+            "missingCandidateIds": [
+              19
+            ],
+            "coverageIssues": [
+              {
+                "candidateId": 17,
+                "axisIds": [
+                  6
+                ],
+                "explanation": "Axis 6 bundles the JIT-efficiency-benefit claim with the separate JIT-effort claim, so a commenter who thinks a JIT would help efficiency but would still be hard to build has no matching pole, losing the distinct technical-benefit disagreement."
+              },
+              {
+                "candidateId": 18,
+                "axisIds": [
+                  6
+                ],
+                "explanation": "Axis 6 bundles the JIT-effort claim with the efficiency-benefit claim, losing the standalone feasibility/effort disagreement that could be held independently of the efficiency question."
+              },
+              {
+                "candidateId": 19,
+                "axisIds": [],
+                "explanation": "No axis addresses whether Woxi's planned CLI-scripting/notebook subset is useful independent of Mathematica."
+              }
+            ],
+            "consolidationIssues": [
+              {
+                "kind": "unrelated_merge",
+                "axisIds": [
+                  6
+                ],
+                "candidateIds": [
+                  17,
+                  18
+                ],
+                "explanation": "Axis 6 merges the independently holdable claim about a JIT's technical efficiency benefit (candidate 17) with the independently holdable claim about the effort required to build a JIT (candidate 18) into a single axis, forcing commenters who split on these into an unrepresentable position."
+              },
+              {
+                "kind": "compatible_poles",
+                "axisIds": [
+                  13
+                ],
+                "candidateIds": [
+                  15
+                ],
+                "explanation": "Axis 13 restates candidate 15's poles (patent grants ownership vs. no owner unless patented), which are logically compatible rather than a genuine disagreement, so this axis should not have been produced."
+              }
+            ]
+          }
+        ]
+      },
+      "log": [
+        "232211f47c90d76c0fc9aef2c5985f850fe54a9d41496e41fab0e7684de33611"
+      ]
+    },
+    {
+      "thread": "49574167",
+      "id": "49574167",
+      "mapping": {
+        "V1": "opus5",
+        "V2": "geminiFlash",
+        "V3": "astraLow",
+        "V4": "solLow"
+      },
+      "reviewer": "anthropic/claude-sonnet-5",
+      "settings": {
+        "reasoning": {
+          "effort": "medium"
+        },
+        "maxTokens": 32000,
+        "concurrency": 2
+      },
+      "review": {
+        "exclusions": [
+          {
+            "candidateId": 3,
+            "reason": "The poles are not mutually exclusive: a team can simultaneously lack drills today (A) and believe AI capacity will let them add drills in future (B); this is a compatible-poles pairing, not a genuine either/or disagreement."
+          },
+          {
+            "candidateId": 6,
+            "reason": "AI being fast at root-cause identification and reliance on AI causing skill atrophy are independently holdable claims (a commenter can believe both at once), so this is a compatible-poles pairing rather than a real disagreement."
+          },
+          {
+            "candidateId": 11,
+            "reason": "This is a claim about the psychological traits/behavior of commenters (overconfidence, humility, fear) rather than a claim about the submission's subject (AI and incident handling), so it falls under the 'traits of commenters' exclusion."
+          },
+          {
+            "candidateId": 32,
+            "reason": "This candidate concerns traditional farming and food security, an unrelated tangent topic with no claim about AI, incidents, or engineering; it falls under the 'topics unrelated to the subject' exclusion."
+          },
+          {
+            "candidateId": 35,
+            "reason": "Believing deep domain knowledge is valuable and believing AI-native skill is a distinct valuable capability are compatible, not mutually exclusive positions, so this is a compatible-poles pairing."
+          },
+          {
+            "candidateId": 36,
+            "reason": "That AI offers little benefit for the technical fix itself and that AI offers benefit by automating surrounding process work are compatible claims about different aspects of the same task, not a genuine either/or."
+          }
+        ],
+        "reviews": [
+          {
+            "variant": "V1",
+            "fullyPreservedCandidateIds": [
+              1,
+              10,
+              17,
+              18,
+              20,
+              25,
+              27,
+              29,
+              31,
+              38,
+              42,
+              46,
+              50,
+              51,
+              53,
+              54,
+              56,
+              57,
+              58,
+              61
+            ],
+            "partialCandidateIds": [
+              4,
+              5,
+              7,
+              8,
+              9,
+              12,
+              13,
+              14,
+              15,
+              16,
+              19,
+              23,
+              30,
+              33,
+              34,
+              37,
+              39,
+              40,
+              41,
+              43,
+              44,
+              45,
+              47,
+              48,
+              49,
+              52,
+              55
+            ],
+            "missingCandidateIds": [
+              2,
+              21,
+              22,
+              24,
+              26,
+              28,
+              59,
+              60
+            ],
+            "coverageIssues": [
+              {
+                "candidateId": 2,
+                "axisIds": [],
+                "explanation": "No axis addresses the claim that incidents beyond AI's ability will eventually also stump humans regardless of practice."
+              },
+              {
+                "candidateId": 21,
+                "axisIds": [],
+                "explanation": "Claude's ability/inability to recognize when it is stuck and ask for help is not represented in any V1 axis."
+              },
+              {
+                "candidateId": 22,
+                "axisIds": [
+                  4
+                ],
+                "explanation": "The specific benchmark claim about Claude missing most deliberately introduced bugs is absorbed into the generic debugging-speed axis 4 and loses its specific, falsifiable content."
+              },
+              {
+                "candidateId": 24,
+                "axisIds": [],
+                "explanation": "The claim that AI is useful as a code-review/sanity-check tool versus dangerously misleading juniors has no corresponding axis."
+              },
+              {
+                "candidateId": 26,
+                "axisIds": [],
+                "explanation": "The claim about whether AI outperforms most (90%) engineers is not represented anywhere."
+              },
+              {
+                "candidateId": 28,
+                "axisIds": [],
+                "explanation": "Whether AI can become a trustworthy autonomous tool with more context versus having fundamental reasoning limitations is entirely absent from V1's axes."
+              },
+              {
+                "candidateId": 59,
+                "axisIds": [],
+                "explanation": "AI's reliability for infrastructure troubleshooting grounded in telemetry is not represented."
+              },
+              {
+                "candidateId": 60,
+                "axisIds": [],
+                "explanation": "The specific disagreement about whether backup-testing validation can be delegated to agents is not represented."
+              },
+              {
+                "candidateId": 43,
+                "axisIds": [
+                  5
+                ],
+                "explanation": "Axis 5 merges #43 with the black-box/library framing (#4) and autonomous-recreation claims (#45,#54), diluting the specific 'need intuitive end-to-end understanding' verdict."
+              },
+              {
+                "candidateId": 47,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "The specific mechanism claim that AI agents can recover codebase understanding via git history/PRs is folded into the general skill-atrophy axis 1 and loses its distinct content."
+              },
+              {
+                "candidateId": 44,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "The specific claim that AI incident reports become useful training cases, and that neglected problems accumulate into larger failures, is not distinctly represented in axis 1's general wording."
+              },
+              {
+                "candidateId": 45,
+                "axisIds": [
+                  5
+                ],
+                "explanation": "The claim that autonomous agents can recreate infrastructure quickly enough to reduce need for hands-on understanding is merged into axis 5 without its 'unattended agents cannot be trusted' counter-claim nuance."
+              },
+              {
+                "candidateId": 48,
+                "axisIds": [
+                  5
+                ],
+                "explanation": "The agency/automation framing of #48 is absorbed into axis 5's understanding framing, losing the 'ability to handle unusual problems' nuance."
+              },
+              {
+                "candidateId": 49,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "The claim that routine AI handling does not necessarily reduce preparedness because complex incidents already require deep knowledge is not distinctly represented in axis 1."
+              },
+              {
+                "candidateId": 52,
+                "axisIds": [
+                  9
+                ],
+                "explanation": "The specific claim that simulation cannot reproduce unknown unknowns is folded into the broader drills-vs-root-cause axis 9 and loses its distinct 'suitability of simulation' framing."
+              },
+              {
+                "candidateId": 55,
+                "axisIds": [
+                  9
+                ],
+                "explanation": "The SRE-specific division of labor claim is folded into the general drills-vs-root-cause axis 9, losing the specific SRE role framing."
+              },
+              {
+                "candidateId": 33,
+                "axisIds": [
+                  4
+                ],
+                "explanation": "Axis 4 preserves the general gist of #33 but loses its specific comparison to human troubleshooting speed under 'sufficient context.'"
+              },
+              {
+                "candidateId": 12,
+                "axisIds": [
+                  2
+                ],
+                "explanation": "Axis 2's generic code-quality framing loses #12's specific claim comparing Claude to human engineers."
+              },
+              {
+                "candidateId": 13,
+                "axisIds": [
+                  2
+                ],
+                "explanation": "The specific refactoring-speed-vs-tech-debt tradeoff of #13 is diluted into the generic code-quality axis 2."
+              },
+              {
+                "candidateId": 15,
+                "axisIds": [
+                  2
+                ],
+                "explanation": "The specific 'fixable via explicit instructions' framing of #15 is lost in the generic axis 2 merge."
+              },
+              {
+                "candidateId": 16,
+                "axisIds": [
+                  2
+                ],
+                "explanation": "The specific comparison to junior-engineer-level absurd implementations is lost in the generic axis 2 merge."
+              },
+              {
+                "candidateId": 19,
+                "axisIds": [
+                  2
+                ],
+                "explanation": "The specific 'always bullshit on first attempt' framing is lost in the generic axis 2 merge."
+              },
+              {
+                "candidateId": 37,
+                "axisIds": [
+                  2
+                ],
+                "explanation": "The specific claim about fix invasiveness/minimality is folded into the generic code-quality axis 2, losing its distinct content."
+              },
+              {
+                "candidateId": 39,
+                "axisIds": [
+                  2
+                ],
+                "explanation": "The specific claim about codebase manageability is diluted into the generic axis 2."
+              },
+              {
+                "candidateId": 40,
+                "axisIds": [
+                  2
+                ],
+                "explanation": "The specific troubleshooting-confidence claim is diluted into the generic axis 2, though it also overlaps thematically with axis 4."
+              },
+              {
+                "candidateId": 41,
+                "axisIds": [
+                  2
+                ],
+                "explanation": "The specific verbosity claim is diluted into the generic code-quality axis 2."
+              },
+              {
+                "candidateId": 4,
+                "axisIds": [
+                  5
+                ],
+                "explanation": "The specific black-box/third-party-library analogy is retained loosely in axis 5 but loses its distinct contractual framing."
+              },
+              {
+                "candidateId": 5,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "The specific tech-debt-from-autonomous-code-generation claim and guardrails counter-claim are diluted into the general skill-atrophy axis 1."
+              },
+              {
+                "candidateId": 7,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "The specific Stack-Overflow-comparison counter-claim (AI not uniquely causing decline) is lost in axis 1's generic wording."
+              },
+              {
+                "candidateId": 8,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "The specific claim comparing AI-copying to manual work/Stack-Overflow searching for learning quality is diluted into axis 1."
+              },
+              {
+                "candidateId": 9,
+                "axisIds": [
+                  2
+                ],
+                "explanation": "The specific 'brute-force ruin unless supervised' claim is diluted into the generic axis 2."
+              },
+              {
+                "candidateId": 14,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "The conditional framing (atrophy avoided only if skills are exercised) is diluted into axis 1's broader claim."
+              },
+              {
+                "candidateId": 23,
+                "axisIds": [
+                  7
+                ],
+                "explanation": "The specific 'architecturally complex code' framing is only loosely captured via axis 7's chisel metaphor, losing its precision."
+              },
+              {
+                "candidateId": 30,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "The specific reasoning about experienced engineers' decomposition skill is diluted into axis 1's general wording."
+              },
+              {
+                "candidateId": 34,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "The specific debugging-and-abstraction framing of #34 is diluted into the general axis 1."
+              }
+            ],
+            "consolidationIssues": [
+              {
+                "kind": "unrelated_merge",
+                "axisIds": [
+                  2
+                ],
+                "candidateIds": [
+                  12,
+                  13,
+                  15,
+                  16,
+                  19,
+                  37,
+                  39,
+                  40,
+                  41
+                ],
+                "explanation": "Axis 2 merges distinct disagreements (overengineering fixability, refactor-speed-vs-debt tradeoff, absurd-implementation comparison, fix invasiveness, troubleshooting confidence, verbosity, codebase manageability) under one generic 'LLM code better/worse' claim, losing material distinctions between commenters who could hold different combinations of these positions."
+              }
+            ]
+          },
+          {
+            "variant": "V2",
+            "fullyPreservedCandidateIds": [
+              58,
+              56,
+              38,
+              43,
+              51,
+              57,
+              28,
+              10,
+              18
+            ],
+            "partialCandidateIds": [],
+            "missingCandidateIds": [
+              1,
+              2,
+              4,
+              5,
+              7,
+              8,
+              9,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              25,
+              26,
+              27,
+              29,
+              30,
+              31,
+              33,
+              34,
+              37,
+              39,
+              40,
+              41,
+              42,
+              44,
+              45,
+              46,
+              47,
+              48,
+              49,
+              50,
+              52,
+              53,
+              54,
+              55,
+              59,
+              60,
+              61
+            ],
+            "coverageIssues": [
+              {
+                "candidateId": 1,
+                "axisIds": [],
+                "explanation": "Candidate absent entirely; V2's 9 axes do not include the continued-capability-makes-engineering-unnecessary disagreement."
+              },
+              {
+                "candidateId": 2,
+                "axisIds": [],
+                "explanation": "No axis represents whether AI-unsolvable incidents will also stump humans."
+              },
+              {
+                "candidateId": 4,
+                "axisIds": [],
+                "explanation": "The black-box-versus-library disagreement is not represented."
+              },
+              {
+                "candidateId": 5,
+                "axisIds": [],
+                "explanation": "The autonomous-code-generation-tech-debt-versus-guardrails disagreement is not represented."
+              },
+              {
+                "candidateId": 7,
+                "axisIds": [],
+                "explanation": "The core 'losing touch by using LLMs instead of debugging' disagreement, distinct from #58, is not represented."
+              },
+              {
+                "candidateId": 8,
+                "axisIds": [],
+                "explanation": "The learning-quality-of-copying-AI-solutions disagreement is not represented."
+              },
+              {
+                "candidateId": 9,
+                "axisIds": [],
+                "explanation": "The brute-force-code-ruins-software disagreement is not represented."
+              },
+              {
+                "candidateId": 12,
+                "axisIds": [],
+                "explanation": "The Claude-vs-human-engineer comparison is not represented."
+              },
+              {
+                "candidateId": 13,
+                "axisIds": [],
+                "explanation": "The refactor-speed-vs-tech-debt tradeoff is not represented."
+              },
+              {
+                "candidateId": 14,
+                "axisIds": [],
+                "explanation": "The conditional-atrophy claim is not represented."
+              },
+              {
+                "candidateId": 15,
+                "axisIds": [],
+                "explanation": "The overengineering-fixability disagreement is not represented."
+              },
+              {
+                "candidateId": 16,
+                "axisIds": [],
+                "explanation": "The absurd-implementation comparison is not represented."
+              },
+              {
+                "candidateId": 17,
+                "axisIds": [],
+                "explanation": "The capability-jump-skepticism disagreement is not represented."
+              },
+              {
+                "candidateId": 19,
+                "axisIds": [],
+                "explanation": "The first-attempt-quality disagreement is not represented."
+              },
+              {
+                "candidateId": 20,
+                "axisIds": [],
+                "explanation": "The AI-documentation-knowledge-transfer disagreement is not represented."
+              },
+              {
+                "candidateId": 21,
+                "axisIds": [],
+                "explanation": "Claude's stuck-recognition disagreement is not represented."
+              },
+              {
+                "candidateId": 22,
+                "axisIds": [],
+                "explanation": "The benchmark bug-finding disagreement is not represented."
+              },
+              {
+                "candidateId": 23,
+                "axisIds": [],
+                "explanation": "The architecturally-complex-code effort disagreement is not represented."
+              },
+              {
+                "candidateId": 24,
+                "axisIds": [],
+                "explanation": "The code-review-tool disagreement is not represented."
+              },
+              {
+                "candidateId": 25,
+                "axisIds": [],
+                "explanation": "The tech-org-insulation disagreement is not represented."
+              },
+              {
+                "candidateId": 26,
+                "axisIds": [],
+                "explanation": "The 90%-of-engineers disagreement is not represented."
+              },
+              {
+                "candidateId": 27,
+                "axisIds": [],
+                "explanation": "The compartmentalization disagreement is not represented."
+              },
+              {
+                "candidateId": 29,
+                "axisIds": [],
+                "explanation": "The chisel-metaphor disagreement is not represented."
+              },
+              {
+                "candidateId": 30,
+                "axisIds": [],
+                "explanation": "The experienced-engineers-no-atrophy claim is not represented."
+              },
+              {
+                "candidateId": 31,
+                "axisIds": [],
+                "explanation": "The AI-chef-vs-co-developer disagreement is not represented."
+              },
+              {
+                "candidateId": 33,
+                "axisIds": [],
+                "explanation": "The general LLM-debugging-speed-vs-unreliability disagreement, distinct from #56, is not represented."
+              },
+              {
+                "candidateId": 34,
+                "axisIds": [],
+                "explanation": "The debugging-atrophy-vs-interactive-learning disagreement is not represented."
+              },
+              {
+                "candidateId": 37,
+                "axisIds": [],
+                "explanation": "The fix-invasiveness disagreement is not represented."
+              },
+              {
+                "candidateId": 39,
+                "axisIds": [],
+                "explanation": "The codebase-manageability disagreement is not represented."
+              },
+              {
+                "candidateId": 40,
+                "axisIds": [],
+                "explanation": "The troubleshooting-confidence disagreement is not represented."
+              },
+              {
+                "candidateId": 41,
+                "axisIds": [],
+                "explanation": "The verbosity disagreement is not represented."
+              },
+              {
+                "candidateId": 42,
+                "axisIds": [],
+                "explanation": "Duplicate of the documentation disagreement, also not represented."
+              },
+              {
+                "candidateId": 44,
+                "axisIds": [],
+                "explanation": "The routine-incident-training-benefit-vs-neglect-accumulation disagreement is not represented."
+              },
+              {
+                "candidateId": 45,
+                "axisIds": [],
+                "explanation": "The autonomous-agents-recreate-systems disagreement is not represented."
+              },
+              {
+                "candidateId": 46,
+                "axisIds": [],
+                "explanation": "The pre-AI-out-of-touch disagreement is not represented."
+              },
+              {
+                "candidateId": 47,
+                "axisIds": [],
+                "explanation": "The git-history-preservation-mechanism disagreement is not represented."
+              },
+              {
+                "candidateId": 48,
+                "axisIds": [],
+                "explanation": "The automation-reduces-agency disagreement is not represented."
+              },
+              {
+                "candidateId": 49,
+                "axisIds": [],
+                "explanation": "The routine-incidents-preparedness disagreement is not represented."
+              },
+              {
+                "candidateId": 50,
+                "axisIds": [],
+                "explanation": "The main-risk (career-path vs direct-understanding) disagreement is not represented."
+              },
+              {
+                "candidateId": 52,
+                "axisIds": [],
+                "explanation": "The simulation-suitability disagreement is not represented."
+              },
+              {
+                "candidateId": 53,
+                "axisIds": [],
+                "explanation": "The ecosystem-transformation-stage disagreement is not represented."
+              },
+              {
+                "candidateId": 54,
+                "axisIds": [],
+                "explanation": "The AI-recover-lost-knowledge-vs-dependency disagreement is not represented."
+              },
+              {
+                "candidateId": 55,
+                "axisIds": [],
+                "explanation": "The SRE role-division disagreement is not represented."
+              },
+              {
+                "candidateId": 59,
+                "axisIds": [],
+                "explanation": "The infrastructure-troubleshooting-reliability disagreement is not represented."
+              },
+              {
+                "candidateId": 60,
+                "axisIds": [],
+                "explanation": "The backup-testing-delegation disagreement is not represented."
+              },
+              {
+                "candidateId": 61,
+                "axisIds": [],
+                "explanation": "The organizational-readiness-investment disagreement is not represented."
+              }
+            ],
+            "consolidationIssues": []
+          },
+          {
+            "variant": "V3",
+            "fullyPreservedCandidateIds": [
+              1,
+              2,
+              4,
+              7,
+              10,
+              15,
+              17,
+              18,
+              20,
+              21,
+              23,
+              25,
+              28,
+              31,
+              37,
+              38,
+              42,
+              43,
+              46,
+              50,
+              51,
+              53,
+              55,
+              56,
+              57,
+              58,
+              61
+            ],
+            "partialCandidateIds": [],
+            "missingCandidateIds": [
+              5,
+              8,
+              9,
+              12,
+              13,
+              14,
+              16,
+              19,
+              22,
+              24,
+              26,
+              27,
+              29,
+              30,
+              33,
+              34,
+              39,
+              40,
+              41,
+              44,
+              45,
+              47,
+              48,
+              49,
+              52,
+              54,
+              59,
+              60
+            ],
+            "coverageIssues": [
+              {
+                "candidateId": 5,
+                "axisIds": [],
+                "explanation": "The autonomous-code-generation-tech-debt-versus-guardrails disagreement has no dedicated or paraphrased axis in V3."
+              },
+              {
+                "candidateId": 8,
+                "axisIds": [],
+                "explanation": "The learning-quality-of-copying-AI-solutions disagreement is absent."
+              },
+              {
+                "candidateId": 9,
+                "axisIds": [],
+                "explanation": "The brute-force-code-ruins-software disagreement is absent."
+              },
+              {
+                "candidateId": 12,
+                "axisIds": [],
+                "explanation": "The Claude-vs-human-engineer comparison is absent."
+              },
+              {
+                "candidateId": 13,
+                "axisIds": [],
+                "explanation": "The refactor-speed-vs-tech-debt tradeoff is absent."
+              },
+              {
+                "candidateId": 14,
+                "axisIds": [],
+                "explanation": "The conditional-atrophy claim is absent."
+              },
+              {
+                "candidateId": 16,
+                "axisIds": [],
+                "explanation": "The absurd-implementation comparison is absent."
+              },
+              {
+                "candidateId": 19,
+                "axisIds": [],
+                "explanation": "The first-attempt-quality disagreement is absent."
+              },
+              {
+                "candidateId": 22,
+                "axisIds": [],
+                "explanation": "The benchmark bug-finding disagreement is absent."
+              },
+              {
+                "candidateId": 24,
+                "axisIds": [],
+                "explanation": "The code-review-tool disagreement is absent."
+              },
+              {
+                "candidateId": 26,
+                "axisIds": [],
+                "explanation": "The 90%-of-engineers disagreement is absent."
+              },
+              {
+                "candidateId": 27,
+                "axisIds": [],
+                "explanation": "The compartmentalization disagreement is absent."
+              },
+              {
+                "candidateId": 29,
+                "axisIds": [],
+                "explanation": "The chisel-metaphor disagreement is absent."
+              },
+              {
+                "candidateId": 30,
+                "axisIds": [],
+                "explanation": "The experienced-engineers-no-atrophy claim is absent."
+              },
+              {
+                "candidateId": 33,
+                "axisIds": [],
+                "explanation": "The general LLM-debugging-speed-vs-unreliability disagreement, distinct from #56, is absent."
+              },
+              {
+                "candidateId": 34,
+                "axisIds": [],
+                "explanation": "The debugging-atrophy-vs-interactive-learning disagreement is absent."
+              },
+              {
+                "candidateId": 39,
+                "axisIds": [],
+                "explanation": "The codebase-manageability disagreement is absent."
+              },
+              {
+                "candidateId": 40,
+                "axisIds": [],
+                "explanation": "The troubleshooting-confidence disagreement is absent."
+              },
+              {
+                "candidateId": 41,
+                "axisIds": [],
+                "explanation": "The verbosity disagreement is absent."
+              },
+              {
+                "candidateId": 44,
+                "axisIds": [],
+                "explanation": "The routine-incident-training-benefit-vs-neglect-accumulation disagreement is absent."
+              },
+              {
+                "candidateId": 45,
+                "axisIds": [],
+                "explanation": "The autonomous-agents-recreate-systems disagreement is absent."
+              },
+              {
+                "candidateId": 47,
+                "axisIds": [],
+                "explanation": "The git-history-preservation-mechanism disagreement is absent."
+              },
+              {
+                "candidateId": 48,
+                "axisIds": [],
+                "explanation": "The automation-reduces-agency disagreement is absent."
+              },
+              {
+                "candidateId": 49,
+                "axisIds": [],
+                "explanation": "The routine-incidents-preparedness disagreement is absent."
+              },
+              {
+                "candidateId": 52,
+                "axisIds": [],
+                "explanation": "The simulation-suitability disagreement is absent."
+              },
+              {
+                "candidateId": 54,
+                "axisIds": [],
+                "explanation": "The AI-recover-lost-knowledge-vs-dependency disagreement is absent."
+              },
+              {
+                "candidateId": 59,
+                "axisIds": [],
+                "explanation": "The infrastructure-troubleshooting-reliability disagreement is absent."
+              },
+              {
+                "candidateId": 60,
+                "axisIds": [],
+                "explanation": "The backup-testing-delegation disagreement is absent."
+              }
+            ],
+            "consolidationIssues": [
+              {
+                "kind": "duplicate",
+                "axisIds": [
+                  22,
+                  29
+                ],
+                "candidateIds": [
+                  20,
+                  42
+                ],
+                "explanation": "Axes 22 and 29 both restate the same disagreement (AI-generated documentation improving versus harming knowledge transfer/maintainability); candidates #20 and #42 should have been merged into a single axis instead of being kept as two separate axes."
+              }
+            ]
+          },
+          {
+            "variant": "V4",
+            "fullyPreservedCandidateIds": [
+              1,
+              2,
+              4,
+              7,
+              10,
+              12,
+              15,
+              16,
+              17,
+              18,
+              20,
+              21,
+              23,
+              24,
+              25,
+              27,
+              28,
+              29,
+              31,
+              33,
+              38,
+              42,
+              43,
+              44,
+              46,
+              51,
+              53,
+              54,
+              55,
+              56,
+              57,
+              58,
+              60,
+              61
+            ],
+            "partialCandidateIds": [
+              14,
+              30,
+              34
+            ],
+            "missingCandidateIds": [
+              5,
+              8,
+              9,
+              13,
+              19,
+              22,
+              26,
+              37,
+              39,
+              40,
+              41,
+              45,
+              47,
+              48,
+              49,
+              50,
+              52,
+              59
+            ],
+            "coverageIssues": [
+              {
+                "candidateId": 14,
+                "axisIds": [
+                  2
+                ],
+                "explanation": "The conditional framing (atrophy avoided only when skills like design/debugging/review are exercised) is merged into axis 2's broader claim, retaining the gist but losing the specific conditionality."
+              },
+              {
+                "candidateId": 30,
+                "axisIds": [
+                  2
+                ],
+                "explanation": "The specific reasoning that experienced engineers already know how to decompose and manage work is diluted into axis 2's general wording."
+              },
+              {
+                "candidateId": 34,
+                "axisIds": [
+                  2
+                ],
+                "explanation": "The specific debugging-and-abstraction framing is diluted into axis 2's general skill-atrophy wording."
+              },
+              {
+                "candidateId": 5,
+                "axisIds": [],
+                "explanation": "The autonomous-code-generation-tech-debt-versus-guardrails disagreement has no corresponding axis."
+              },
+              {
+                "candidateId": 8,
+                "axisIds": [],
+                "explanation": "The learning-quality-of-copying-AI-solutions disagreement is absent."
+              },
+              {
+                "candidateId": 9,
+                "axisIds": [],
+                "explanation": "The brute-force-code-ruins-software disagreement is absent."
+              },
+              {
+                "candidateId": 13,
+                "axisIds": [],
+                "explanation": "The refactor-speed-vs-tech-debt tradeoff is absent."
+              },
+              {
+                "candidateId": 19,
+                "axisIds": [],
+                "explanation": "The first-attempt-quality disagreement is absent."
+              },
+              {
+                "candidateId": 22,
+                "axisIds": [],
+                "explanation": "The benchmark bug-finding disagreement is absent."
+              },
+              {
+                "candidateId": 26,
+                "axisIds": [],
+                "explanation": "The 90%-of-engineers disagreement is absent."
+              },
+              {
+                "candidateId": 37,
+                "axisIds": [],
+                "explanation": "The fix-invasiveness disagreement is absent."
+              },
+              {
+                "candidateId": 39,
+                "axisIds": [],
+                "explanation": "The codebase-manageability disagreement is absent."
+              },
+              {
+                "candidateId": 40,
+                "axisIds": [],
+                "explanation": "The troubleshooting-confidence disagreement is absent."
+              },
+              {
+                "candidateId": 41,
+                "axisIds": [],
+                "explanation": "The verbosity disagreement is absent."
+              },
+              {
+                "candidateId": 45,
+                "axisIds": [],
+                "explanation": "The autonomous-agents-recreate-systems disagreement is absent."
+              },
+              {
+                "candidateId": 47,
+                "axisIds": [],
+                "explanation": "The git-history-preservation-mechanism disagreement is absent."
+              },
+              {
+                "candidateId": 48,
+                "axisIds": [],
+                "explanation": "The automation-reduces-agency disagreement is absent."
+              },
+              {
+                "candidateId": 49,
+                "axisIds": [],
+                "explanation": "The routine-incidents-preparedness disagreement is absent."
+              },
+              {
+                "candidateId": 50,
+                "axisIds": [],
+                "explanation": "The main-risk (career-path vs direct-understanding) disagreement is absent."
+              },
+              {
+                "candidateId": 52,
+                "axisIds": [],
+                "explanation": "The simulation-suitability disagreement is absent."
+              },
+              {
+                "candidateId": 59,
+                "axisIds": [],
+                "explanation": "The infrastructure-troubleshooting-reliability disagreement is absent."
+              }
+            ],
+            "consolidationIssues": []
+          }
+        ]
+      },
+      "log": [
+        "9016f29e79da9dccf62a5e91a5ed217bd4a337d26e88fcce805127028c20af97"
+      ]
+    },
+    {
+      "thread": "49568506",
+      "id": "49568506",
+      "mapping": {
+        "V1": "solLow",
+        "V2": "opus5",
+        "V3": "geminiFlash",
+        "V4": "astraLow"
+      },
+      "reviewer": "anthropic/claude-sonnet-5",
+      "settings": {
+        "reasoning": {
+          "effort": "medium"
+        },
+        "maxTokens": 32000,
+        "concurrency": 2
+      },
+      "review": {
+        "exclusions": [
+          {
+            "candidateId": 26,
+            "reason": "nB=0 in the source data: no commenter held the opposing pole (Lean based on ZF/ZFC), so this is not a genuine two-sided disagreement and should not be produced as an axis by any variant."
+          }
+        ],
+        "reviews": [
+          {
+            "variant": "V1",
+            "fullyPreservedCandidateIds": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              25,
+              27,
+              28,
+              29,
+              30,
+              31,
+              32,
+              33,
+              34,
+              35,
+              36,
+              37,
+              38,
+              39,
+              40,
+              41,
+              42,
+              43,
+              44,
+              45,
+              46
+            ],
+            "partialCandidateIds": [
+              12
+            ],
+            "missingCandidateIds": [],
+            "coverageIssues": [
+              {
+                "candidateId": 12,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "Axis 1 merges the whole Lean-kernel-trust cluster but drops the specific comparison that a formal proof increases trust relative to a human-written proof; only the generic bug-exploit skepticism survives."
+              }
+            ],
+            "consolidationIssues": [
+              {
+                "kind": "unsupported_claim",
+                "axisIds": [
+                  32
+                ],
+                "candidateIds": [
+                  26
+                ],
+                "explanation": "Axis 32 presents 'Lean is based on ZF/ZFC' as one pole of a genuine disagreement, but the source candidate had zero commenters holding that pole, so this is not a real two-sided dispute."
+              }
+            ]
+          },
+          {
+            "variant": "V2",
+            "fullyPreservedCandidateIds": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              9,
+              10,
+              11,
+              13,
+              15,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              25,
+              27,
+              28,
+              29,
+              30,
+              31,
+              32,
+              34,
+              35,
+              36,
+              38,
+              40,
+              41,
+              42,
+              43,
+              44,
+              45
+            ],
+            "partialCandidateIds": [
+              12,
+              14,
+              16,
+              33,
+              37
+            ],
+            "missingCandidateIds": [
+              8,
+              17,
+              39,
+              46
+            ],
+            "coverageIssues": [
+              {
+                "candidateId": 12,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "The comparison-to-human-proof trust claim is reduced to a generic kernel-bug caveat."
+              },
+              {
+                "candidateId": 14,
+                "axisIds": [
+                  2
+                ],
+                "explanation": "Axis 2 fuses the general AI-benefit/harm verdict with the separate centralization-of-control claim, blurring the distinct scope of candidate 14."
+              },
+              {
+                "candidateId": 16,
+                "axisIds": [
+                  2
+                ],
+                "explanation": "The empowerment-vs-centralization disagreement (candidate 16) is folded into the general benefit/harm axis rather than kept as its own claim."
+              },
+              {
+                "candidateId": 33,
+                "axisIds": [
+                  3
+                ],
+                "explanation": "The translation-vs-substantial-work claim is entangled with an unrelated claim about months of human preparation (candidate 46), obscuring its distinct scope."
+              },
+              {
+                "candidateId": 37,
+                "axisIds": [
+                  3
+                ],
+                "explanation": "Same axis 3 conflates the breakthrough-significance disagreement with the unrelated timeline/marketing claim."
+              },
+              {
+                "candidateId": 8,
+                "axisIds": [],
+                "explanation": "No axis represents the claim that AI breakthroughs in commenters' lifetimes are limited by restricted model access."
+              },
+              {
+                "candidateId": 17,
+                "axisIds": [],
+                "explanation": "No axis represents the dispute over whether GDP/tax/innovation metrics are meaningful or poisoned evidence of AI benefit."
+              },
+              {
+                "candidateId": 39,
+                "axisIds": [],
+                "explanation": "No axis represents the disagreement over whether frontier AI could eventually build its own formalization tooling."
+              },
+              {
+                "candidateId": 46,
+                "axisIds": [
+                  3
+                ],
+                "explanation": "The 11-days-vs-months-of-preparation dispute is not given its own pole; it is only an incidental clause inside the unrelated breakthrough axis."
+              }
+            ],
+            "consolidationIssues": [
+              {
+                "kind": "unrelated_merge",
+                "axisIds": [
+                  2
+                ],
+                "candidateIds": [
+                  14,
+                  16
+                ],
+                "explanation": "Candidates 14 (overall AI benefit vs harm) and 16 (empowerment vs centralization) are independently holdable claims merged into a single axis."
+              },
+              {
+                "kind": "unrelated_merge",
+                "axisIds": [
+                  3
+                ],
+                "candidateIds": [
+                  33,
+                  37,
+                  46
+                ],
+                "explanation": "The breakthrough-significance dispute (33/37) is merged with the unrelated timeline/marketing dispute about an 11-day claim (46), which a commenter could hold independently."
+              }
+            ]
+          },
+          {
+            "variant": "V3",
+            "fullyPreservedCandidateIds": [
+              1,
+              5,
+              7,
+              11,
+              13,
+              15,
+              20,
+              24,
+              27,
+              28,
+              29,
+              30,
+              31,
+              32,
+              33,
+              35,
+              37,
+              38,
+              40,
+              41,
+              42,
+              43,
+              44,
+              45
+            ],
+            "partialCandidateIds": [
+              9,
+              10,
+              12,
+              14,
+              16
+            ],
+            "missingCandidateIds": [
+              2,
+              3,
+              4,
+              6,
+              8,
+              17,
+              18,
+              19,
+              21,
+              22,
+              23,
+              25,
+              34,
+              36,
+              39,
+              46
+            ],
+            "coverageIssues": [
+              {
+                "candidateId": 9,
+                "axisIds": [
+                  3
+                ],
+                "explanation": "Aging-should-be-cured is merged with the separate lifespan-resource-problem dispute, losing that a commenter could favor curing aging while still worrying about resource strain."
+              },
+              {
+                "candidateId": 10,
+                "axisIds": [
+                  3
+                ],
+                "explanation": "Same axis 3 conflates the independent population/resource dispute with the aging-cure verdict."
+              },
+              {
+                "candidateId": 12,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "The human-proof trust comparison is reduced to a generic kernel-bug caveat in the merged Lean-trust axis."
+              },
+              {
+                "candidateId": 14,
+                "axisIds": [
+                  2
+                ],
+                "explanation": "General AI benefit/harm verdict is fused with the centralization-of-control claim."
+              },
+              {
+                "candidateId": 16,
+                "axisIds": [
+                  2
+                ],
+                "explanation": "Empowerment-vs-centralization claim folded into the general benefit/harm axis."
+              },
+              {
+                "candidateId": 2,
+                "axisIds": [],
+                "explanation": "No axis represents the subsidize-AI-vs-fund-education dispute."
+              },
+              {
+                "candidateId": 3,
+                "axisIds": [],
+                "explanation": "No axis represents whether Lean is human-oriented."
+              },
+              {
+                "candidateId": 4,
+                "axisIds": [],
+                "explanation": "No axis represents whether Lean will become the dominant proof language."
+              },
+              {
+                "candidateId": 6,
+                "axisIds": [],
+                "explanation": "No axis represents the human-citation-advantage dispute."
+              },
+              {
+                "candidateId": 8,
+                "axisIds": [],
+                "explanation": "No axis represents restricted-access limiting AI breakthroughs."
+              },
+              {
+                "candidateId": 17,
+                "axisIds": [],
+                "explanation": "No axis represents the GDP/metrics evidence dispute."
+              },
+              {
+                "candidateId": 18,
+                "axisIds": [],
+                "explanation": "No axis represents the AI-felony dispute."
+              },
+              {
+                "candidateId": 19,
+                "axisIds": [],
+                "explanation": "No axis represents the looping-vs-infinite-domain dispute."
+              },
+              {
+                "candidateId": 21,
+                "axisIds": [],
+                "explanation": "No axis represents the trusted-core-size dispute."
+              },
+              {
+                "candidateId": 22,
+                "axisIds": [],
+                "explanation": "No axis represents the comparator-scope dispute."
+              },
+              {
+                "candidateId": 23,
+                "axisIds": [],
+                "explanation": "No axis represents the axiomatic-foundations dispute."
+              },
+              {
+                "candidateId": 25,
+                "axisIds": [],
+                "explanation": "No axis represents the abbreviations-vs-new-inference-system dispute."
+              },
+              {
+                "candidateId": 34,
+                "axisIds": [],
+                "explanation": "No axis represents the plausibility of the 13-million-line claim."
+              },
+              {
+                "candidateId": 36,
+                "axisIds": [],
+                "explanation": "No axis represents the Buzzard-scope dispute."
+              },
+              {
+                "candidateId": 39,
+                "axisIds": [],
+                "explanation": "No axis represents the frontier-AI-builds-own-tooling dispute."
+              },
+              {
+                "candidateId": 46,
+                "axisIds": [],
+                "explanation": "No axis represents the 11-days-vs-months-of-preparation dispute."
+              }
+            ],
+            "consolidationIssues": [
+              {
+                "kind": "unrelated_merge",
+                "axisIds": [
+                  2
+                ],
+                "candidateIds": [
+                  14,
+                  16
+                ],
+                "explanation": "Independently holdable claims about overall AI benefit/harm and about centralization of control are merged into one axis."
+              },
+              {
+                "kind": "unrelated_merge",
+                "axisIds": [
+                  3
+                ],
+                "candidateIds": [
+                  9,
+                  10
+                ],
+                "explanation": "The aging-cure verdict and the lifespan population/resource dispute are independently holdable but merged into a single axis."
+              }
+            ]
+          },
+          {
+            "variant": "V4",
+            "fullyPreservedCandidateIds": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              13,
+              15,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              25,
+              27,
+              28,
+              29,
+              30,
+              31,
+              32,
+              33,
+              34,
+              35,
+              36,
+              37,
+              38,
+              39,
+              40,
+              41,
+              42,
+              43,
+              44,
+              45,
+              46
+            ],
+            "partialCandidateIds": [
+              12,
+              14,
+              16
+            ],
+            "missingCandidateIds": [],
+            "coverageIssues": [
+              {
+                "candidateId": 12,
+                "axisIds": [
+                  1
+                ],
+                "explanation": "The human-proof trust comparison is reduced to a generic kernel-bug caveat in the merged Lean-trust axis."
+              },
+              {
+                "candidateId": 14,
+                "axisIds": [
+                  3
+                ],
+                "explanation": "The general AI benefit/harm verdict is fused with the centralization-of-control claim, changing its scope."
+              },
+              {
+                "candidateId": 16,
+                "axisIds": [
+                  3
+                ],
+                "explanation": "The empowerment-vs-centralization dispute is folded into the general benefit/harm axis rather than kept distinct."
+              }
+            ],
+            "consolidationIssues": [
+              {
+                "kind": "unrelated_merge",
+                "axisIds": [
+                  3
+                ],
+                "candidateIds": [
+                  14,
+                  16
+                ],
+                "explanation": "Candidates 14 and 16 describe independently holdable claims (overall AI benefit/harm vs. empowerment/centralization) that are merged into a single axis."
+              },
+              {
+                "kind": "unsupported_claim",
+                "axisIds": [
+                  32
+                ],
+                "candidateIds": [
+                  26
+                ],
+                "explanation": "Axis 32 presents Lean's foundational system as a genuine two-sided dispute, but the source candidate had no commenters supporting the opposing pole."
+              }
+            ]
+          }
+        ]
+      },
+      "log": [
+        "89cf53db5f8a09f39b7c09f380b84a6d93c8297d6c560cfd76a34ca676c834df"
+      ]
+    }
+  ]
+}

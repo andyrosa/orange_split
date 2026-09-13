@@ -1,6 +1,6 @@
 // Headless runner: executes the same core pipeline as hn_polarization.html from Node.
 // Usage: node scripts/run_node.js --thread=49525378 [--key=sk-or-...] [--out=result.json] [--thread-file=path] [--cache-dir=path]
-//        [--config-file=path] [--volume=<key>] [--consolidation=<key>] [--model=id] [--temperature=0] [--seed=12345] [--concurrency=30]
+//        [--config-file=path] [--volume=<key>] [--consolidation=<key>] [--summary=<key>] [--model=id] [--temperature=0] [--seed=12345] [--concurrency=30]
 //        [--share=<percent>] [--budget=<usd>]
 // --share analyzes only the top N percent of comments, the same selection as the page's slider; default 100.
 // --budget stops the run once the spend passes this many dollars; default DEFAULT_CONFIG.budgetUsd.
@@ -42,6 +42,10 @@ function buildConfig() {
     const consolidation = readArgument('consolidation');
     if (consolidation !== null) {
         Object.assign(config, core.roleChoice('consolidation', consolidation).config);
+    }
+    const summary = readArgument('summary');
+    if (summary !== null) {
+        Object.assign(config, core.roleChoice('summary', summary).config);
     }
     const model = readArgument('model');
     if (model !== null) {
@@ -131,18 +135,23 @@ function report(result, elapsedSeconds) {
 
 async function main() {
     const threadId = readArgument('thread');
-    if (!threadId || !core.isThreadId(threadId)) {
-        throw new Error('pass --thread=<numeric Hacker News item id>');
+    const articleFile = readArgument('article-file');
+    if (articleFile && threadId) throw new Error('Choose --article-file or --thread, not both');
+    if (!articleFile && (!threadId || !core.isThreadId(threadId))) {
+        throw new Error('pass --thread=<numeric Hacker News item id> or --article-file=<plain text file>');
     }
     const apiKey = readArgument('key') || process.env[KEY_ENV_NAME];
     if (!apiKey) {
         throw new Error(`pass --key=... or set ${KEY_ENV_NAME}`);
     }
     const config = buildConfig();
-    const fullThread = core.flattenThread(await loadThreadItem(threadId, readArgument('thread-file')));
+    const fullThread = articleFile
+        ? core.createArticleSource(fs.readFileSync(articleFile, 'utf8'), readArgument('title') || '')
+        : core.flattenThread(await loadThreadItem(threadId, readArgument('thread-file')));
     const share = readArgument('share');
-    const thread = core.threadShare(fullThread, share === null ? DEFAULT_SHARE_PERCENT : Number(share));
-    process.stderr.write(`${thread.title} (${thread.comments.length} of ${fullThread.comments.length} comments)\n`);
+    if (articleFile && share !== null && Number(share) !== 100) throw new Error('Pasted articles require --share=100; the app never silently analyzes only a prefix');
+    const thread = articleFile ? fullThread : core.threadShare(fullThread, share === null ? DEFAULT_SHARE_PERCENT : Number(share));
+    process.stderr.write(articleFile ? `${thread.title} (complete article, ${thread.text.length} characters)\n` : `${thread.title} (${thread.comments.length} of ${fullThread.comments.length} comments)\n`);
 
     const cacheDirectory = readArgument('cache-dir');
     const directCallChat = core.makeOpenRouterCallChat({ apiKey });
@@ -166,7 +175,8 @@ async function main() {
     if (result.synthesisError) process.exitCode = 1;
 }
 
-main().catch(error => {
+module.exports = { buildConfig };
+if (require.main === module) main().catch(error => {
     process.stderr.write(`ERROR: ${error.message}\n`);
     process.exitCode = 1;
 });

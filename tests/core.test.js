@@ -48,7 +48,7 @@ test('minimum-comment input and buttons refresh both story sources without chang
     const sandbox = {
         elements, Event, stepMinComments: core.stepMinComments, isThreadId: core.isThreadId,
         homePageStories: stories, lastSearch: { text: 'Example', stories },
-        storyScope: 'front', searchLatest: { cancel() {} },
+        storyScope: 'front', articleModeSelected: false, searchLatest: { cancel() {} },
         SEARCH_MIN_CHARS: 3, HEADER_HOME_PAGE: 'Front page', searchHeader: () => 'Search',
         closeList() { elements.storyList.hidden = true; },
         showList(rows) {
@@ -1875,7 +1875,7 @@ test('runPipeline passes per-stage sampling and reasoning settings to the model 
 
 test('model choices exist per role with labels, config fragments, and per-character rates', () => {
     assert.equal(core.DEFAULT_VOLUME_KEY, 'lunaLow');
-    assert.equal(core.DEFAULT_CONSOLIDATION_KEY, 'sonnet5');
+    assert.equal(core.DEFAULT_CONSOLIDATION_KEY, 'astraLow');
     for (const [key, choice] of Object.entries(core.VOLUME_MODELS)) {
         assert.ok(choice.label.length > 0, key + ' has a label');
         assert.ok(choice.config.modelExtract && choice.config.modelScore, key + ' names the extraction and scoring model');
@@ -1906,9 +1906,9 @@ test('buildStageConfig merges one volume choice with one consolidation choice', 
 test('option labels are built from the entry constants and quality record', () => {
     const haiku = core.VOLUME_MODELS.haiku;
     const usd = (haiku.usdPerMillionChars * core.CHARS_PER_COMMENT / 1000).toFixed(2);
-    assert.equal(haiku.label, `Claude Haiku 4.5: $${usd} and ${core.formatDuration(haiku.secondsPerMillionChars * core.CHARS_PER_COMMENT / 1000)} per 1000 comments. 0.5 stances per comment; 3 to 4 two-sided rows per 100 comments; 59% of stances held under blind review, 12% wrong; clean output.`);
+    assert.equal(haiku.label, `Claude Haiku 4.5: $${usd} and ${core.formatDuration(haiku.secondsPerMillionChars * core.CHARS_PER_COMMENT / 1000)} per 1000 comments. 0.5 stances per comment; 3.5 two-sided rows per 100 comments; 59% of stances held under blind review, 12% wrong; clean output.`);
     const sonnet = core.CONSOLIDATION_MODELS.sonnet5;
-    assert.equal(sonnet.label, `Claude Sonnet 5: $${(sonnet.usdPerMillionChars * core.CHARS_PER_COMMENT / 1000).toFixed(2)} and 3 minutes per 1000 comments. 61% to 74% of axes two-sided across 3 runs.`);
+    assert.equal(sonnet.label, `Claude Sonnet 5: $${(sonnet.usdPerMillionChars * core.CHARS_PER_COMMENT / 1000).toFixed(2)} and 3 minutes per 1000 comments. 81.82% of axes two-sided across 5 threads; Same 1,234 HN comments; Luna low extraction/scoring. Opus 5 reviewed consolidation. Coverage excludes legitimately dropped candidates; flags are model judgments, not an accuracy grade.`);
     assert.equal(core.CONSOLIDATION_MODELS.lunaMax.label.endsWith('. 56% of axes two-sided.'), true, 'no note, no runs');
 });
 
@@ -1933,17 +1933,19 @@ test('extraction model metrics have clear columns and measured values', () => {
 
 test('consolidation model metrics use role-specific columns', () => {
     assert.deepEqual(core.CONSOLIDATION_METRIC_COLUMNS.map(([, label]) => label), [
-        'Model', 'Reasoning effort', 'Estimated cost / 1k comments', 'Estimated time / 1k comments',
-        'Axes with both sides', 'Measured across', 'Notes',
+        'Model', 'Cost / 1k comments', 'Minutes / 1k comments',
+        'Two-sided comparisons / 1k comments', 'Axes flagged in review', 'Candidates fully preserved in review',
     ]);
     assert.deepEqual(core.consolidationMetrics(core.CONSOLIDATION_MODELS.sonnet5), {
-        model: 'Claude Sonnet 5',
+        model: 'Claude Sonnet 5 (adaptive)',
         reasoning: 'adaptive',
-        cost: '$0.23',
-        time: '3 minutes',
-        twoSided: '61% to 74%',
-        measurement: '3 runs',
-        notes: '',
+        cost: '$0.55',
+        time: '3.2',
+        twoSidedPer1k: '72.9',
+        twoSided: '81.82%',
+        flagged: '21.8% (24/110)',
+        preserved: '75.2% (173/230)',
+        measurement: '5 threads',
     });
     assert.equal(core.CONSOLIDATION_MODELS.glm53.effort, 'high');
 });
@@ -1951,7 +1953,7 @@ test('consolidation model metrics use role-specific columns', () => {
 test('combinedRate scales the consolidation rate by the volume model\'s candidate factor', () => {
     const opus = core.VOLUME_MODELS.opus5;
     const sonnet = core.CONSOLIDATION_MODELS.sonnet5;
-    assertClose(core.combinedRate('opus5', 'sonnet5', 'usdPerMillionChars'), opus.usdPerMillionChars + sonnet.usdPerMillionChars * (opus.candidateFactor + 1), 'opus factor plus synthesis allowance applied');
+    assertClose(core.combinedRate('opus5', 'sonnet5', 'usdPerMillionChars'), opus.usdPerMillionChars + sonnet.usdPerMillionChars * opus.candidateFactor + sonnet.synthesisRates.usdPerMillionChars, 'opus factor plus measured synthesis rate applied');
     assert.equal(core.VOLUME_MODELS.haiku.candidateFactor, 1, 'Haiku is the reference');
     for (const choice of Object.values(core.VOLUME_MODELS)) {
         assert.ok(choice.candidateFactor > 0);
@@ -1959,7 +1961,7 @@ test('combinedRate scales the consolidation rate by the volume model\'s candidat
 });
 
 test('combinedRate sums the per-character rates and estimateRunSeconds never goes below the stage latency floor', () => {
-    const expected = core.VOLUME_MODELS.haiku.usdPerMillionChars + 2 * core.CONSOLIDATION_MODELS.sonnet5.usdPerMillionChars;
+    const expected = core.VOLUME_MODELS.haiku.usdPerMillionChars + core.CONSOLIDATION_MODELS.sonnet5.usdPerMillionChars + core.CONSOLIDATION_MODELS.sonnet5.synthesisRates.usdPerMillionChars;
     assertClose(core.combinedRate('haiku', 'sonnet5', 'usdPerMillionChars'), expected, 'combined rate');
     const seconds = core.estimateRunSeconds(416000, 'haiku', 'sonnet5');
     assertClose(seconds, (core.VOLUME_MODELS.haiku.secondsPerMillionChars + 2 * core.CONSOLIDATION_MODELS.sonnet5.secondsPerMillionChars) * 0.416, 'seconds for a large thread');
@@ -2097,8 +2099,10 @@ test('run page URLs carry every setting and use the snapshot time as the cache n
         volume: 'lunaLow',
         consolidation: 'sonnet5',
         budget: '1.5',
+        summary: 'sonnet5',
     });
-    assert.deepEqual(core.parseRunPageUrl(value), selection);
+    assert.deepEqual(core.parseRunPageUrl(value), { ...selection, summary: 'sonnet5' });
+    url.searchParams.delete('summary');
     assert.equal(core.runResultCacheKey(selection), url.search.slice(1));
 });
 
