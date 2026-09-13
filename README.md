@@ -4,13 +4,15 @@ For every claim made in a Hacker News thread or pasted article, how many people 
 
 ## Original motivation
 
-The original motivation was to see how many people were still saying that LLMs are just statistical parrots.
+The original motivation was to assess the reaction to Fable 5.1.
 
 ## Practical utility and lessons
 
 This tool is of very limited practical utility. Since it focuses on polarization, it's thread analysis does not surface interesting opinions or side stories, help user build an understanding of individual community members, or substitute for reading the comments or the article people are responding to. 
 
-The main lesson from building it is that automated model selection is expensive, time-consuming, and of suspect quality.
+The main lesson from building it is that automated model selection is expensive, time-consuming, and of suspect quality. 
+
+The model to model comparisons (shown below) that inform the model select UI are somewhat useful.
 
 ## Goal
 
@@ -112,8 +114,8 @@ A final model synthesis leads with the main disagreements and their reasoning, i
 
 ## User interface
 
-The app is hosted at https://andyrosa.github.io/hn_polarization/.
-The public source repository is https://github.com/andyrosa/hn_polarization.
+The app is hosted at https://andyrosa.github.io/orange_split/.
+The public source repository is https://github.com/andyrosa/orange_split.
 
 Every push to `main` runs `node --test`, including the Content-Security-Policy checks,
 and deploys through `.github/workflows/pages.yml`. The workflow publishes only
