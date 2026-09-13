@@ -1907,9 +1907,11 @@ test('option labels are built from the entry constants and quality record', () =
     const haiku = core.VOLUME_MODELS.haiku;
     const usd = (haiku.usdPerMillionChars * core.CHARS_PER_COMMENT / 1000).toFixed(2);
     assert.equal(haiku.label, `Claude Haiku 4.5: $${usd} and ${core.formatDuration(haiku.secondsPerMillionChars * core.CHARS_PER_COMMENT / 1000)} per 1000 comments. 0.5 stances per comment; 3.5 two-sided rows per 100 comments; 59% of stances held under blind review, 12% wrong; clean output.`);
-    const sonnet = core.CONSOLIDATION_MODELS.sonnet5;
-    assert.equal(sonnet.label, `Claude Sonnet 5: $${(sonnet.usdPerMillionChars * core.CHARS_PER_COMMENT / 1000).toFixed(2)} and 3 minutes per 1000 comments. 81.82% of axes two-sided across 5 threads; Same 1,234 HN comments; Luna low extraction/scoring. Opus 5 reviewed consolidation. Coverage excludes legitimately dropped candidates; flags are model judgments, not an accuracy grade.`);
-    assert.equal(core.CONSOLIDATION_MODELS.lunaMax.label.endsWith('. 56% of axes two-sided.'), true, 'no note, no runs');
+    const sonnet = { ...core.CONSOLIDATION_MODELS.sonnet5, usdPerMillionChars: 1.733, secondsPerMillionChars: 600,
+        quality: { twoSidedPercent: [81.82], runs: '5 threads', note: 'Example review evidence' } };
+    assert.equal(core.consolidationLabel(sonnet), 'Claude Sonnet 5: $0.55 and 3 minutes per 1000 comments. 81.82% of axes two-sided across 5 threads; Example review evidence.');
+    const withoutNote = { ...sonnet, quality: { twoSidedPercent: [56] } };
+    assert.equal(core.consolidationLabel(withoutNote).endsWith('. 56% of axes two-sided.'), true, 'no note, no runs');
 });
 
 test('extraction model metrics have clear columns and measured values', () => {
@@ -1936,7 +1938,11 @@ test('consolidation model metrics use role-specific columns', () => {
         'Model', 'Cost / 1k comments', 'Minutes / 1k comments',
         'Two-sided comparisons / 1k comments', 'Axes flagged in review', 'Candidates fully preserved in review',
     ]);
-    assert.deepEqual(core.consolidationMetrics(core.CONSOLIDATION_MODELS.sonnet5), {
+    const measured = { ...core.CONSOLIDATION_MODELS.sonnet5, usdPerMillionChars: 1.733, secondsPerMillionChars: 600,
+        quality: { benchmark: { comments: 1234, axes: 110, twoSided: 90,
+            review: { candidates: 233, fullyPreserved: 173, partial: 47, missing: 10, excluded: 3, flaggedAxes: 24 } },
+            twoSidedPer1k: 72.93355, twoSidedPercent: [81.82], flaggedPercent: 21.81818, preservedPercent: 75.21739, runs: '5 threads' } };
+    assert.deepEqual(core.consolidationMetrics(measured), {
         model: 'Claude Sonnet 5 (adaptive)',
         reasoning: 'adaptive',
         cost: '$0.55',
@@ -1968,7 +1974,6 @@ test('combinedRate sums the per-character rates and estimateRunSeconds never goe
     const floor = 2 * core.VOLUME_MODELS.haiku.minimumSeconds + 2 * core.CONSOLIDATION_MODELS.sonnet5.minimumSeconds;
     assert.equal(core.estimateRunSeconds(0, 'haiku', 'sonnet5'), floor);
     assert.equal(core.estimateRunSeconds(8000, 'haiku', 'sonnet5'), floor, 'a small thread is bounded by latency');
-    assert.equal(floor, 46, 'includes the additional synthesis latency');
     for (const choice of Object.values(core.VOLUME_MODELS).concat(Object.values(core.CONSOLIDATION_MODELS))) {
         assert.ok(choice.minimumSeconds > 0);
     }

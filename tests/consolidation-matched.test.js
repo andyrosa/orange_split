@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { readPage, blockText, CORE_SCRIPT_PATTERN } = require('../scripts/load_core');
-const { MODELS, loadExperimentCore, validateModelSet, Budget, requestAllowance, makeClient, consolidate, score, validateReview, completeReviewEvidence, reviewRequest } = require('../scripts/eval_consolidation_matched');
+const { MODELS, loadExperimentCore, validateModelSet, Budget, requestAllowance, makeClient, consolidate, score, validateReview, completeReviewPartitions, completeReviewEvidence, reviewRequest } = require('../scripts/eval_consolidation_matched');
 const core = loadExperimentCore(blockText(readPage(), CORE_SCRIPT_PATTERN));
 const { noCacheCost, aggregate, buildReport } = require('../scripts/report_consolidation_matched');
 
@@ -86,9 +86,11 @@ test('review uses common eligibility and rejects overlapping partitions and inve
     const request = reviewRequest(core, { thread: { title: 'Four-way comparison' }, candidates: [] }, variants);
     assert.match(request.messages[0].content, /all 4 anonymous/);
     assert.deepEqual(request.reasoning, { effort: 'medium' });
-    assert.equal(request.maxTokens, 32000);
+    assert.equal(request.maxTokens, 64000);
     assert.equal(JSON.parse(request.messages[1].content).variants.length, 4);
     assert.doesNotThrow(() => validateModelSet({ models: MODELS }));
+    assert.doesNotThrow(() => validateModelSet({ models: MODELS.slice(0, 4) }));
+    assert.throws(() => validateModelSet({ models: MODELS.slice(0, 7) }), /Frozen model set/);
     assert.throws(() => validateModelSet({ models: MODELS.slice(0, 3) }), /Frozen model set/);
 });
 
@@ -143,4 +145,53 @@ test('evidence completion fills only requested explanations and preserves all gr
         assert.equal(response.json.reviews[index].coverageIssues.length, 0);
     }
     await assert.rejects(() => completeReviewEvidence(core, { call: async () => ({ json: { evidence: [] } }) }, item, variants, response, []), /Incomplete evidence supplement/);
+});
+
+test('timeout retry requires verified cancellation and retains the failed attempt in accounting', async () => {
+    const item = { thread: { title: 'Timeout accounting' }, candidates: [] };
+    const config = { ...core.DEFAULT_CONFIG, ...core.buildStageConfig('lunaLow', 'glm53') };
+    const error = Object.assign(new Error('timeout'), { name: 'TimeoutError', usage: { cost: 0.38 }, cancelled: true });
+    const calls = [];
+    const result = await consolidate(core, { call: async call => {
+        calls.push(call);
+        if (calls.length === 1) throw error;
+        return { json: { axes: [{ statementA: 'Adopt four days.', statementB: 'Keep five days.' }] }, usage: { cost: 0.2 } };
+    } }, item, config);
+    assert.equal(calls.length, 2);
+    assert.equal(result.log.length, 2);
+    assert.equal(calls[1].meta.retryOfCancelledRequest, result.log[0]);
+    assert.deepEqual(calls[0].messages, calls[1].messages);
+    assert.match(result.warnings.join(' '), /failed attempt cost and time included/);
+    let unknownCalls = 0;
+    await assert.rejects(() => consolidate(core, { call: async () => {
+        unknownCalls++; throw Object.assign(new Error('timeout'), { name: 'TimeoutError' });
+    } }, item, config), /timeout/);
+    assert.equal(unknownCalls, 1);
+});
+
+test('partition supplement fills only unassigned candidates without changing existing grades', async () => {
+    const variants = ['V1', 'V2'].map(label => ({ label, axes: [{ id: 1 }] }));
+    const item = { thread: { title: 'Missing classification' }, candidates: [
+        { statementA: 'Adopt four days.', statementB: 'Keep five days.', commentsA: [1], commentsB: [2] },
+        { statementA: 'Allow remote work.', statementB: 'Require office work.', commentsA: [1], commentsB: [2] },
+    ] };
+    const response = { json: { exclusions: [], reviews: variants.map(({ label }) => ({ variant: label,
+        fullyPreservedCandidateIds: [1], partialCandidateIds: [], missingCandidateIds: [],
+        coverageIssues: [], consolidationIssues: [] })) } };
+    const log = [];
+    const result = await completeReviewPartitions(core, { call: async call => {
+        const input = JSON.parse(call.messages[1].content);
+        assert.deepEqual(input.gaps.map(x => x.candidateId), [2, 2]);
+        return { json: { classifications: input.gaps.map((gap, i) => ({ variant: gap.variant, candidateId: gap.candidateId,
+            classification: i ? 'fullyPreserved' : 'partial', axisIds: [1], explanation: 'Compared candidate scope with output axis.' })) } };
+    } }, item, variants, response, log);
+    assert.equal(log.length, 1);
+    assert.deepEqual(result.json.reviews[0].fullyPreservedCandidateIds, [1]);
+    assert.deepEqual(result.json.reviews[0].partialCandidateIds, [2]);
+    assert.deepEqual(result.json.reviews[1].fullyPreservedCandidateIds, [1, 2]);
+    assert.deepEqual(result.json.exclusions, response.json.exclusions);
+    assert.deepEqual(response.json.reviews[1].fullyPreservedCandidateIds, [1]);
+    const conflicting = structuredClone(response); conflicting.json.reviews[0].partialCandidateIds.push(1);
+    await assert.rejects(() => completeReviewPartitions(core, { call: async () => { throw new Error('Must not call'); } }, item, variants, conflicting, []), /conflicting candidate classifications/);
+    await assert.rejects(() => completeReviewPartitions(core, { call: async () => ({ json: { classifications: [] } }) }, item, variants, response, []), /Incomplete partition supplement/);
 });

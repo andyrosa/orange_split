@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HN Split model picker proposals</title>
+<title>Orange Split saved result and budget proposals</title>
 <style>
 :root {
     color-scheme: light;
@@ -139,6 +139,53 @@ p { line-height: 1.45; }
 .previous-proposals { margin-top: 36px; border-top: 1px solid #d8d8d4; padding-top: 18px; }
 .previous-proposals > summary { cursor: pointer; color: #556270; font-size: 14px; padding: 8px 0; }
 .previous-proposals > h1 { margin-top: 18px; }
+.coverage-intro { max-width: 780px; }
+.coverage-nav { display: flex; flex-wrap: wrap; gap: 16px; margin: 18px 0 24px; }
+.coverage-nav a { color: #245c8c; text-underline-offset: 3px; }
+.coverage-proposal { scroll-margin-top: 18px; }
+.coverage-proposal .heading { flex-wrap: wrap; }
+.coverage-demo { border: 1px solid #ccd2d7; border-radius: 6px; overflow: hidden; }
+.coverage-thread { padding: 16px 20px; border-bottom: 1px solid #e0e4e8; background: #f8fafc; }
+.coverage-thread h3 { font-size: 19px; margin: 0 0 4px; }
+.coverage-thread p { margin: 0; color: #58616a; font-size: 14px; }
+.coverage-models { margin-top: 8px !important; }
+.coverage-plan { padding: 18px 20px; border-bottom: 1px solid #dce3e9; }
+.coverage-plan h4, .coverage-result h4 { margin: 0 0 12px; font-size: 16px; }
+.coverage-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 14px 24px; }
+.coverage-budget { display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.coverage-budget input { width: 76px; padding: 7px 8px; border: 1px solid #a8b1bb; border-radius: 4px; font: inherit; }
+.coverage-demo button { cursor: pointer; font: inherit; font-size: 14px; border: 1px solid #a8b1bb; border-radius: 4px; padding: 8px 12px; background: #fff; color: #254e73; }
+.coverage-demo button:hover { background: #eaf3fc; }
+.coverage-demo button:focus-visible, .coverage-demo input:focus-visible, .coverage-demo summary:focus-visible { outline: 3px solid #286eae; outline-offset: 3px; }
+.coverage-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.coverage-slider { margin: 16px 0 12px; }
+.coverage-slider label { display: block; margin-bottom: 9px; font-size: 14px; }
+.coverage-slider input { display: block; width: 100%; max-width: 580px; margin: 0; accent-color: #2b6cb0; }
+.coverage-selection { font-size: 16px; margin: 14px 0 4px; }
+.coverage-hint { font-size: 14px; color: #58616a; margin: 4px 0 14px; }
+.coverage-demo .coverage-run { background: #245c8c; border-color: #245c8c; color: #fff; }
+.coverage-demo .coverage-run:hover { background: #19466e; }
+.coverage-demo .coverage-reset { background: transparent; border-color: transparent; color: #65717d; }
+.coverage-receipt { padding: 12px 14px; border-left: 3px solid #2b6cb0; background: #edf5fc; margin: 14px 0 0; font-size: 14px; }
+.coverage-result { padding: 20px; }
+.coverage-result-label { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.coverage-result-label h4 { margin: 0; }
+.coverage-result-label span { color: #496356; font-size: 14px; }
+.coverage-actual { font-size: 21px; font-weight: 650; margin: 0 0 6px; }
+.coverage-result-meta { font-size: 14px; color: #58616a; margin: 0 0 12px; }
+.coverage-difference { margin: 0; border-left: 3px solid #bb862d; padding: 8px 12px; background: #fff8e9; font-size: 14px; color: #714d10; }
+.coverage-excerpt { max-width: 850px; margin: 18px 0 0; line-height: 1.6; }
+.coverage-excerpt-label { margin: 16px 0 -10px; color: #65717d; font-size: 12px; }
+.coverage-details { border-top: 1px solid #dce3e9; }
+.coverage-details > summary { padding: 16px 20px; cursor: pointer; font-size: 15px; color: #245c8c; }
+.coverage-details .coverage-plan { border: 0; padding-top: 4px; }
+.coverage-note { font-size: 13px; color: #65717d; max-width: 900px; }
+@media (max-width: 560px) {
+    .coverage-proposal { padding: 14px; }
+    .coverage-thread, .coverage-plan, .coverage-result { padding: 14px; }
+    .coverage-actual { font-size: 19px; }
+    .coverage-controls { gap: 12px; }
+}
 @media (max-width: 560px) {
     .model-proposal { padding: 14px; }
     .model-names { flex-direction: column; align-items: flex-start; gap: 4px; }
@@ -159,6 +206,37 @@ p { line-height: 1.45; }
 </head>
 <body>
 <main>
+<h1>Keep the result. Make the next run clear.</h1>
+<p class="intro coverage-intro">Three proposals for GPT-6 Astra. Change the budget to $2 or select 100% in each demo: the saved result keeps its own comment count and snapshot date.</p>
+<nav class="coverage-nav" aria-label="Budget and saved result proposals">
+<a href="#coverage-a">A. Independent controls</a>
+<a href="#coverage-b">B. Automatic coverage</a>
+<a href="#coverage-c">C. Result first</a>
+</nav>
+<p class="coverage-note">Interactive mockups. Run buttons show the requested run without calling a model. The saved result below comes from the local cache export: 2,013 comments in the September 5 snapshot. The newer 2,073-comment snapshot and $1 → 66% example come from the reported screen; budget fitting is illustrative.</p>
+
+<section class="proposal recommended coverage-proposal" id="coverage-a">
+<div class="heading"><h2>A. Independent controls</h2><span class="recommendation">Recommended</span></div>
+<p class="description">Budget changes the spending limit. Coverage changes only with the slider, “All comments,” or “Fit to budget.” The saved result stays below, with the coverage it actually used.</p>
+<div class="coverage-demo" data-coverage-variant="independent" id="coverage-demo-a"></div>
+</section>
+
+<section class="proposal coverage-proposal" id="coverage-b">
+<div class="heading"><h2>B. Automatic coverage</h2></div>
+<p class="description">Keep today’s budget fitting: $2 selects more comments automatically. Label the controls “Next analysis” and keep the earlier result visible. Fewer steps, but budget edits still move the slider.</p>
+<div class="coverage-demo" data-coverage-variant="automatic" id="coverage-demo-b"></div>
+</section>
+
+<section class="proposal coverage-proposal" id="coverage-c">
+<div class="heading"><h2>C. Result first</h2></div>
+<p class="description">Opening a stored thread leads with its saved result. Expand “Run another analysis” to choose coverage and budget. Best for reading previous work; changing the next run takes an extra click.</p>
+<div class="coverage-demo" data-coverage-variant="result-first" id="coverage-demo-c"></div>
+</section>
+<p class="coverage-note">In all three proposals, opening a saved result is free and ignores the next run’s budget. A successful new analysis replaces the displayed result; a failed run leaves it available. “100%” always names a specific snapshot.</p>
+<noscript><p>Enable JavaScript to try the budget and coverage controls.</p></noscript>
+
+<details class="previous-proposals">
+<summary>Previous proposals · model and story pickers</summary>
 <h1>Model pickers, without the tables</h1>
 <p class="intro">Names at rest; properties only while choosing. Each pair is extraction + scoring first, consolidation + synthesis second. These independent demos use the live page’s model options and measured samples; nothing changes the live app.</p>
 
@@ -273,7 +351,116 @@ p { line-height: 1.45; }
 </div>
 </section>
 </details>
+</details>
 </main>
+
+<script id="coverage-proposals">
+(() => {
+    // This isolated fixture never reads or writes the app's caches and makes no network requests.
+    const saved = Object.freeze({ comments: 2013, snapshotComments: 2013 });
+    const snapshotComments = 2073;
+    const count = number => number.toLocaleString('en-US');
+    // Calibrated only to the reported $1 / 66% case, not a measured cost forecast.
+    const illustrativeFit = budget => Math.min(100, Math.max(1, Math.floor(budget * 66)));
+    const summaryExcerpt = "Even setting benchmarks aside, everyday use surfaces a split over reliability: many report the models still make careless errors or show poor judgment in specialized work, while others say such mistakes have become rare and easily corrected. This feeds directly into disagreement over autonomy: some insist substantial projects still require constant human direction and review, whereas others describe already running large, largely unsupervised agentic workflows successfully.";
+
+    for (const root of document.querySelectorAll('[data-coverage-variant]')) {
+        const variant = root.dataset.coverageVariant;
+        const prefix = root.id;
+        const automatic = variant === 'automatic';
+        const thread = document.createElement('header');
+        thread.className = 'coverage-thread';
+        thread.innerHTML = '<h3>GPT-6 Astra</h3><p>Thread 49554643 · 2,073 comments in the snapshot saved Sep 12, 2026, 09:04 AM</p><p class="coverage-models">GPT-5.6 Luna, low · Claude Sonnet 5</p>';
+
+        const result = document.createElement('section');
+        result.className = 'coverage-result';
+        result.setAttribute('aria-label', 'Saved analysis');
+        result.innerHTML = '<div class="coverage-result-label"><h4>Saved result</h4><span>Available to read · $0 to open</span></div><p class="coverage-actual">Analyzed 2,013 comments</p><p class="coverage-result-meta">100% of the snapshot saved Sep 5, 2026, 11:10 AM · GPT-5.6 Luna, low / Claude Sonnet 5</p><p class="coverage-difference">The newer snapshot has 60 more comments. This result describes the September 5 snapshot.</p><p class="coverage-excerpt-label">Excerpt from the saved summary</p><p class="coverage-excerpt"></p>';
+        result.querySelector('.coverage-excerpt').textContent = summaryExcerpt;
+        result.dataset.analyzedComments = saved.comments;
+
+        const plan = document.createElement('section');
+        plan.className = 'coverage-plan';
+        plan.setAttribute('aria-label', 'Next analysis');
+        plan.innerHTML = `
+            <h4>Next analysis</h4>
+            <div class="coverage-controls">
+                <label class="coverage-budget" for="${prefix}-budget">Max spend ($)<input id="${prefix}-budget" type="number" min="0.01" step="0.25" value="1" inputmode="decimal"></label>
+                <div class="coverage-actions">
+                    <button type="button" data-action="one">$1</button>
+                    <button type="button" data-action="two">$2</button>
+                    <button type="button" data-action="fit">Fit to budget</button>
+                </div>
+            </div>
+            <div class="coverage-slider">
+                <label for="${prefix}-share">Coverage of the Sep 12 snapshot: <strong data-share-label>66%</strong></label>
+                <input id="${prefix}-share" type="range" min="1" max="100" value="66">
+            </div>
+            <p class="coverage-selection" aria-live="polite" aria-atomic="true"></p>
+            <p class="coverage-hint"></p>
+            <div class="coverage-actions">
+                <button type="button" data-action="all">All comments (100%)</button>
+                <button type="button" class="coverage-run" data-action="run">Run analysis</button>
+                <button type="button" class="coverage-reset" data-action="reset">Reset demo</button>
+            </div>
+            <p class="coverage-receipt" role="status" hidden></p>`;
+        const budgetInput = plan.querySelector('input[type="number"]');
+        const shareInput = plan.querySelector('input[type="range"]');
+        const selection = plan.querySelector('.coverage-selection');
+        const hint = plan.querySelector('.coverage-hint');
+        const receipt = plan.querySelector('.coverage-receipt');
+        let budget = 1;
+        let share = 66;
+
+        function render() {
+            budgetInput.value = budget;
+            shareInput.value = share;
+            plan.querySelector('[data-share-label]').textContent = `${share}%`;
+            shareInput.setAttribute('aria-valuetext', `${share}%, ${count(Math.ceil(snapshotComments * share / 100))} of ${count(snapshotComments)} comments`);
+            selection.textContent = `Will analyze ${count(Math.ceil(snapshotComments * share / 100))} of ${count(snapshotComments)} comments (${share}%).`;
+            hint.textContent = automatic
+                ? `Changing the budget refits coverage automatically. Current spending limit: $${budget.toFixed(2)}.`
+                : `Spending limit: $${budget.toFixed(2)}. Use “Fit to budget” to adjust coverage to this limit.`;
+            if (share > illustrativeFit(budget)) hint.textContent += ' This selection may need a higher budget to finish.';
+            receipt.hidden = true;
+            receipt.textContent = '';
+        }
+        function setBudget(value) {
+            budget = Number.isFinite(value) && value > 0 ? value : 1;
+            if (automatic) share = illustrativeFit(budget);
+            render();
+        }
+        budgetInput.addEventListener('change', () => setBudget(Number(budgetInput.value)));
+        shareInput.addEventListener('input', () => { share = Number(shareInput.value); render(); });
+        plan.addEventListener('click', event => {
+            const action = event.target.closest('button[data-action]')?.dataset.action;
+            if (!action) return;
+            if (action === 'one' || action === 'two') return setBudget(action === 'one' ? 1 : 2);
+            if (action === 'all') share = 100;
+            if (action === 'fit') share = illustrativeFit(budget);
+            if (action === 'reset') { budget = 1; share = 66; }
+            if (action === 'run') {
+                receipt.textContent = `Demo: request analysis of ${count(Math.ceil(snapshotComments * share / 100))} comments from the Sep 12 snapshot with a $${budget.toFixed(2)} spending limit. The saved ${count(saved.comments)}-comment result stays visible until a new result is ready. No analysis was started.`;
+                receipt.hidden = false;
+                return;
+            }
+            render();
+        });
+        root.append(thread);
+        if (variant === 'result-first') {
+            const details = document.createElement('details');
+            details.className = 'coverage-details';
+            const toggle = document.createElement('summary');
+            toggle.textContent = 'Run another analysis · choose budget and coverage';
+            details.append(toggle, plan);
+            root.append(result, details);
+        } else {
+            root.append(plan, result);
+        }
+        render();
+    }
+})();
+</script>
 
 <script id="model-proposals">
 // Snapshot of volumeMetrics/consolidationMetrics in hn_polarization.html; no live calls or storage.

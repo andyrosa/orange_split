@@ -63,12 +63,15 @@ test('compact model pickers retain metrics, selection events and keyboard contro
         assert.equal(picker.header.children.length, picker.columns.length);
         const options = sandbox.modelOptionButtons(picker);
         assert.equal(options.length, Object.keys(picker.choices).length);
+        const names = Array.from(options, option => picker.choices[option.dataset.key].name);
+        assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b, 'en', { numeric: true, sensitivity: 'base' })));
+        const selectedIndex = options.findIndex(option => option.dataset.key === picker.select.value);
         for (const option of options) assert.equal(option.children.length, picker.columns.length);
         picker.button.dispatchEvent(new Event('click'));
         assert.equal(picker.options.hidden, false);
-        assert.equal(document.activeElement, options[0]);
-        assert.equal(press(options[0], 'ArrowDown'), true);
-        assert.equal(document.activeElement, options[1]);
+        assert.equal(document.activeElement, options[selectedIndex]);
+        assert.equal(press(options[selectedIndex], 'ArrowDown'), true);
+        assert.equal(document.activeElement, options[(selectedIndex + 1) % options.length]);
         options[1].dispatchEvent(new Event('click'));
         assert.equal(changes, 1);
         assert.equal(picker.select.value, options[1].dataset.key);

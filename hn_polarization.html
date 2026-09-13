@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-Q5zyX4wa7s1odGDIr3ViffFdLXxg7kWXV2GgTPRAKRE=' 'sha256-IVLSzHOefhQr7u/DylG1949ov/QrrgtGNA/zf59bAMQ='; style-src 'sha256-KT3UpnaCy7d+sOo/XH3zMNyc0JbKjYaypk/7VGDHDVw='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-JX9Www+OMQxFr+Bw3nwjIciyZaiDE1mfT2ze6ee05ko=' 'sha256-mKoYIIv4isF5fO5MiEUM8Ugj02TfH95PjeP0KHdHQeg='; style-src 'sha256-HHdZunb33HbKxFB+4FTH7Yg2tkPEiiLnLHuAGBFtYp8='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
 <title>Orange Split - For and Against on Hacker News</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EOS%3C/text%3E%3C/svg%3E">
 <style>
@@ -66,7 +66,9 @@ input[type="range"] { width: 8rem; vertical-align: middle; }
 .consolidation-grid { grid-template-columns: minmax(15rem, 1.8fr) minmax(7rem, 0.8fr) minmax(7rem, 0.8fr) minmax(9rem, 1fr) minmax(9rem, 1fr) minmax(10rem, 1.1fr); }
 #consolidation-model-options { max-width: 76rem; }
 #consolidation-model-options .model-grid { min-width: 60rem; }
-.summary-grid { grid-template-columns: minmax(11rem, 1.6fr) minmax(6rem, 0.7fr) minmax(8rem, 0.9fr) minmax(8rem, 0.9fr) minmax(15rem, 1.8fr) minmax(15rem, 1.8fr) minmax(12rem, 1.5fr); }
+.summary-grid { grid-template-columns: minmax(15rem, 1.8fr) minmax(9rem, 1fr) minmax(9rem, 1fr); }
+#summary-model-options { max-width: 44rem; }
+#summary-model-options .model-grid { min-width: 36rem; }
 .summary-quality { flex: 0 0 100%; margin-top: 0.25rem; font-size: 0.85rem; }
 .summary-quality p { margin: 0.5rem 0; max-width: 48rem; }
 .model-grid-header { position: sticky; top: 0; padding: 0.55rem 2.2rem 0.55rem 0.75rem; background: #eee; color: #555; font-size: 11px; line-height: 1.15; }
@@ -324,8 +326,8 @@ function optionEntry(role, labelFor, { model, sampling, reasoning, maxTokens, ..
     return Object.freeze({ ...rest, config, get label() { return labelFor(this); } });
 }
 const volumeEntry = entry => optionEntry('volume', volumeLabel, entry);
-// Embedded from data/consolidation-matched.json after all four matched runs and reviews complete.
-const MATCHED_CONSOLIDATION = Object.freeze({"openai/gpt-6-astra":{"benchmark":{"comments":1234,"axes":150,"twoSided":107,"review":{"candidates":233,"fullyPreserved":164,"partial":25,"missing":34,"excluded":10,"flaggedAxes":5},"costPer1k":0.48953808752025935,"secondsPer1k":122.00891410048622},"usdPerMillionChars":1.3272823548281492,"secondsPerMillionChars":330.8022050697269,"minimumSeconds":14.593},"google/gemini-3.8-flash":{"benchmark":{"comments":1234,"axes":64,"twoSided":59,"review":{"candidates":233,"fullyPreserved":76,"partial":17,"missing":130,"excluded":10,"flaggedAxes":5},"costPer1k":0.15687277147487846,"secondsPer1k":109.50891410048622},"usdPerMillionChars":0.4253284204836828,"secondsPerMillionChars":296.91101282482265,"minimumSeconds":18.591},"anthropic/claude-opus-5":{"benchmark":{"comments":1234,"axes":120,"twoSided":103,"review":{"candidates":233,"fullyPreserved":138,"partial":61,"missing":24,"excluded":10,"flaggedAxes":9},"costPer1k":0.8714789303079418,"secondsPer1k":364.9149108589951},"usdPerMillionChars":2.3628367971559965,"secondsPerMillionChars":989.3921117563436,"minimumSeconds":45.144},"openai/gpt-5.6-sol":{"benchmark":{"comments":1234,"axes":164,"twoSided":125,"review":{"candidates":233,"fullyPreserved":177,"partial":22,"missing":24,"excluded":10,"flaggedAxes":4},"costPer1k":0.11313452188006483,"secondsPer1k":115.41004862236629},"usdPerMillionChars":0.30674110644580815,"secondsPerMillionChars":312.9107315883489,"minimumSeconds":24.651}});
+// Embedded from data/consolidation-matched.json after all eight matched runs and reviews complete.
+const MATCHED_CONSOLIDATION = Object.freeze({"openai/gpt-6-astra":{"benchmark":{"comments":1234,"axes":150,"twoSided":107,"review":{"candidates":233,"fullyPreserved":159,"partial":42,"missing":20,"excluded":12,"flaggedAxes":7},"costPer1k":0.48953808752025935,"secondsPer1k":122.00891410048622},"usdPerMillionChars":1.3272823548281492,"secondsPerMillionChars":330.8022050697269,"minimumSeconds":14.593},"google/gemini-3.8-flash":{"benchmark":{"comments":1234,"axes":64,"twoSided":59,"review":{"candidates":233,"fullyPreserved":71,"partial":42,"missing":108,"excluded":12,"flaggedAxes":5},"costPer1k":0.15687277147487846,"secondsPer1k":109.50891410048622},"usdPerMillionChars":0.4253284204836828,"secondsPerMillionChars":296.91101282482265,"minimumSeconds":18.591},"anthropic/claude-opus-5":{"benchmark":{"comments":1234,"axes":120,"twoSided":103,"review":{"candidates":233,"fullyPreserved":126,"partial":55,"missing":40,"excluded":12,"flaggedAxes":9},"costPer1k":0.8714789303079418,"secondsPer1k":364.9149108589951},"usdPerMillionChars":2.3628367971559965,"secondsPerMillionChars":989.3921117563436,"minimumSeconds":45.144},"openai/gpt-5.6-sol":{"benchmark":{"comments":1234,"axes":164,"twoSided":125,"review":{"candidates":233,"fullyPreserved":180,"partial":26,"missing":15,"excluded":12,"flaggedAxes":1},"costPer1k":0.11313452188006483,"secondsPer1k":115.41004862236629},"usdPerMillionChars":0.30674110644580815,"secondsPerMillionChars":312.9107315883489,"minimumSeconds":24.651},"anthropic/claude-sonnet-5":{"benchmark":{"comments":1234,"axes":102,"twoSided":87,"review":{"candidates":233,"fullyPreserved":116,"partial":65,"missing":40,"excluded":12,"flaggedAxes":16},"costPer1k":0.705325769854133,"secondsPer1k":598.8606158833063},"usdPerMillionChars":1.91234650091292,"secondsPerMillionChars":1623.6880208642308,"minimumSeconds":58.384},"z-ai/glm-5.3":{"benchmark":{"comments":1234,"axes":146,"twoSided":117,"review":{"candidates":233,"fullyPreserved":168,"partial":29,"missing":24,"excluded":12,"flaggedAxes":7},"costPer1k":0.490468677471637,"secondsPer1k":1117.2884927066452},"usdPerMillionChars":1.3298054590636146,"secondsPerMillionChars":3029.2991279472158,"minimumSeconds":32.731},"openai/gpt-5.6-luna":{"benchmark":{"comments":1234,"axes":139,"twoSided":111,"review":{"candidates":233,"fullyPreserved":155,"partial":36,"missing":30,"excluded":12,"flaggedAxes":6},"costPer1k":0.26121377633711507,"secondsPer1k":1893.1507293354944},"usdPerMillionChars":0.7082277048686867,"secondsPerMillionChars":5132.890825319192,"minimumSeconds":346.032},"anthropic/claude-fable-5.1":{"benchmark":{"comments":1234,"axes":92,"twoSided":79,"review":{"candidates":233,"fullyPreserved":98,"partial":66,"missing":57,"excluded":12,"flaggedAxes":12},"costPer1k":0.8779578606158834,"secondsPer1k":182.38573743922205},"usdPerMillionChars":2.3804030909646197,"secondsPerMillionChars":494.5016072225042,"minimumSeconds":18.403}});
 const consolidationEntry = entry => {
     const measured = MATCHED_CONSOLIDATION[entry.model];
     if (measured) entry = { ...entry,
@@ -333,7 +335,7 @@ const consolidationEntry = entry => {
         secondsPerMillionChars: measured.secondsPerMillionChars,
         minimumSeconds: measured.minimumSeconds,
         quality: { benchmark: measured.benchmark, runs: '5 threads', matched: true,
-            note: 'Same 1,234 HN comments and 233 Luna-low candidates; one fresh run per thread. Same two-pass Luna-low scoring and anonymous Sonnet 5 medium-effort review. Common candidate eligibility for all four models. Consolidation cost/time only; costs use uncached token prices. Review flags are model judgments; Sonnet shares a model family with Opus' },
+            note: 'Same 1,234 HN comments and 233 Luna-low candidates; one accepted output per thread. Same two-pass Luna-low scoring and anonymous Sonnet 5 medium-effort review. Common candidate eligibility for all eight models. Consolidation cost/time only; costs use uncached token prices. Review flags are model judgments; Sonnet reviews its own model and shares a model family with Opus and Fable' },
     };
     const benchmark = entry.quality.benchmark;
     if (benchmark) {
@@ -614,7 +616,7 @@ function consolidationMetrics(choice) {
     const benchmark = quality.benchmark;
     const review = benchmark?.review;
     return {
-        model: `${choice.name} (${choice.effort})`,
+        model: choice.effort === 'default' ? choice.name : `${choice.name} (${choice.effort})`,
         reasoning: choice.effort,
         cost: `$${usd.toFixed(2)}`,
         time: (seconds / 60).toFixed(1),
@@ -627,23 +629,18 @@ function consolidationMetrics(choice) {
 }
 
 const SUMMARY_METRIC_COLUMNS = Object.freeze([
-    ['model', 'Model'], ['reasoning', 'Reasoning effort'], ['cost', 'Estimated cost / 1k comments'],
-    ['time', 'Estimated time / 1k comments'], ['summaryRank', 'Summary quality for this combination'],
-    ['testedWith', 'Measured with consolidation'], ['notes', 'Notes'],
+    ['model', 'Model'], ['cost', 'Estimated cost / 1k comments'],
+    ['time', 'Estimated time / 1k comments'],
 ]);
 
 function summaryLabel(choice) {
     return `${choice.name}: ${perThousandCommentsText(choice)} for summary. ${choice.measuredRate ? 'Measured cost rate.' : 'Estimated using consolidation rate.'}`;
 }
 
-function summaryMetrics(choice, consolidationKey = choice.testedConsolidationKey, volumeKey = DEFAULT_VOLUME_KEY) {
-    const quality = summaryQualityText(choice, consolidationKey, volumeKey);
-    const tested = CONSOLIDATION_MODELS[choice.testedConsolidationKey];
-    return { model: choice.name, reasoning: choice.effort,
+function summaryMetrics(choice) {
+    return { model: choice.effort === 'default' ? choice.name : `${choice.name} (${choice.effort})`,
         cost: `$${(choice.usdPerMillionChars * CHARS_PER_COMMENT * COMMENTS_PER_LABEL / RATE_UNIT_CHARS).toFixed(2)}`,
         time: formatDuration(choice.secondsPerMillionChars * CHARS_PER_COMMENT * COMMENTS_PER_LABEL / RATE_UNIT_CHARS),
-        summaryRank: quality.rank, testedWith: choice.summaryQuality ? `${tested.name} (${tested.effort}); Luna low extraction/scoring` : 'Not evaluated',
-        notes: choice.measuredRate ? 'Measured summary cost rate' : 'Cost/time estimated from consolidation',
     };
 }
 
@@ -3183,7 +3180,7 @@ const modelPickers = [
     {
         choices: SUMMARY_MODELS,
         columns: SUMMARY_METRIC_COLUMNS,
-        metrics: choice => summaryMetrics(choice, elements.consolidationModel.value, elements.volumeModel.value),
+        metrics: summaryMetrics,
         gridClass: 'summary-grid',
         metricKeys: new Set(['cost', 'time']),
         root: elements.summaryModelPicker,
@@ -3765,7 +3762,9 @@ function initializeModelPicker(picker) {
         picker.header,
         Object.fromEntries(picker.columns.map(([key, label]) => [key, label])),
     );
-    const options = Object.entries(picker.choices).map(([key, choice]) => {
+    const choicesByName = Object.entries(picker.choices).sort(([, a], [, b]) =>
+        a.name.localeCompare(b.name, 'en', { numeric: true, sensitivity: 'base' }));
+    const options = choicesByName.map(([key, choice]) => {
         const option = makeElement('button', { className: `model-grid ${picker.gridClass} model-option` });
         option.type = 'button';
         option.setAttribute('role', 'option');
@@ -3794,12 +3793,7 @@ function initializeModelPicker(picker) {
         });
         return option;
     });
-    const isConsolidation = picker.select === elements.consolidationModel;
-    const matchedOptions = isConsolidation ? options.filter(option => picker.choices[option.dataset.key].quality.matched) : [];
-    const earlierOptions = isConsolidation ? options.filter(option => !picker.choices[option.dataset.key].quality.matched) : [];
-    picker.options.replaceChildren(picker.header,
-        ...(matchedOptions.length ? [...matchedOptions,
-            makeElement('p', { className: 'model-comparison-method', text: 'Earlier tests' }), ...earlierOptions] : options));
+    picker.options.replaceChildren(picker.header, ...options);
     syncModelPicker(picker);
     picker.button.addEventListener('click', () => {
         const opening = picker.options.hidden;

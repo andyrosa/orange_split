@@ -12,6 +12,16 @@ test('consolidation cost and time use actual benchmark comments rather than lega
     assert.equal(values.cost, '$0.12');
     assert.equal(values.time, '1.5');
     assert.deepEqual(core.perThousandCommentsRates(choice), { usd: 0.123456, seconds: 87.6 });
-    const legacy = core.CONSOLIDATION_MODELS.sonnet5;
+    const legacy = { ...core.CONSOLIDATION_MODELS.sonnet5, quality: {} };
     assert.ok(Math.abs(core.perThousandCommentsRates(legacy).usd - legacy.usdPerMillionChars * core.CHARS_PER_COMMENT / 1000) < 1e-12);
+});
+
+test('every consolidation row matches its retained eight-model evaluation', () => {
+    const core = loadCore();
+    const report = require('../data/consolidation-matched.json');
+    assert.equal(Object.keys(report.models).length, 8);
+    for (const [key, measured] of Object.entries(report.models)) {
+        assert.deepEqual(core.CONSOLIDATION_MODELS[key].quality.benchmark, measured.benchmark);
+        assert.equal(core.CONSOLIDATION_MODELS[key].quality.matched, true);
+    }
 });
