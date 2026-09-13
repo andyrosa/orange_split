@@ -1875,7 +1875,7 @@ test('runPipeline passes per-stage sampling and reasoning settings to the model 
 
 test('model choices exist per role with labels, config fragments, and per-character rates', () => {
     assert.equal(core.DEFAULT_VOLUME_KEY, 'lunaLow');
-    assert.equal(core.DEFAULT_CONSOLIDATION_KEY, 'astraLow');
+    assert.equal(core.DEFAULT_CONSOLIDATION_KEY, 'solLow');
     for (const [key, choice] of Object.entries(core.VOLUME_MODELS)) {
         assert.ok(choice.label.length > 0, key + ' has a label');
         assert.ok(choice.config.modelExtract && choice.config.modelScore, key + ' names the extraction and scoring model');
@@ -1916,7 +1916,7 @@ test('option labels are built from the entry constants and quality record', () =
 
 test('extraction model metrics have clear columns and measured values', () => {
     assert.deepEqual(core.VOLUME_METRIC_COLUMNS.map(([, label]) => label), [
-        'Model', 'Reasoning effort', 'Estimated cost / 1k comments', 'Estimated time / 1k comments',
+        'Model', 'Estimated cost / 1k comments', 'Estimated time / 1k comments', 'Reasoning effort',
         'Stances found / comment', 'Two-sided rows / 100 comments',
         'Stances held in blind review', 'Stances wrong in blind review',
     ]);
@@ -1959,7 +1959,7 @@ test('consolidation model metrics use role-specific columns', () => {
 test('combinedRate scales the consolidation rate by the volume model\'s candidate factor', () => {
     const opus = core.VOLUME_MODELS.opus5;
     const sonnet = core.CONSOLIDATION_MODELS.sonnet5;
-    assertClose(core.combinedRate('opus5', 'sonnet5', 'usdPerMillionChars'), opus.usdPerMillionChars + sonnet.usdPerMillionChars * opus.candidateFactor + sonnet.synthesisRates.usdPerMillionChars, 'opus factor plus measured synthesis rate applied');
+    assertClose(core.combinedRate('opus5', 'sonnet5', 'usdPerMillionChars'), opus.usdPerMillionChars + sonnet.usdPerMillionChars * opus.candidateFactor + core.SUMMARY_MODELS.sonnet5.usdPerMillionChars, 'opus factor plus measured synthesis rate applied');
     assert.equal(core.VOLUME_MODELS.haiku.candidateFactor, 1, 'Haiku is the reference');
     for (const choice of Object.values(core.VOLUME_MODELS)) {
         assert.ok(choice.candidateFactor > 0);
@@ -1967,11 +1967,11 @@ test('combinedRate scales the consolidation rate by the volume model\'s candidat
 });
 
 test('combinedRate sums the per-character rates and estimateRunSeconds never goes below the stage latency floor', () => {
-    const expected = core.VOLUME_MODELS.haiku.usdPerMillionChars + core.CONSOLIDATION_MODELS.sonnet5.usdPerMillionChars + core.CONSOLIDATION_MODELS.sonnet5.synthesisRates.usdPerMillionChars;
+    const expected = core.VOLUME_MODELS.haiku.usdPerMillionChars + core.CONSOLIDATION_MODELS.sonnet5.usdPerMillionChars + core.SUMMARY_MODELS.sonnet5.usdPerMillionChars;
     assertClose(core.combinedRate('haiku', 'sonnet5', 'usdPerMillionChars'), expected, 'combined rate');
     const seconds = core.estimateRunSeconds(416000, 'haiku', 'sonnet5');
-    assertClose(seconds, (core.VOLUME_MODELS.haiku.secondsPerMillionChars + 2 * core.CONSOLIDATION_MODELS.sonnet5.secondsPerMillionChars) * 0.416, 'seconds for a large thread');
-    const floor = 2 * core.VOLUME_MODELS.haiku.minimumSeconds + 2 * core.CONSOLIDATION_MODELS.sonnet5.minimumSeconds;
+    assertClose(seconds, (core.VOLUME_MODELS.haiku.secondsPerMillionChars + core.CONSOLIDATION_MODELS.sonnet5.secondsPerMillionChars + core.SUMMARY_MODELS.sonnet5.secondsPerMillionChars) * 0.416, 'seconds for a large thread');
+    const floor = 2 * core.VOLUME_MODELS.haiku.minimumSeconds + core.CONSOLIDATION_MODELS.sonnet5.minimumSeconds + core.SUMMARY_MODELS.sonnet5.minimumSeconds;
     assert.equal(core.estimateRunSeconds(0, 'haiku', 'sonnet5'), floor);
     assert.equal(core.estimateRunSeconds(8000, 'haiku', 'sonnet5'), floor, 'a small thread is bounded by latency');
     for (const choice of Object.values(core.VOLUME_MODELS).concat(Object.values(core.CONSOLIDATION_MODELS))) {

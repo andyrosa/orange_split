@@ -51,14 +51,13 @@ test('Astra selector choice keeps extraction/scoring on the chosen volume model'
     assert.deepEqual(cfg.reasoningConsolidate, { effort: 'low' });
     assert.deepEqual(cfg.reasoningSynthesize, { effort: 'low' });
     assert.equal(cfg.samplingConsolidate, null);
-    assert.equal(core.DEFAULT_CONSOLIDATION_KEY, 'astraLow');
     const display = core.consolidationMetrics(core.CONSOLIDATION_MODELS.astraLow);
     assert.equal(display.measurement, '5 threads');
     assert.match(display.twoSided, /%/);
     const volume = core.VOLUME_MODELS.opus5;
     const astra = core.CONSOLIDATION_MODELS.astraLow;
     assert.equal(core.combinedRate('opus5', 'astraLow', 'usdPerMillionChars'),
-        volume.usdPerMillionChars + astra.usdPerMillionChars * volume.candidateFactor + astra.synthesisRates.usdPerMillionChars);
+        volume.usdPerMillionChars + astra.usdPerMillionChars * volume.candidateFactor + core.SUMMARY_MODELS.astraLow.usdPerMillionChars);
     assert.equal(core.estimateRunSeconds(0, 'lunaLow', 'astraLow'),
-        2 * core.VOLUME_MODELS.lunaLow.minimumSeconds + astra.minimumSeconds + astra.synthesisMinimumSeconds);
+        2 * core.VOLUME_MODELS.lunaLow.minimumSeconds + astra.minimumSeconds + core.SUMMARY_MODELS.astraLow.minimumSeconds);
 });

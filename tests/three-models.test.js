@@ -41,18 +41,16 @@ test('mixed summary links and result keys are distinct while old links still res
     assert.equal(core.parseRunPageUrl(old.href), null);
 });
 
-test('quality applies only to its measured pipeline and Gemini remains standalone', () => {
-    assert.match(core.summaryQualityText(core.SUMMARY_MODELS.astraLow, 'astraLow', 'lunaLow').rank, /#1/);
-    for (const [cons, volume] of [['geminiFlash', 'lunaLow'], ['astraLow', 'haiku']]) {
-        const text = core.summaryQualityText(core.SUMMARY_MODELS.astraLow, cons, volume);
-        assert.equal(text.rank, 'Untested combination');
-        assert.equal(text.scores, '');
+test('summary benchmarks remain visible when upstream choices change, with their fixed inputs stated', () => {
+    for (const choice of Object.values(core.SUMMARY_MODELS)) {
+        const measured = core.summaryQualityText(choice, 'solLow', 'lunaLow');
+        assert.equal(measured.rank, 'Matched benchmark');
+        assert.match(measured.method, /same five Sol-low consolidation and Luna-low scoring inputs/);
+        for (const [cons, volume] of [['geminiFlash', 'lunaLow'], ['astraLow', 'haiku']]) {
+            assert.deepEqual(core.summaryQualityText(choice, cons, volume), measured);
+        }
+        assert.match(measured.method, /does not grade every upstream combination/);
     }
-    const gemini = core.summaryQualityText(core.SUMMARY_MODELS.geminiFlash, 'geminiFlash', 'lunaLow');
-    assert.match(gemini.rank, /Standalone.*8\/10/);
-    assert.match(gemini.method, /without comparison or ranking/);
-    const report = require('../data/gemini-summary-quality.json');
-    assert.deepEqual(core.SUMMARY_MODELS.geminiFlash.summaryQuality.scores, report.scores);
 });
 
 test('summary cost changes independently of consolidation', () => {

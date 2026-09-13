@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-JX9Www+OMQxFr+Bw3nwjIciyZaiDE1mfT2ze6ee05ko=' 'sha256-mKoYIIv4isF5fO5MiEUM8Ugj02TfH95PjeP0KHdHQeg='; style-src 'sha256-HHdZunb33HbKxFB+4FTH7Yg2tkPEiiLnLHuAGBFtYp8='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-9nv9PkvwmIYbP3pHqY6QkNF0yNlwhL3tiBuKOD+4iOc=' 'sha256-G4t9UV3484oviIcoapAD4QSoBRGyonm87b/0CwTd9eg='; style-src 'sha256-HvYB058pt1TuiL8QC7zeWapO9GLCk/4KZ+GXEsp2v2w='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
 <title>Orange Split - For and Against on Hacker News</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EOS%3C/text%3E%3C/svg%3E">
 <style>
@@ -62,13 +62,13 @@ input[type="range"] { width: 8rem; vertical-align: middle; }
 .model-choice { display: flex; align-items: center; gap: 0.4rem; min-width: 0; max-width: 100%; }
 .model-choice > label { margin: 0; font-size: 0.85rem; font-weight: 600; white-space: nowrap; }
 .model-grid { display: grid; align-items: stretch; }
-.volume-grid { grid-template-columns: minmax(11rem, 2fr) minmax(6rem, 0.75fr) minmax(7rem, 0.9fr) minmax(7rem, 0.9fr) minmax(6rem, 0.8fr) minmax(8rem, 1fr) minmax(8rem, 1fr) minmax(7rem, 0.9fr); }
+.volume-grid { grid-template-columns: minmax(11rem, 2fr) minmax(7rem, 0.9fr) minmax(7rem, 0.9fr) minmax(6rem, 0.75fr) minmax(6rem, 0.8fr) minmax(8rem, 1fr) minmax(8rem, 1fr) minmax(7rem, 0.9fr); }
 .consolidation-grid { grid-template-columns: minmax(15rem, 1.8fr) minmax(7rem, 0.8fr) minmax(7rem, 0.8fr) minmax(9rem, 1fr) minmax(9rem, 1fr) minmax(10rem, 1.1fr); }
 #consolidation-model-options { max-width: 76rem; }
 #consolidation-model-options .model-grid { min-width: 60rem; }
-.summary-grid { grid-template-columns: minmax(15rem, 1.8fr) minmax(9rem, 1fr) minmax(9rem, 1fr); }
-#summary-model-options { max-width: 44rem; }
-#summary-model-options .model-grid { min-width: 36rem; }
+.summary-grid { grid-template-columns: minmax(15rem, 1.8fr) minmax(9rem, 1fr) minmax(9rem, 1fr) minmax(7rem, .8fr) minmax(10rem, 1.1fr); }
+#summary-model-options { max-width: 64rem; }
+#summary-model-options .model-grid { min-width: 54rem; }
 .summary-quality { flex: 0 0 100%; margin-top: 0.25rem; font-size: 0.85rem; }
 .summary-quality p { margin: 0.5rem 0; max-width: 48rem; }
 .model-grid-header { position: sticky; top: 0; padding: 0.55rem 2.2rem 0.55rem 0.75rem; background: #eee; color: #555; font-size: 11px; line-height: 1.15; }
@@ -283,7 +283,7 @@ const CONSTANTS = Object.freeze({
 // call of the model in its role, the floor for a stage no matter how small the thread.
 const SAMPLING_SEED = 12345;
 const DEFAULT_VOLUME_KEY = 'lunaLow';
-const DEFAULT_CONSOLIDATION_KEY = 'astraLow';
+const DEFAULT_CONSOLIDATION_KEY = 'solLow';
 const DEFAULT_SUMMARY_KEY = 'astraLow';
 
 // The rates in the tables are per this many characters of comment text.
@@ -365,7 +365,7 @@ const VOLUME_MODELS = Object.freeze({
     glmFlash: volumeEntry({
         name: 'GLM 5.3 Flash',
         effort: 'low',
-        quality: { stancesPerComment: [0.5, 0.6], twoSidedPer100Comments: [3.5, 4], note: 'the most coverage; some nonstandard output shapes, which the page accepts' },
+        quality: { reviewHeldPercent: 64, reviewWrongPercent: 33, stancesPerComment: [0.5, 0.6], twoSidedPer100Comments: [3.5, 4], note: 'the most coverage; some nonstandard output shapes, which the page accepts' },
         model: 'z-ai/glm-5.3-flash', sampling: SAMPLING_TEMPERATURE_AND_SEED, reasoning: { effort: 'low' },
         maxTokens: { extract: 64000, score: 32000 },
         usdPerMillionChars: 0.6,
@@ -376,7 +376,7 @@ const VOLUME_MODELS = Object.freeze({
     geminiFlash: volumeEntry({
         name: 'Gemini 3.8 Flash',
         effort: 'none',
-        quality: { stancesPerComment: [0.3], twoSidedPer100Comments: [3], note: 'the least coverage; the most stable ranking between runs' },
+        quality: { reviewHeldPercent: 97, reviewWrongPercent: 2, stancesPerComment: [0.3], twoSidedPer100Comments: [3], note: 'the least coverage; the most stable ranking between runs' },
         model: 'google/gemini-3.8-flash', sampling: SAMPLING_TEMPERATURE_AND_SEED, reasoning: null,
         maxTokens: { extract: 16000, score: 16000 },
         usdPerMillionChars: 6.1,
@@ -499,16 +499,16 @@ const CONSOLIDATION_MODELS = Object.freeze(Object.fromEntries(Object.entries({
 
 // Share supported model profiles, but expose independent per-role config fragments and rates.
 const GEMINI_SUMMARY_QUALITY = Object.freeze({"threads":5,"reviews":10,"scores":{"faithfulness":74.5,"coverage":68.5,"clarity":89.7},"weighted":74.22,"majorReviewCount":8,"standalone":true});
+// Embedded from the completed five-thread experiment in data/summary-matched.json.
+const MATCHED_SUMMARY = Object.freeze({"astraLow":{"matched":true,"threads":5,"reviews":5,"scores":{"faithfulness":97.2,"coverage":79.4,"clarity":93},"weighted":91.44,"majorReviewCount":0,"majorErrorPercent":0,"failedCount":0,"errorPercent":0,"benchmark":{"comments":1234,"costPer1k":0.5573905996758509,"secondsPer1k":41.929497568881686},"rates":{"usdPerMillionChars":1.5112505575293378,"secondsPerMillionChars":113.68325302713713,"minimumSeconds":9.067}},"geminiFlash":{"matched":true,"threads":5,"reviews":5,"scores":{"faithfulness":78.8,"coverage":73.6,"clarity":90.6},"weighted":78.41999999999999,"majorReviewCount":3,"majorErrorPercent":60,"failedCount":0,"errorPercent":60,"benchmark":{"comments":1234,"costPer1k":0.09653910048622368,"secondsPer1k":53.86871961102107},"rates":{"usdPerMillionChars":0.26174601709829876,"secondsPerMillionChars":146.05401058591667,"minimumSeconds":11.457}},"opus5":{"matched":true,"threads":5,"reviews":5,"scores":{"faithfulness":84,"coverage":80.8,"clarity":86.8},"weighted":83.32,"majorReviewCount":2,"majorErrorPercent":40,"failedCount":0,"errorPercent":40,"benchmark":{"comments":1234,"costPer1k":0.5795421393841167,"secondsPer1k":112.22609400324149},"rates":{"usdPerMillionChars":1.5713099247912148,"secondsPerMillionChars":304.2780901406841,"minimumSeconds":21.942}},"solLow":{"matched":true,"threads":5,"reviews":5,"scores":{"faithfulness":87.6,"coverage":78.4,"clarity":92.2},"weighted":85.3,"majorReviewCount":2,"majorErrorPercent":40,"failedCount":0,"errorPercent":40,"benchmark":{"comments":1234,"costPer1k":0.11897406807131279,"secondsPer1k":54.50648298217181},"rates":{"usdPerMillionChars":0.3225738410530548,"secondsPerMillionChars":147.7831754673909,"minimumSeconds":11.486}},"sonnet5":{"matched":true,"threads":5,"reviews":5,"scores":{"faithfulness":67.4,"coverage":72.8,"clarity":85.8},"weighted":70.86,"majorReviewCount":5,"majorErrorPercent":100,"failedCount":0,"errorPercent":100,"benchmark":{"comments":1234,"costPer1k":0.19401296596434361,"secondsPer1k":63.4132901134522},"rates":{"usdPerMillionChars":0.5260264582001305,"secondsPerMillionChars":171.9321604893515,"minimumSeconds":13.88}},"glm53":{"matched":true,"threads":5,"reviews":5,"scores":{"faithfulness":28.2,"coverage":29.8,"clarity":32.6},"weighted":29.12,"majorReviewCount":2,"majorErrorPercent":40,"failedCount":3,"errorPercent":100,"benchmark":{"comments":1234,"costPer1k":0.11375067423014587,"secondsPer1k":43.896272285251214},"rates":{"usdPerMillionChars":0.30841167746570786,"secondsPerMillionChars":119.01576022832886,"minimumSeconds":7.956}},"lunaMax":{"matched":true,"threads":5,"reviews":5,"scores":{"faithfulness":76.2,"coverage":70.8,"clarity":88.2},"weighted":75.78,"majorReviewCount":4,"majorErrorPercent":80,"failedCount":0,"errorPercent":80,"benchmark":{"comments":1234,"costPer1k":0.046927714748784446,"secondsPer1k":210.27633711507292},"rates":{"usdPerMillionChars":0.12723489617320652,"secondsPerMillionChars":570.1212612576983,"minimumSeconds":33.945}},"fableLow":{"matched":true,"threads":5,"reviews":5,"scores":{"faithfulness":91.4,"coverage":80.2,"clarity":87.8},"weighted":87.68,"majorReviewCount":0,"majorErrorPercent":0,"failedCount":0,"errorPercent":0,"benchmark":{"comments":1234,"costPer1k":1.2716855753646676,"secondsPer1k":126.11588330632091},"rates":{"usdPerMillionChars":3.447915224780449,"secondsPerMillionChars":341.93741170163446,"minimumSeconds":25.962}}});
 const SUMMARY_MODELS = Object.freeze(Object.fromEntries(Object.entries(CONSOLIDATION_MODELS).map(([key, choice]) => [key,
     optionEntry('summary', summaryLabel, {
-        name: choice.name, effort: choice.effort, testedConsolidationKey: key,
-        summaryQuality: key === 'geminiFlash' ? GEMINI_SUMMARY_QUALITY : choice.summaryQuality,
+        name: choice.name, effort: choice.effort, testedConsolidationKey: 'solLow',
+        summaryQuality: MATCHED_SUMMARY[key],
         model: choice.config.modelConsolidate, sampling: choice.config.samplingConsolidate,
         reasoning: choice.config.reasoningConsolidate, maxTokens: { synthesize: 16000 },
-        usdPerMillionChars: choice.synthesisRates?.usdPerMillionChars ?? choice.usdPerMillionChars,
-        secondsPerMillionChars: choice.synthesisRates?.secondsPerMillionChars ?? choice.secondsPerMillionChars,
-        minimumSeconds: choice.synthesisMinimumSeconds ?? choice.minimumSeconds,
-        measuredRate: choice.synthesisRates !== undefined,
+        ...MATCHED_SUMMARY[key].rates,
+        measuredRate: true,
     }),
 ])));
 const ROLE_CHOICES = Object.freeze({ volume: VOLUME_MODELS, consolidation: CONSOLIDATION_MODELS, summary: SUMMARY_MODELS });
@@ -543,7 +543,7 @@ function centralValueText(values, suffix) {
 
 function perThousandCommentsRates(choice) {
     const chars = CHARS_PER_COMMENT * COMMENTS_PER_LABEL;
-    const benchmark = choice.quality?.benchmark;
+    const benchmark = choice.summaryQuality?.benchmark ?? choice.quality?.benchmark;
     return {
         usd: benchmark?.costPer1k ?? (choice.usdPerMillionChars * chars) / RATE_UNIT_CHARS,
         seconds: benchmark?.secondsPer1k ?? (choice.secondsPerMillionChars * chars) / RATE_UNIT_CHARS,
@@ -577,9 +577,9 @@ function volumeLabel(choice) {
 
 const VOLUME_METRIC_COLUMNS = Object.freeze([
     ['model', 'Model'],
-    ['reasoning', 'Reasoning effort'],
     ['cost', 'Estimated cost / 1k comments'],
     ['time', 'Estimated time / 1k comments'],
+    ['reasoning', 'Reasoning effort'],
     ['stances', 'Stances found / comment'],
     ['rows', 'Two-sided rows / 100 comments'],
     ['consistency', 'Stances held in blind review'],
@@ -629,23 +629,30 @@ function consolidationMetrics(choice) {
 }
 
 const SUMMARY_METRIC_COLUMNS = Object.freeze([
-    ['model', 'Model'], ['cost', 'Estimated cost / 1k comments'],
-    ['time', 'Estimated time / 1k comments'],
+    ['model', 'Model'], ['cost', 'Cost / 1k comments'], ['time', 'Time (min) / 1k comments'],
+    ['summaryQuality', 'Quality /100'], ['summaryErrors', 'Failed / major error'],
 ]);
 
 function summaryLabel(choice) {
-    return `${choice.name}: ${perThousandCommentsText(choice)} for summary. ${choice.measuredRate ? 'Measured cost rate.' : 'Estimated using consolidation rate.'}`;
+    const q = choice.summaryQuality;
+    return `${choice.name}: quality ${q.weighted.toFixed(1)}/100, ${q.errorPercent.toFixed(0)}% failed or major support error; ${perThousandCommentsText(choice)} for summary. Same five-thread benchmark.`;
 }
 
 function summaryMetrics(choice) {
+    const q = choice.summaryQuality, rates = perThousandCommentsRates(choice);
     return { model: choice.effort === 'default' ? choice.name : `${choice.name} (${choice.effort})`,
-        cost: `$${(choice.usdPerMillionChars * CHARS_PER_COMMENT * COMMENTS_PER_LABEL / RATE_UNIT_CHARS).toFixed(2)}`,
-        time: formatDuration(choice.secondsPerMillionChars * CHARS_PER_COMMENT * COMMENTS_PER_LABEL / RATE_UNIT_CHARS),
+        summaryQuality: q.weighted.toFixed(1), summaryErrors: `${q.errorPercent.toFixed(0)}%`,
+        cost: `$${rates.usd.toFixed(2)}`, time: (rates.seconds / 60).toFixed(1),
     };
 }
 
 function summaryQualityText(choice, consolidationKey, volumeKey = DEFAULT_VOLUME_KEY) {
     const q = choice.summaryQuality;
+    if (q?.matched) return {
+        rank: 'Matched benchmark', label: `Summary benchmark: ${q.weighted.toFixed(1)}/100 · ${q.threads} threads`,
+        scores: `Faithfulness ${q.scores.faithfulness.toFixed(1)}/100 · Coverage ${q.scores.coverage.toFixed(1)}/100 · Clarity ${q.scores.clarity.toFixed(1)}/100. ${q.failedCount}/${q.threads} summaries failed after repair; ${q.majorReviewCount}/${q.threads} had a major support error.`,
+        method: 'All eight summary models use the same five Sol-low consolidation and Luna-low scoring inputs (1,234 HN comments). One anonymous Astra-high review per thread. Quality weights faithfulness 60%, coverage 30%, clarity 10%; unavailable summaries score zero. Error rate counts failed summaries or major support errors once per summary. Cost/time cover summary generation and repairs only, using uncached prices. This fixed benchmark compares summary choices; it does not grade every upstream combination. Five-thread model judgments, without a statistical rank; Astra evaluates its own model family.',
+    };
     if (!q) return { rank: 'Not ranked', label: 'Summary quality: not evaluated', scores: '',
         method: 'Summary ranks currently cover only Astra low and Sonnet 5 adaptive.' };
     const tested = CONSOLIDATION_MODELS[choice.testedConsolidationKey]
@@ -2062,7 +2069,7 @@ function markSystemMessageCacheable(message) {
 }
 
 function providerResponseSchema(request) {
-    if (request.model !== 'openai/gpt-6-astra' || request.schema.name !== 'thread_synthesis') return request.schema.schema;
+    if (!request.model.startsWith('openai/') || request.schema.name !== 'thread_synthesis') return request.schema.schema;
     // OpenAI rejects regex lookaround. The prompt and parseSynthesisResponse retain all word limits.
     const schema = JSON.parse(JSON.stringify(request.schema.schema));
     schema.properties.sections.items.properties.text.pattern = '^[^\\r\\n]*\\[\\[axis:[1-9]\\d*\\]\\][^\\r\\n]*$';
@@ -3182,7 +3189,7 @@ const modelPickers = [
         columns: SUMMARY_METRIC_COLUMNS,
         metrics: summaryMetrics,
         gridClass: 'summary-grid',
-        metricKeys: new Set(['cost', 'time']),
+        metricKeys: new Set(['summaryQuality', 'summaryErrors', 'cost', 'time']),
         root: elements.summaryModelPicker,
         select: elements.summaryModel,
         header: elements.summaryModelHeader,
@@ -3683,7 +3690,7 @@ function renderModelGrid(picker, container, values, choice) {
             if (Number.isFinite(score) && best > worst) {
                 const fraction = (score - worst) / (best - worst);
                 cell.style.backgroundColor = `hsl(${120 * fraction}, 70%, 85%)`;
-                const direction = ['cost', 'time', 'wrong', 'flagged'].includes(key) ? 'Lower' : 'Higher';
+                const direction = ['cost', 'time', 'wrong', 'flagged', 'summaryErrors'].includes(key) ? 'Lower' : 'Higher';
                 cell.title = `${direction} is better. Green = best, yellow = midpoint, red = worst in this column. Ranges use their midpoint.`;
             }
         }
@@ -3707,6 +3714,8 @@ function modelMetricScore(choice, key) {
         case 'twoSidedPer1k': value = quality.twoSidedPer1k; break;
         case 'flagged': value = quality.flaggedPercent; break;
         case 'preserved': value = quality.preservedPercent; break;
+        case 'summaryQuality': value = choice.summaryQuality?.weighted; break;
+        case 'summaryErrors': value = choice.summaryQuality?.errorPercent; break;
         default: return null;
     }
     if (Array.isArray(value)) {
@@ -3714,7 +3723,7 @@ function modelMetricScore(choice, key) {
             ? value.reduce((sum, number) => sum + number, 0) / value.length : null;
     }
     if (!Number.isFinite(value)) return null;
-    return ['cost', 'time', 'wrong', 'flagged'].includes(key) ? -value : value;
+    return ['cost', 'time', 'wrong', 'flagged', 'summaryErrors'].includes(key) ? -value : value;
 }
 
 function closeModelOptions(picker, { restoreFocus = false } = {}) {

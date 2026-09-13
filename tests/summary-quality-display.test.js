@@ -31,3 +31,41 @@ test('summary details distinguish tied ranks, support errors and untested models
     assert.equal(missing.rank, 'Not ranked');
     assert.equal(missing.scores, '');
 });
+
+test('every summary row exposes the same matched quality and cost/time measurements as retained evidence', () => {
+    const report = require('../data/summary-matched.json');
+    assert.deepEqual(Object.keys(report.models).sort(), Object.keys(core.SUMMARY_MODELS).sort());
+    assert.deepEqual(core.SUMMARY_METRIC_COLUMNS.map(([key]) => key), ['model', 'cost', 'time', 'summaryQuality', 'summaryErrors']);
+    for (const [key, choice] of Object.entries(core.SUMMARY_MODELS)) {
+        const retained = report.models[key], q = choice.summaryQuality;
+        assert.equal(q.weighted, retained.weighted);
+        assert.equal(q.errorPercent, retained.errorPercent);
+        assert.equal(q.failedCount, retained.failedCount);
+        assert.equal(q.threads, 5);
+        assert.equal(q.benchmark.comments, 1234);
+        assert.deepEqual(q.scores, retained.scores);
+        assert.deepEqual(q.benchmark, retained.benchmark);
+        const values = core.summaryMetrics(choice);
+        assert.equal(values.summaryQuality, retained.weighted.toFixed(1));
+        assert.equal(values.summaryErrors, `${retained.errorPercent.toFixed(0)}%`);
+        assert.equal(values.cost, `$${retained.benchmark.costPer1k.toFixed(2)}`);
+        assert.equal(values.time, (retained.benchmark.secondsPer1k / 60).toFixed(1));
+        assert.doesNotMatch(values.model, /\(default\)/);
+        assert.equal(choice.usdPerMillionChars, retained.rates.usdPerMillionChars);
+        assert.equal(choice.secondsPerMillionChars, retained.rates.secondsPerMillionChars);
+    }
+});
+
+test('summary cell colors follow quality upward and errors, cost and time downward', () => {
+    const fs = require('node:fs'), vm = require('node:vm');
+    const page = fs.readFileSync(require.resolve('../hn_polarization.html'), 'utf8');
+    const start = page.indexOf('function modelMetricScore('), end = page.indexOf('function closeModelOptions(', start);
+    const sandbox = { perThousandCommentsRates: core.perThousandCommentsRates };
+    vm.runInNewContext(page.slice(start, end), sandbox);
+    for (const choice of Object.values(core.SUMMARY_MODELS)) {
+        assert.equal(sandbox.modelMetricScore(choice, 'summaryQuality'), choice.summaryQuality.weighted);
+        assert.equal(sandbox.modelMetricScore(choice, 'summaryErrors'), -choice.summaryQuality.errorPercent);
+        assert.equal(sandbox.modelMetricScore(choice, 'cost'), -choice.summaryQuality.benchmark.costPer1k);
+        assert.equal(sandbox.modelMetricScore(choice, 'time'), -choice.summaryQuality.benchmark.secondsPer1k);
+    }
+});
