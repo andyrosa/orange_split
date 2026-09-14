@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-9nv9PkvwmIYbP3pHqY6QkNF0yNlwhL3tiBuKOD+4iOc=' 'sha256-G4t9UV3484oviIcoapAD4QSoBRGyonm87b/0CwTd9eg='; style-src 'sha256-HvYB058pt1TuiL8QC7zeWapO9GLCk/4KZ+GXEsp2v2w='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-IewPx8PjD6/jlXbWfNJG0fHF11+Jzbfc+wNSNVUId3A=' 'sha256-jd6tPZcgns321Pt/p61z0aFnp3Ho5Ott8R81Gw4YKkA='; style-src 'sha256-HvYB058pt1TuiL8QC7zeWapO9GLCk/4KZ+GXEsp2v2w='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
 <title>Orange Split - For and Against on Hacker News</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EOS%3C/text%3E%3C/svg%3E">
 <style>
@@ -252,7 +252,8 @@ const CONSTANTS = Object.freeze({
     HN_ITEM_URL: 'https://hn.algolia.com/api/v1/items/',
     HN_CURRENT_ITEM_URL: 'https://hacker-news.firebaseio.com/v0/item/',
     HN_ITEM_PAGE_URL: 'https://news.ycombinator.com/item?id=',
-    HN_FRONT_PAGE_URL: 'https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=30',
+    HN_TOP_STORIES_URL: 'https://hacker-news.firebaseio.com/v0/topstories.json',
+    HN_STORIES_BY_ID_URL: 'https://hn.algolia.com/api/v1/search?hitsPerPage=60&tags=',
     HN_STORY_SEARCH_URL: 'https://hn.algolia.com/api/v1/search?tags=story&hitsPerPage=30&query=',
     OPENROUTER_URL: 'https://openrouter.ai/api/v1/chat/completions',
     OPENROUTER_AUTH_URL: 'https://openrouter.ai/auth',
@@ -1101,6 +1102,19 @@ async function fetchCurrentCommentCount(threadId) {
 
 async function fetchStories(url, what) {
     return parseFrontPage(await fetchHnJson(url, what));
+}
+
+// HN supplies the ranking; Algolia supplies metadata in one request. Its front_page tag only covers
+// the first page, so fetch the first 60 ranked IDs for the two front-page scopes.
+async function fetchFrontPageStories() {
+    const ids = await fetchHnJson(CONSTANTS.HN_TOP_STORIES_URL, 'the top stories');
+    if (!Array.isArray(ids)) throw new Error('top stories response has no ID array');
+    const rankedIds = [...new Set(ids.filter(id => Number.isSafeInteger(id) && id > 0))].slice(0, 60);
+    if (rankedIds.length === 0) return [];
+    const tags = 'story,(' + rankedIds.map(id => 'story_' + id).join(',') + ')';
+    const stories = await fetchStories(CONSTANTS.HN_STORIES_BY_ID_URL + encodeURIComponent(tags), 'the front-page stories');
+    const byId = new Map(stories.map(story => [story.id, story]));
+    return rankedIds.map(id => byId.get(id)).filter(Boolean);
 }
 
 // Parses Algolia search hits (front page or story search) into { id, title, numComments }.
@@ -2913,7 +2927,7 @@ if (typeof module !== 'undefined' && module.exports) {
         roleChoice, buildStageConfig, combinedRate, estimateRunSeconds, applyToAllStages, stepMinComments, perThousandCommentsRates,
         isArticle, isArticleId, createArticleSource, sourceFromSnapshot, parseArticlePreparation, buildArticlePrepareMessages, parseAxisReview, parseSynthesisReview, estimateSourceRun, ARTICLE_MAX_CHARS,
         stripHtml, flattenThread, makeExtractBatches, makeScoreBatches, seededShuffle,
-        selectCommentShare, threadShare, indexCommentsById, estimateRunCost, largestShareWithinBudget, parseFrontPage, parseCurrentCommentCount, formatLocalDateTime, storyDate, storyDetails, storyLabel, sortStoriesNewestFirst, storySearchUrl, isThreadId, fetchThreadItem, fetchCurrentCommentCount, fetchStories,
+        selectCommentShare, threadShare, indexCommentsById, estimateRunCost, largestShareWithinBudget, parseFrontPage, parseCurrentCommentCount, formatLocalDateTime, storyDate, storyDetails, storyLabel, sortStoriesNewestFirst, storySearchUrl, isThreadId, fetchThreadItem, fetchCurrentCommentCount, fetchStories, fetchFrontPageStories,
         buildExtractMessages, buildConsolidateMessages, buildScoreMessages,
         buildSynthesisMessages, parseSynthesisResponse, synthesisTextParts,
         parseExtractResponse, parseConsolidateResponse, parseScoreResponse,
@@ -3897,6 +3911,11 @@ let lastSearch = null;
 let listStories = [];
 let activeIndex = -1;
 let storyScope = 'front';
+let frontPageLimit = 30;
+
+function frontPageLabel() {
+    return frontPageLimit === 60 ? `${HEADER_HOME_PAGE} +1` : HEADER_HOME_PAGE;
+}
 
 function storyResultSelection(storyId, fetchedAt) {
     const { volumeKey, consolidationKey, summaryKey } = selectedModelKeys();
@@ -4060,7 +4079,7 @@ function refreshList() {
             return;
         }
         const needle = text.toLowerCase();
-        showList(homePageStories.filter(story => story.title.toLowerCase().includes(needle)), () => HEADER_HOME_PAGE);
+        showList(homePageStories.slice(0, frontPageLimit).filter(story => story.title.toLowerCase().includes(needle)), frontPageLabel);
         return;
     }
     if (text.length < SEARCH_MIN_CHARS) {
@@ -4075,15 +4094,20 @@ function refreshList() {
     }
 }
 
-function selectStoryScope(scope, { focus = true } = {}) {
+function selectStoryScope(scope, { focus = true, toggle = false } = {}) {
     if (activeController !== null || importActive) return;
+    frontPageLimit = toggle && scope === 'front' && storyScope === 'front' && !articleModeSelected && frontPageLimit === 30 ? 60 : 30;
     if (articleModeSelected) { resetLoadedSource(); updateEstimate(); }
     storyScope = scope;
     showArticleMode(false);
     const frontPage = scope === 'front';
     elements.frontPageScope.setAttribute('aria-pressed', String(frontPage));
     elements.searchAllScope.setAttribute('aria-pressed', String(!frontPage));
-    elements.threadId.placeholder = frontPage ? 'filter front page, or id' : 'search all stories, or id';
+    elements.frontPageScope.textContent = frontPageLabel();
+    elements.frontPageScope.title = frontPage
+        ? `Show the first ${frontPageLimit === 30 ? 60 : 30} stories`
+        : 'Show the first 30 stories';
+    elements.threadId.placeholder = frontPage ? `filter ${frontPageLabel().toLowerCase()}, or id` : 'search all stories, or id';
     searchLatest.cancel();
     closeList();
     if (focus) {
@@ -4094,7 +4118,7 @@ function selectStoryScope(scope, { focus = true } = {}) {
 
 async function populateFrontPage() {
     try {
-        homePageStories = await fetchStories(CONSTANTS.HN_FRONT_PAGE_URL, 'the home page');
+        homePageStories = await fetchFrontPageStories();
     } catch (error) {
         homePageHeader = HEADER_HOME_PAGE_UNAVAILABLE;
         if (!articleModeSelected) setStatus(`Home page suggestions unavailable: ${error.message}. A thread id can still be typed.`, true);
@@ -4922,7 +4946,7 @@ elements.articleScope.addEventListener('click', selectArticleMode);
 elements.articleText.addEventListener('input', loadArticleDraft);
 elements.articleTitle.addEventListener('input', loadArticleDraft);
 
-elements.frontPageScope.addEventListener('click', () => selectStoryScope('front'));
+elements.frontPageScope.addEventListener('click', () => selectStoryScope('front', { toggle: true }));
 elements.searchAllScope.addEventListener('click', () => selectStoryScope('search'));
 // The list opens on focus, click, or typing; arrows move the highlight, Enter picks it (or loads a typed
 // id), Escape closes; leaving the box closes it too. A press inside the list keeps the focus in the box.

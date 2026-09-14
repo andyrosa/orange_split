@@ -49,7 +49,7 @@ test('minimum-comment input and buttons refresh both story sources without chang
         elements, Event, stepMinComments: core.stepMinComments, isThreadId: core.isThreadId,
         homePageStories: stories, lastSearch: { text: 'Example', stories },
         storyScope: 'front', articleModeSelected: false, searchLatest: { cancel() {} },
-        SEARCH_MIN_CHARS: 3, HEADER_HOME_PAGE: 'Front page', searchHeader: () => 'Search',
+        SEARCH_MIN_CHARS: 3, frontPageLimit: 30, frontPageLabel: () => 'Front page', searchHeader: () => 'Search',
         closeList() { elements.storyList.hidden = true; },
         showList(rows) {
             refreshes += 1;
