@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-IewPx8PjD6/jlXbWfNJG0fHF11+Jzbfc+wNSNVUId3A=' 'sha256-jd6tPZcgns321Pt/p61z0aFnp3Ho5Ott8R81Gw4YKkA='; style-src 'sha256-HvYB058pt1TuiL8QC7zeWapO9GLCk/4KZ+GXEsp2v2w='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-IewPx8PjD6/jlXbWfNJG0fHF11+Jzbfc+wNSNVUId3A=' 'sha256-nftCwfZZNnppLSCIPysGfXGtsf4WqzqbCVTIHHMF0G4='; style-src 'sha256-vsUkom2Dud9bUYKsSLUxZbQefZM1pTL+Qj/hGxsWQpQ='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
 <title>Orange Split - For and Against on Hacker News</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EOS%3C/text%3E%3C/svg%3E">
 <style>
@@ -40,7 +40,7 @@ input[type="number"] { width: 5em; }
 #story-list li.header { color: #666; font-size: 0.9em; cursor: default; background: #eee; }
 #story-list li.active { background: #cde; }
 #story-list li.preprocessed .story-title { font-weight: bold; }
-.story-option { display: flex; align-items: center; padding: 0.35rem 0.5rem; white-space: nowrap; }
+.story-option { display: flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.5rem; white-space: nowrap; }
 .story-option.header { display: block; }
 .story-title { flex: 0 1 auto; min-width: 4rem; overflow: hidden; text-overflow: ellipsis; }
 .story-title a { color: #0645ad; cursor: alias; }
@@ -49,6 +49,12 @@ input[type="number"] { width: 5em; }
 .story-status { color: #666; }
 .story-status.ready { color: #176b35; font-weight: bold; }
 .story-status.partial { color: #24588f; }
+@media (max-width: 48rem) {
+    #story-list { left: calc(2px - 1rem); width: calc(100vw - 4px); box-sizing: border-box; }
+    .story-option { flex-direction: column; align-items: stretch; gap: 0.15rem; white-space: normal; overflow-wrap: anywhere; }
+    .story-title { min-width: 0; }
+    .story-detail { line-height: 1.4; }
+}
 #cached-threads-toggle { border: 0; background: none; color: #0645ad; cursor: pointer; font: inherit; margin: 0; padding: 0; text-decoration: underline; }
 #cached-threads-toggle:disabled { color: #666; cursor: default; text-decoration: none; }
 #cached-threads-list { margin: -0.5rem 0 1rem; padding-left: 1.5rem; }
@@ -4012,16 +4018,17 @@ function showList(stories, headerFor) {
         });
         title.append(link);
         const detail = makeElement('span', { className: 'story-detail' });
-        detail.append(document.createTextNode(` — ${counted(story.numComments, 'comment')} reported by Algolia, posted ${storyDate(story)}, id ${story.id}`));
+        detail.title = 'Comment counts are reported by Algolia.';
+        detail.append(document.createTextNode(`${counted(story.numComments, 'comment')}, ${storyDate(story)}, id ${story.id}`));
         if (thread !== null) {
             const difference = story.numComments - thread.commentCount;
-            detail.append(document.createTextNode(`; ${thread.commentCount} fetched from Algolia`));
+            detail.append(document.createTextNode(`; ${thread.commentCount} fetched`));
             if (difference !== 0) {
                 const direction = difference > 0 ? `+${difference} new` : `${Math.abs(difference)} fewer now`;
                 detail.append(document.createTextNode(' ('), makeElement('span', { className: 'new', text: direction }), document.createTextNode(')'));
             }
         }
-        detail.append(document.createTextNode(' — '));
+        detail.append(document.createTextNode('; '));
         const status = makeElement('span', {
             className: `story-status ${thread === null ? 'snapshot' : 'partial'}`,
             text: thread === null ? 'not stored' : 'checking preprocessing…',
