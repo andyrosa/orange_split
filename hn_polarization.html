@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-IewPx8PjD6/jlXbWfNJG0fHF11+Jzbfc+wNSNVUId3A=' 'sha256-nftCwfZZNnppLSCIPysGfXGtsf4WqzqbCVTIHHMF0G4='; style-src 'sha256-vsUkom2Dud9bUYKsSLUxZbQefZM1pTL+Qj/hGxsWQpQ='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-EbrCwe4Sj7tVNHVeAjNI39QG65vwm8jt7vrxWLQFa/U=' 'sha256-nftCwfZZNnppLSCIPysGfXGtsf4WqzqbCVTIHHMF0G4='; style-src 'sha256-vsUkom2Dud9bUYKsSLUxZbQefZM1pTL+Qj/hGxsWQpQ='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
 <title>Orange Split - For and Against on Hacker News</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EOS%3C/text%3E%3C/svg%3E">
 <style>
@@ -291,7 +291,7 @@ const CONSTANTS = Object.freeze({
 const SAMPLING_SEED = 12345;
 const DEFAULT_VOLUME_KEY = 'lunaLow';
 const DEFAULT_CONSOLIDATION_KEY = 'solLow';
-const DEFAULT_SUMMARY_KEY = 'astraLow';
+const DEFAULT_SUMMARY_KEY = 'sol6Low';
 
 // The rates in the tables are per this many characters of comment text.
 const RATE_UNIT_CHARS = 1000000;
@@ -335,6 +335,9 @@ function optionEntry(role, labelFor, { model, sampling, reasoning, maxTokens, ..
 const volumeEntry = entry => optionEntry('volume', volumeLabel, entry);
 // Embedded from data/consolidation-matched.json after all eight matched runs and reviews complete.
 const MATCHED_CONSOLIDATION = Object.freeze({"openai/gpt-6-astra":{"benchmark":{"comments":1234,"axes":150,"twoSided":107,"review":{"candidates":233,"fullyPreserved":159,"partial":42,"missing":20,"excluded":12,"flaggedAxes":7},"costPer1k":0.48953808752025935,"secondsPer1k":122.00891410048622},"usdPerMillionChars":1.3272823548281492,"secondsPerMillionChars":330.8022050697269,"minimumSeconds":14.593},"google/gemini-3.8-flash":{"benchmark":{"comments":1234,"axes":64,"twoSided":59,"review":{"candidates":233,"fullyPreserved":71,"partial":42,"missing":108,"excluded":12,"flaggedAxes":5},"costPer1k":0.15687277147487846,"secondsPer1k":109.50891410048622},"usdPerMillionChars":0.4253284204836828,"secondsPerMillionChars":296.91101282482265,"minimumSeconds":18.591},"anthropic/claude-opus-5":{"benchmark":{"comments":1234,"axes":120,"twoSided":103,"review":{"candidates":233,"fullyPreserved":126,"partial":55,"missing":40,"excluded":12,"flaggedAxes":9},"costPer1k":0.8714789303079418,"secondsPer1k":364.9149108589951},"usdPerMillionChars":2.3628367971559965,"secondsPerMillionChars":989.3921117563436,"minimumSeconds":45.144},"openai/gpt-5.6-sol":{"benchmark":{"comments":1234,"axes":164,"twoSided":125,"review":{"candidates":233,"fullyPreserved":180,"partial":26,"missing":15,"excluded":12,"flaggedAxes":1},"costPer1k":0.11313452188006483,"secondsPer1k":115.41004862236629},"usdPerMillionChars":0.30674110644580815,"secondsPerMillionChars":312.9107315883489,"minimumSeconds":24.651},"anthropic/claude-sonnet-5":{"benchmark":{"comments":1234,"axes":102,"twoSided":87,"review":{"candidates":233,"fullyPreserved":116,"partial":65,"missing":40,"excluded":12,"flaggedAxes":16},"costPer1k":0.705325769854133,"secondsPer1k":598.8606158833063},"usdPerMillionChars":1.91234650091292,"secondsPerMillionChars":1623.6880208642308,"minimumSeconds":58.384},"z-ai/glm-5.3":{"benchmark":{"comments":1234,"axes":146,"twoSided":117,"review":{"candidates":233,"fullyPreserved":168,"partial":29,"missing":24,"excluded":12,"flaggedAxes":7},"costPer1k":0.490468677471637,"secondsPer1k":1117.2884927066452},"usdPerMillionChars":1.3298054590636146,"secondsPerMillionChars":3029.2991279472158,"minimumSeconds":32.731},"openai/gpt-5.6-luna":{"benchmark":{"comments":1234,"axes":139,"twoSided":111,"review":{"candidates":233,"fullyPreserved":155,"partial":36,"missing":30,"excluded":12,"flaggedAxes":6},"costPer1k":0.26121377633711507,"secondsPer1k":1893.1507293354944},"usdPerMillionChars":0.7082277048686867,"secondsPerMillionChars":5132.890825319192,"minimumSeconds":346.032},"anthropic/claude-fable-5.1":{"benchmark":{"comments":1234,"axes":92,"twoSided":79,"review":{"candidates":233,"fullyPreserved":98,"partial":66,"missing":57,"excluded":12,"flaggedAxes":12},"costPer1k":0.8779578606158834,"secondsPer1k":182.38573743922205},"usdPerMillionChars":2.3804030909646197,"secondsPerMillionChars":494.5016072225042,"minimumSeconds":18.403}});
+// Embedded from data/consolidation-additions.json: models added after the matched eight, on the same inputs
+// and exclusion lists, graded in a separate review of the added models only.
+const ADDED_CONSOLIDATION = Object.freeze({"openai/gpt-6-sol":{"benchmark":{"comments":1234,"axes":162,"twoSided":124,"review":{"candidates":233,"fullyPreserved":176,"partial":21,"missing":24,"excluded":12,"flaggedAxes":5},"costPer1k":0.09267260940032415,"secondsPer1k":70.80875202593194},"usdPerMillionChars":0.2512628176818644,"secondsPerMillionChars":191.98344220260893,"minimumSeconds":9.795},"anthropic/claude-opus-5.5":{"benchmark":{"comments":1234,"axes":149,"twoSided":121,"review":{"candidates":233,"fullyPreserved":182,"partial":12,"missing":27,"excluded":12,"flaggedAxes":14},"costPer1k":0.39428200972447336,"secondsPer1k":133.15153970826583},"usdPerMillionChars":1.0690149912223463,"secondsPerMillionChars":361.013154396627,"minimumSeconds":16.224}});
 const consolidationEntry = entry => {
     const measured = MATCHED_CONSOLIDATION[entry.model];
     if (measured) entry = { ...entry,
@@ -344,6 +347,15 @@ const consolidationEntry = entry => {
         quality: { benchmark: measured.benchmark, runs: '5 threads', matched: true,
             note: 'Same 1,234 HN comments and 233 Luna-low candidates; one accepted output per thread. Same two-pass Luna-low scoring and anonymous Sonnet 5 medium-effort review. Common candidate eligibility for all eight models. Consolidation cost/time only; costs use uncached token prices. Review flags are model judgments; Sonnet reviews its own model and shares a model family with Opus and Fable' },
     };
+    const added = ADDED_CONSOLIDATION[entry.model];
+    if (added) entry = { ...entry,
+        usdPerMillionChars: added.usdPerMillionChars,
+        secondsPerMillionChars: added.secondsPerMillionChars,
+        minimumSeconds: added.minimumSeconds,
+        quality: { benchmark: added.benchmark, runs: '5 threads', matched: true, added: true,
+            note: 'Same 1,234 HN comments, 233 Luna-low candidates, scoring and candidate eligibility as the matched eight, but graded in a separate anonymous Sonnet 5 review of the added models only, which can shift grades. Consolidation cost/time only; costs use uncached token prices. Sonnet shares a model family with Opus' },
+    };
+    if (!entry.quality) throw new Error(`${entry.name}: no quality record and no measured consolidation data`);
     const benchmark = entry.quality.benchmark;
     if (benchmark) {
         const review = benchmark.review;
@@ -412,6 +424,20 @@ const VOLUME_MODELS = Object.freeze({
         secondsPerMillionChars: 290,
         minimumSeconds: 20,
         candidateFactor: 1, // 62 candidates against 64
+    }),
+    // data/volume-addition.json: measured beside a GPT-5.6 Luna low reference run on the same 592-comment
+    // thread; cost, time and call latency are the GPT-5.6 Luna constants scaled by the measured ratios
+    // (0.379, 0.804, 0.536), so the row compares with the others.
+    luna6Low: volumeEntry({
+        name: 'GPT-6 Luna',
+        effort: 'low',
+        quality: { stancesPerComment: [0.41], twoSidedPer100Comments: [5.9], reviewHeldPercent: 86, reviewWrongPercent: 8 },
+        model: 'openai/gpt-6-luna', sampling: SAMPLING_SEED_ONLY, reasoning: { effort: 'low' },
+        maxTokens: { extract: 32000, score: 16000 },
+        usdPerMillionChars: 0.313,
+        secondsPerMillionChars: 233,
+        minimumSeconds: 10.7,
+        candidateFactor: 0.89, // 81 candidates against GPT-5.6 Luna's 91 on the same thread
     }),
 });
 
@@ -502,19 +528,34 @@ const CONSOLIDATION_MODELS = Object.freeze(Object.fromEntries(Object.entries({
         secondsPerMillionChars: 427.5,
         minimumSeconds: 15,
     }),
+    // Rates and quality come from ADDED_CONSOLIDATION.
+    sol6Low: consolidationEntry({
+        name: 'GPT-6 Sol',
+        effort: 'low',
+        model: 'openai/gpt-6-sol', sampling: SAMPLING_SEED_ONLY, reasoning: { effort: 'low' }, maxTokens: { consolidate: CONSOLIDATION_MAX_TOKENS },
+    }),
+    opus55: consolidationEntry({
+        name: 'Claude Opus 5.5',
+        effort: 'adaptive',
+        model: 'anthropic/claude-opus-5.5', sampling: null, reasoning: null, maxTokens: { consolidate: CONSOLIDATION_MAX_TOKENS },
+    }),
 }).sort(([, a], [, b]) => Number(!!b.quality.matched) - Number(!!a.quality.matched))));
 
 // Share supported model profiles, but expose independent per-role config fragments and rates.
 const GEMINI_SUMMARY_QUALITY = Object.freeze({"threads":5,"reviews":10,"scores":{"faithfulness":74.5,"coverage":68.5,"clarity":89.7},"weighted":74.22,"majorReviewCount":8,"standalone":true});
 // Embedded from the completed five-thread experiment in data/summary-matched.json.
 const MATCHED_SUMMARY = Object.freeze({"astraLow":{"matched":true,"threads":5,"reviews":5,"scores":{"faithfulness":97.2,"coverage":79.4,"clarity":93},"weighted":91.44,"majorReviewCount":0,"majorErrorPercent":0,"failedCount":0,"errorPercent":0,"benchmark":{"comments":1234,"costPer1k":0.5573905996758509,"secondsPer1k":41.929497568881686},"rates":{"usdPerMillionChars":1.5112505575293378,"secondsPerMillionChars":113.68325302713713,"minimumSeconds":9.067}},"geminiFlash":{"matched":true,"threads":5,"reviews":5,"scores":{"faithfulness":78.8,"coverage":73.6,"clarity":90.6},"weighted":78.41999999999999,"majorReviewCount":3,"majorErrorPercent":60,"failedCount":0,"errorPercent":60,"benchmark":{"comments":1234,"costPer1k":0.09653910048622368,"secondsPer1k":53.86871961102107},"rates":{"usdPerMillionChars":0.26174601709829876,"secondsPerMillionChars":146.05401058591667,"minimumSeconds":11.457}},"opus5":{"matched":true,"threads":5,"reviews":5,"scores":{"faithfulness":84,"coverage":80.8,"clarity":86.8},"weighted":83.32,"majorReviewCount":2,"majorErrorPercent":40,"failedCount":0,"errorPercent":40,"benchmark":{"comments":1234,"costPer1k":0.5795421393841167,"secondsPer1k":112.22609400324149},"rates":{"usdPerMillionChars":1.5713099247912148,"secondsPerMillionChars":304.2780901406841,"minimumSeconds":21.942}},"solLow":{"matched":true,"threads":5,"reviews":5,"scores":{"faithfulness":87.6,"coverage":78.4,"clarity":92.2},"weighted":85.3,"majorReviewCount":2,"majorErrorPercent":40,"failedCount":0,"errorPercent":40,"benchmark":{"comments":1234,"costPer1k":0.11897406807131279,"secondsPer1k":54.50648298217181},"rates":{"usdPerMillionChars":0.3225738410530548,"secondsPerMillionChars":147.7831754673909,"minimumSeconds":11.486}},"sonnet5":{"matched":true,"threads":5,"reviews":5,"scores":{"faithfulness":67.4,"coverage":72.8,"clarity":85.8},"weighted":70.86,"majorReviewCount":5,"majorErrorPercent":100,"failedCount":0,"errorPercent":100,"benchmark":{"comments":1234,"costPer1k":0.19401296596434361,"secondsPer1k":63.4132901134522},"rates":{"usdPerMillionChars":0.5260264582001305,"secondsPerMillionChars":171.9321604893515,"minimumSeconds":13.88}},"glm53":{"matched":true,"threads":5,"reviews":5,"scores":{"faithfulness":28.2,"coverage":29.8,"clarity":32.6},"weighted":29.12,"majorReviewCount":2,"majorErrorPercent":40,"failedCount":3,"errorPercent":100,"benchmark":{"comments":1234,"costPer1k":0.11375067423014587,"secondsPer1k":43.896272285251214},"rates":{"usdPerMillionChars":0.30841167746570786,"secondsPerMillionChars":119.01576022832886,"minimumSeconds":7.956}},"lunaMax":{"matched":true,"threads":5,"reviews":5,"scores":{"faithfulness":76.2,"coverage":70.8,"clarity":88.2},"weighted":75.78,"majorReviewCount":4,"majorErrorPercent":80,"failedCount":0,"errorPercent":80,"benchmark":{"comments":1234,"costPer1k":0.046927714748784446,"secondsPer1k":210.27633711507292},"rates":{"usdPerMillionChars":0.12723489617320652,"secondsPerMillionChars":570.1212612576983,"minimumSeconds":33.945}},"fableLow":{"matched":true,"threads":5,"reviews":5,"scores":{"faithfulness":91.4,"coverage":80.2,"clarity":87.8},"weighted":87.68,"majorReviewCount":0,"majorErrorPercent":0,"failedCount":0,"errorPercent":0,"benchmark":{"comments":1234,"costPer1k":1.2716855753646676,"secondsPer1k":126.11588330632091},"rates":{"usdPerMillionChars":3.447915224780449,"secondsPerMillionChars":341.93741170163446,"minimumSeconds":25.962}}});
+// Embedded from data/summary-additions.json: models added after the matched eight, on the same inputs,
+// graded in a separate Astra-high review of the added summaries only.
+const ADDED_SUMMARY = Object.freeze(Object.fromEntries(Object.entries({"sol6Low":{"matched":true,"threads":5,"reviews":5,"scores":{"faithfulness":95.6,"coverage":78.8,"clarity":93.2},"weighted":90.32,"majorReviewCount":0,"majorErrorPercent":0,"failedCount":0,"errorPercent":0,"benchmark":{"comments":1234,"costPer1k":0.11283954619124795,"secondsPer1k":29.57293354943274},"rates":{"usdPerMillionChars":0.3059413402236269,"secondsPerMillionChars":80.18095809356825,"minimumSeconds":6.478}},"opus55":{"matched":true,"threads":5,"reviews":5,"scores":{"faithfulness":89.6,"coverage":78.4,"clarity":91.2},"weighted":86.4,"majorReviewCount":1,"majorErrorPercent":20,"failedCount":0,"errorPercent":20,"benchmark":{"comments":1234,"costPer1k":0.3589335494327391,"secondsPer1k":78.04781199351702},"rates":{"usdPerMillionChars":0.9731748741576639,"secondsPerMillionChars":211.61067204531423,"minimumSeconds":18.335}}})
+    .map(([key, quality]) => [key, { ...quality, added: true }])));
 const SUMMARY_MODELS = Object.freeze(Object.fromEntries(Object.entries(CONSOLIDATION_MODELS).map(([key, choice]) => [key,
     optionEntry('summary', summaryLabel, {
         name: choice.name, effort: choice.effort, testedConsolidationKey: 'solLow',
-        summaryQuality: MATCHED_SUMMARY[key],
+        summaryQuality: MATCHED_SUMMARY[key] ?? ADDED_SUMMARY[key],
         model: choice.config.modelConsolidate, sampling: choice.config.samplingConsolidate,
         reasoning: choice.config.reasoningConsolidate, maxTokens: { synthesize: 16000 },
-        ...MATCHED_SUMMARY[key].rates,
+        ...(MATCHED_SUMMARY[key] ?? ADDED_SUMMARY[key]).rates,
         measuredRate: true,
     }),
 ])));
@@ -658,7 +699,8 @@ function summaryQualityText(choice, consolidationKey, volumeKey = DEFAULT_VOLUME
     if (q?.matched) return {
         rank: 'Matched benchmark', label: `Summary benchmark: ${q.weighted.toFixed(1)}/100 · ${q.threads} threads`,
         scores: `Faithfulness ${q.scores.faithfulness.toFixed(1)}/100 · Coverage ${q.scores.coverage.toFixed(1)}/100 · Clarity ${q.scores.clarity.toFixed(1)}/100. ${q.failedCount}/${q.threads} summaries failed after repair; ${q.majorReviewCount}/${q.threads} had a major support error.`,
-        method: 'All eight summary models use the same five Sol-low consolidation and Luna-low scoring inputs (1,234 HN comments). One anonymous Astra-high review per thread. Quality weights faithfulness 60%, coverage 30%, clarity 10%; unavailable summaries score zero. Error rate counts failed summaries or major support errors once per summary. Cost/time cover summary generation and repairs only, using uncached prices. This fixed benchmark compares summary choices; it does not grade every upstream combination. Five-thread model judgments, without a statistical rank; Astra evaluates its own model family.',
+        method: (q.added ? 'Added after the matched eight: same inputs and rubric, but graded in a separate anonymous Astra-high review of the added summaries only, which can shift grades. ' : '')
+            + 'All eight summary models use the same five Sol-low consolidation and Luna-low scoring inputs (1,234 HN comments). One anonymous Astra-high review per thread. Quality weights faithfulness 60%, coverage 30%, clarity 10%; unavailable summaries score zero. Error rate counts failed summaries or major support errors once per summary. Cost/time cover summary generation and repairs only, using uncached prices. This fixed benchmark compares summary choices; it does not grade every upstream combination. Five-thread model judgments, without a statistical rank; Astra evaluates its own model family.',
     };
     if (!q) return { rank: 'Not ranked', label: 'Summary quality: not evaluated', scores: '',
         method: 'Summary ranks currently cover only Astra low and Sonnet 5 adaptive.' };
@@ -2088,9 +2130,13 @@ function markSystemMessageCacheable(message) {
     return { role: 'system', content: [{ type: 'text', text: message.content, cache_control: { type: 'ephemeral' } }] };
 }
 
+// Models outside OpenAI whose structured-output validator also rejects regex lookaround.
+const NO_LOOKAROUND_MODELS = Object.freeze(['anthropic/claude-opus-5.5']);
+
 function providerResponseSchema(request) {
-    if (!request.model.startsWith('openai/') || request.schema.name !== 'thread_synthesis') return request.schema.schema;
-    // OpenAI rejects regex lookaround. The prompt and parseSynthesisResponse retain all word limits.
+    const rejectsLookaround = request.model.startsWith('openai/') || NO_LOOKAROUND_MODELS.includes(request.model);
+    if (!rejectsLookaround || request.schema.name !== 'thread_synthesis') return request.schema.schema;
+    // OpenAI and NO_LOOKAROUND_MODELS reject regex lookaround. The prompt and parseSynthesisResponse retain all word limits.
     const schema = JSON.parse(JSON.stringify(request.schema.schema));
     schema.properties.sections.items.properties.text.pattern = '^[^\\r\\n]*\\[\\[axis:[1-9]\\d*\\]\\][^\\r\\n]*$';
     return schema;

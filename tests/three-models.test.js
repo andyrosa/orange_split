@@ -11,7 +11,7 @@ test('three roles route independently and retain legacy helper behavior', () => 
     assert.equal(cfg.modelSynthesize, 'openai/gpt-6-astra');
     assert.deepEqual(cfg.reasoningSynthesize, { effort: 'low' });
     assert.equal(cfg.maxTokensSynthesize, 16000);
-    assert.equal(core.DEFAULT_CONFIG.modelSynthesize, cfg.modelSynthesize);
+    assert.equal(core.DEFAULT_CONFIG.modelSynthesize, 'openai/gpt-6-sol');
     assert.deepEqual(core.buildStageConfig('lunaLow', 'geminiFlash'), core.buildStageConfig('lunaLow', 'geminiFlash', 'geminiFlash'));
     assert.equal(core.CONSOLIDATION_MODELS.geminiFlash.config.modelSynthesize, undefined);
 });

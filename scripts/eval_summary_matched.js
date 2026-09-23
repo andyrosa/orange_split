@@ -2,17 +2,12 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { readPage, blockText, CORE_SCRIPT_PATTERN } = require('./load_core');
-const { hash, loadExperimentCore, makeClient, MODELS } = require('./eval_consolidation_matched');
+const { hash, save, loadExperimentCore, makeClient, MODELS } = require('./eval_consolidation_matched');
 const { RUBRIC, SCHEMA, validateReview } = require('./eval_summary_quality');
 const POLICY = Object.freeze({ version: 1, weights: { faithfulness: 0.6, coverage: 0.3, clarity: 0.1 },
     evaluator: 'openai/gpt-6-astra', effort: 'high', maxTokens: 32000, reviewsPerThread: 1,
     runsPerThread: 1, concurrency: 5, consolidation: 'solLow', volume: 'lunaLow', budget: 15, unavailableScore: 0 });
 const read = file => JSON.parse(fs.readFileSync(file, 'utf8'));
-function save(file, value) {
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(file + '.tmp', JSON.stringify(value, null, 2) + '\n');
-    fs.renameSync(file + '.tmp', file);
-}
 function loadSummaryCore(source) {
     return loadExperimentCore(source + '\nObject.assign(module.exports, { SYNTHESIS_SCHEMA });');
 }

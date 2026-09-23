@@ -10,10 +10,20 @@ const REVIEW_SETTINGS = { reasoning: { effort: 'medium' }, maxTokens: 64000, con
 const PARTITIONS = ['fullyPreservedCandidateIds', 'partialCandidateIds', 'missingCandidateIds'];
 const read = file => JSON.parse(fs.readFileSync(file, 'utf8'));
 const hash = value => crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
+// Windows can briefly lock a just-written file (antivirus, search indexer), failing the replacing rename.
+const RENAME_ATTEMPTS = 5;
+const RENAME_RETRY_MS = 200;
+const RENAME_LOCK_CODES = ['EPERM', 'EACCES', 'EBUSY'];
 function save(file, value) {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file + '.tmp', JSON.stringify(value, null, 2) + '\n');
-    fs.renameSync(file + '.tmp', file);
+    for (let attempt = 1; ; attempt++) {
+        try { fs.renameSync(file + '.tmp', file); return; }
+        catch (error) {
+            if (!RENAME_LOCK_CODES.includes(error.code) || attempt >= RENAME_ATTEMPTS) throw error;
+            Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, RENAME_RETRY_MS);
+        }
+    }
 }
 function loadExperimentCore(source) {
     const shim = { exports: {} };
@@ -404,5 +414,5 @@ async function main() {
     save(path.join(root, 'completion.json'), { completedAt: new Date().toISOString(), spent: client.budget.spent, inheritedSpend: fixture.inheritedSpend || 0, additionalSpend: client.budget.spent - (fixture.inheritedSpend || 0), budget: fixture.budget });
     log('Matched experiment complete');
 }
-module.exports = { MODELS, REVIEWER, REVIEW_SETTINGS, PARTITIONS, hash, loadExperimentCore, validateModelSet, requestAllowance, Budget, makeClient, consolidate, score, validateReview, completeReviewPartitions, completeReviewEvidence, reviewRequest };
+module.exports = { MODELS, REVIEWER, REVIEW_SETTINGS, PARTITIONS, hash, save,loadExperimentCore, validateModelSet, requestAllowance, Budget, makeClient, consolidate, score, validateReview, completeReviewPartitions, completeReviewEvidence, reviewRequest };
 if (require.main === module) main().catch(error => { console.error(error.stack); process.exitCode = 1; });

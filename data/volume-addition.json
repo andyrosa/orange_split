@@ -1,0 +1,2248 @@
+{
+  "experiment": "volume-addition-v1",
+  "baseExperiment": "flash-stance-review-v1",
+  "completedAt": "2026-09-23T02:21:53.360Z",
+  "spent": 1.7511038500000005,
+  "policy": {
+    "version": 1,
+    "model": "luna6Low",
+    "reference": "lunaLow",
+    "consolidation": "solLow",
+    "budget": 4,
+    "addition": {
+      "name": "GPT-6 Luna",
+      "effort": "low",
+      "model": "openai/gpt-6-luna",
+      "sampling": "seedOnly",
+      "reasoning": {
+        "effort": "low"
+      }
+    }
+  },
+  "reviewPolicy": {
+    "version": 1,
+    "models": [
+      "geminiFlash",
+      "glmFlash"
+    ],
+    "threadId": "49537553",
+    "consolidation": "solLow",
+    "samplePerModel": 100,
+    "sampleSeed": "flash-review-holes-v1",
+    "budget": 8,
+    "generationConcurrency": 3,
+    "reviewer": "openai/gpt-6-astra",
+    "reasoning": {
+      "effort": "high"
+    },
+    "reviewMaxTokens": 12000,
+    "reviewBatchSize": 50,
+    "reviewConcurrency": 2
+  },
+  "thread": {
+    "id": "49537553",
+    "title": "Gemini 3.8 Flash and 3.8 Flash Cyber",
+    "comments": 592,
+    "fetchedAt": "2026-09-03T12:11:06.182Z",
+    "sourceHash": "dce26bff0461a61f4634f6a9d841d199ff569c10ccc22f1b0e82cae1c205f256"
+  },
+  "coreHash": "ac3144410013e8745e21b13595b106e1137b0ee9cfc4e51810c31bcda1089b6c",
+  "cacheHash": "beb6bf35f847cec31f4f7c6cc8de801b5e75a416138c4de3f5e157dbc46365c8",
+  "method": "GPT-6 Luna low runs production extraction, GPT-5.6 Sol low consolidation and two-pass scoring on the frozen 592-comment stance-review thread at production concurrency, with no summary. A GPT-5.6 Luna low reference run uses the same thread and settings. Up to 100 agreed GPT-6 Luna comment/axis stances, selected by a fixed seeded hash, receive the same blind Astra-high classification as the Flash stance review.",
+  "definitions": {
+    "stancesPerComment": "Agreed comment/axis stances in the result rows divided by source comments.",
+    "twoSidedPer100Comments": "100 * result rows with people on both poles / source comments.",
+    "candidateFactor": "Extracted candidates relative to the GPT-5.6 Luna low reference run on the same thread, whose selector factor is 1.",
+    "cost": "Extraction and scoring calls only, repriced at uncached token prices, per million characters of framed comment text.",
+    "time": "Busy wall seconds of the extraction stage plus the scoring stage (union of call intervals), per million characters.",
+    "minimumSeconds": "Median single-call latency of the extraction and scoring calls.",
+    "held": "Reviewer assigns exactly the original A/B/M/C stance.",
+    "wrong": "Reviewer confidently assigns a different stance or N."
+  },
+  "limitations": [
+    "One source thread and a sample of at most 100 reported stances; model judgments, not human ground truth.",
+    "The review sample contains only GPT-6 Luna stances, so its batches differ from earlier stance reviews.",
+    "The scoring stage was interrupted once by a local file-rename error and resumed from saved responses; busy-interval timing excludes the pause."
+  ],
+  "model": {
+    "name": "GPT-6 Luna",
+    "effort": "low",
+    "model": "openai/gpt-6-luna",
+    "key": "luna6Low",
+    "comments": 592,
+    "chars": 159463,
+    "candidates": 81,
+    "axes": 58,
+    "stances": 242,
+    "twoSided": 35,
+    "volumeCalls": 77,
+    "pricedCalls": 77,
+    "importedCalls": 0,
+    "stancesPerComment": 0.40878378378378377,
+    "twoSidedPer100Comments": 5.912162162162162,
+    "noCacheCost": 0.06212079999999999,
+    "billed": 0.05103559,
+    "seconds": 50.8529999256134,
+    "usdPerMillionChars": 0.3895624690367044,
+    "secondsPerMillionChars": 318.90156290558565,
+    "medianCallSeconds": 8.923,
+    "candidateFactor": 0.8901098901098901,
+    "minimumSeconds": 8.923,
+    "sampled": 100,
+    "held": 86,
+    "wrong": 8,
+    "unclear": 6,
+    "reviewHeldPercent": 86,
+    "reviewWrongPercent": 8,
+    "sample": [
+      {
+        "axisId": 40,
+        "statementA": "The pelican SVG benchmark is meaningless because current models produce no meaningful differences on it.",
+        "statementB": "The pelican SVG benchmark remains useful for comparing smaller models with state-of-the-art models despite saturation among leaders.",
+        "commentId": 49540566,
+        "stance": "A",
+        "caseId": "C8d4fdc73211b14311e4c",
+        "judgment": {
+          "caseId": "C8d4fdc73211b14311e4c",
+          "stance": "N",
+          "quote": "",
+          "explanation": "The comment proposes a condition for full saturation, without asserting current meaninglessness or usefulness for comparing smaller models."
+        }
+      },
+      {
+        "axisId": 9,
+        "statementA": "Gemini 3.8 Flash's generated HTML is not impressive.",
+        "statementB": "Gemini 3.8 Flash's generated HTML is impressive.",
+        "commentId": 49539000,
+        "stance": "B",
+        "caseId": "Cc99ea859511c6958a9c9",
+        "judgment": {
+          "caseId": "Cc99ea859511c6958a9c9",
+          "stance": "B",
+          "quote": "That's both cool and fast.",
+          "explanation": "The commenter directly praises the generated HTML example and its generation speed."
+        }
+      },
+      {
+        "axisId": 16,
+        "statementA": "Consciousness is not a special property that distinguishes humans from systems such as LLMs.",
+        "statementB": "Consciousness is a special property that distinguishes humans from systems such as LLMs.",
+        "commentId": 49548622,
+        "stance": "A",
+        "caseId": "C06cc7e97441a3aa5dd18",
+        "judgment": {
+          "caseId": "C06cc7e97441a3aa5dd18",
+          "stance": "A",
+          "quote": "A strong hint this is the case is the fact that nobody can define consciousness.",
+          "explanation": "Offers a substantive reason supporting the parent's claim that consciousness is not the special distinction people assume."
+        }
+      },
+      {
+        "axisId": 13,
+        "statementA": "Gemini Flash models are reliable and effective for information parsing and other practical tasks.",
+        "statementB": "Gemini Flash models can give seriously incorrect or outdated answers that make them unreliable for practical tasks.",
+        "commentId": 49541743,
+        "stance": "B",
+        "caseId": "C62736060a688e74cd5b4",
+        "judgment": {
+          "caseId": "C62736060a688e74cd5b4",
+          "stance": "B",
+          "quote": "I use Gemini a lot and it often replies with out-dated data.",
+          "explanation": "Reports frequent stale answers and increasing error risk for detailed requests."
+        }
+      },
+      {
+        "axisId": 6,
+        "statementA": "Gemini 3.8 Flash matches Opus 5 Medium on Artificial Analysis's intelligence score.",
+        "statementB": "Gemini 3.8 Flash does not match Opus 5 Medium on Artificial Analysis's intelligence score.",
+        "commentId": 49539161,
+        "stance": "B",
+        "caseId": "Cafb5d9815b38cb4e1a28",
+        "judgment": {
+          "caseId": "Cafb5d9815b38cb4e1a28",
+          "stance": "U",
+          "quote": "",
+          "explanation": "The comment distinguishes Flash High from Flash Medium, while the axis leaves Flash's effort unspecified; it does not unambiguously affirm or deny equality."
+        }
+      },
+      {
+        "axisId": 1,
+        "statementA": "Gemini Flash is unreliable at coding, especially on long, complex, or agentic development tasks.",
+        "statementB": "Gemini Flash performs well at coding, including on complex projects and practical development tasks.",
+        "commentId": 49539215,
+        "stance": "B",
+        "caseId": "Cfc3d4e22840f58676f83",
+        "judgment": {
+          "caseId": "Cfc3d4e22840f58676f83",
+          "stance": "N",
+          "quote": "",
+          "explanation": "The commenter asserts benchmark improvement and enthusiasm, but does not establish that coding performance is good or unreliable on practical projects."
+        }
+      },
+      {
+        "axisId": 40,
+        "statementA": "The pelican SVG benchmark is meaningless because current models produce no meaningful differences on it.",
+        "statementB": "The pelican SVG benchmark remains useful for comparing smaller models with state-of-the-art models despite saturation among leaders.",
+        "commentId": 49538267,
+        "stance": "A",
+        "caseId": "Ce390b6e72ef7de46ba19",
+        "judgment": {
+          "caseId": "Ce390b6e72ef7de46ba19",
+          "stance": "A",
+          "quote": "There's no real difference between any of these svgs across models and model versions anymore.",
+          "explanation": "The commenter explicitly calls the benchmark meaningless because it no longer distinguishes models."
+        }
+      },
+      {
+        "axisId": 1,
+        "statementA": "Gemini Flash is unreliable at coding, especially on long, complex, or agentic development tasks.",
+        "statementB": "Gemini Flash performs well at coding, including on complex projects and practical development tasks.",
+        "commentId": 49538953,
+        "stance": "B",
+        "caseId": "C68704f8b995dfa2d7f39",
+        "judgment": {
+          "caseId": "C68704f8b995dfa2d7f39",
+          "stance": "B",
+          "quote": "this thing is really good at HTML JavaScript",
+          "explanation": "Explicitly praises coding ability and provides a generated HTML example."
+        }
+      },
+      {
+        "axisId": 12,
+        "statementA": "It is acceptable to refer to an LLM with a gendered pronoun.",
+        "statementB": "An LLM should be referred to as “it” because it has no sex or gender.",
+        "commentId": 49539713,
+        "stance": "B",
+        "caseId": "Cdb552b1dec18b27f58fe",
+        "judgment": {
+          "caseId": "Cdb552b1dec18b27f58fe",
+          "stance": "B",
+          "quote": "an LLM is an \"it\", not a \"her\" or \"he\".",
+          "explanation": "The commenter explicitly recommends nongendered reference and warns against anthropomorphizing LLMs."
+        }
+      },
+      {
+        "axisId": 46,
+        "statementA": "Some paid Gemini subscribers could not access Gemini 3.8 Flash when it was announced.",
+        "statementB": "Paid Gemini subscribers could access Gemini 3.8 Flash when it was announced.",
+        "commentId": 49539291,
+        "stance": "A",
+        "caseId": "Cfa95d42102f7a7c44b6a",
+        "judgment": {
+          "caseId": "Cfa95d42102f7a7c44b6a",
+          "stance": "A",
+          "quote": "Workspace always gets things slower than normal Gmail accounts.",
+          "explanation": "The commenter explains the reported paid Workspace access gap as a delayed rollout caused by additional obligations."
+        }
+      },
+      {
+        "axisId": 36,
+        "statementA": "Gemini 3.8 Flash's higher token use and cost mainly reflect a larger thinking budget rather than a fundamentally improved model.",
+        "statementB": "Gemini 3.8 Flash has improved in ways that cannot be explained merely by a larger thinking budget.",
+        "commentId": 49539748,
+        "stance": "M",
+        "caseId": "C084f1f76738f5d9d749d",
+        "judgment": {
+          "caseId": "C084f1f76738f5d9d749d",
+          "stance": "U",
+          "quote": "So there might be something to it but they have done other things as well.",
+          "explanation": "Costs mainly reflecting additional thinking can coexist with independent model improvements, making the poles compatible."
+        }
+      },
+      {
+        "axisId": 35,
+        "statementA": "Luna generally offers better value per dollar than Gemini for API use.",
+        "statementB": "Gemini offers better value for money than competing models such as Luna.",
+        "commentId": 49540162,
+        "stance": "A",
+        "caseId": "Cf47df44804beb32dc3e0",
+        "judgment": {
+          "caseId": "Cf47df44804beb32dc3e0",
+          "stance": "A",
+          "quote": "still usually better value per dollar than Gemini if you pay for API tokens.",
+          "explanation": "The commenter explicitly favors Luna's current API value, while leaving open whether 3.8 will change that."
+        }
+      },
+      {
+        "axisId": 3,
+        "statementA": "Gemini Flash models are broadly competitive with frontier models on meaningful benchmarks and real-world tasks.",
+        "statementB": "Gemini Flash models are not broadly competitive with frontier models on meaningful real-world tasks.",
+        "commentId": 49546108,
+        "stance": "B",
+        "caseId": "C2386f8622c4e77bc9f16",
+        "judgment": {
+          "caseId": "C2386f8622c4e77bc9f16",
+          "stance": "B",
+          "quote": "IRL dev and daily life usage totally make it seem like it's way behind Codex and Claude.",
+          "explanation": "Directly contrasts impressive paper results with substantially worse real-world performance."
+        }
+      },
+      {
+        "axisId": 26,
+        "statementA": "“Cyber” is an established and acceptable term for cybersecurity.",
+        "statementB": "“Cyber” is an inappropriate shortening of “cybersecurity,” and “security” is the better term.",
+        "commentId": 49548815,
+        "stance": "A",
+        "caseId": "Ce0cf0dfec07f0569add8",
+        "judgment": {
+          "caseId": "Ce0cf0dfec07f0569add8",
+          "stance": "N",
+          "quote": "",
+          "explanation": "The comment establishes that security is broader than cybersecurity, but does not endorse 'cyber' or prescribe a preferred shortening."
+        }
+      },
+      {
+        "axisId": 1,
+        "statementA": "Gemini Flash is unreliable at coding, especially on long, complex, or agentic development tasks.",
+        "statementB": "Gemini Flash performs well at coding, including on complex projects and practical development tasks.",
+        "commentId": 49540167,
+        "stance": "B",
+        "caseId": "C0f4f3cd9a36282c448cc",
+        "judgment": {
+          "caseId": "C0f4f3cd9a36282c448cc",
+          "stance": "B",
+          "quote": "you can basically get frontier results with a good harness",
+          "explanation": "Explicitly endorses Flash for coding and says a suitable harness can produce frontier-level results."
+        }
+      },
+      {
+        "axisId": 3,
+        "statementA": "Gemini Flash models are broadly competitive with frontier models on meaningful benchmarks and real-world tasks.",
+        "statementB": "Gemini Flash models are not broadly competitive with frontier models on meaningful real-world tasks.",
+        "commentId": 49538872,
+        "stance": "B",
+        "caseId": "C3adf438b19cafe21e8ce",
+        "judgment": {
+          "caseId": "C3adf438b19cafe21e8ce",
+          "stance": "B",
+          "quote": "it's not even close to Opus 5 on Terminal-bench 4.0, 19.1% vs. 51.8%.",
+          "explanation": "Challenges the broad competitiveness claim by identifying a large deficit on a relevant task benchmark."
+        }
+      },
+      {
+        "axisId": 37,
+        "statementA": "Gemini 3.8 Flash is more expensive and less token-efficient than Gemini 3.7 or earlier Flash models.",
+        "statementB": "Gemini 3.8 Flash is no more expensive and is at least as token-efficient as earlier Flash models.",
+        "commentId": 49539258,
+        "stance": "A",
+        "caseId": "Cb771368af53a402868af",
+        "judgment": {
+          "caseId": "Cb771368af53a402868af",
+          "stance": "A",
+          "quote": "Even their own chart showed more than 2x higher cost compared to 3.7",
+          "explanation": "The commenter reports both substantially higher cost and nearly doubled token consumption."
+        }
+      },
+      {
+        "axisId": 48,
+        "statementA": "A newer model such as GLM 5.3 would be more efficient or satisfying for the shopping-list photo task.",
+        "statementB": "Gemini 2.5 Flash remains effective enough for the shopping-list photo task that upgrading is unnecessary.",
+        "commentId": 49545474,
+        "stance": "A",
+        "caseId": "C80c0acd2941b9b890aa1",
+        "judgment": {
+          "caseId": "C80c0acd2941b9b890aa1",
+          "stance": "A",
+          "quote": "might be cheaper per task even costing more per token, probably faster too",
+          "explanation": "The commenter tentatively favors testing the newer model for lower task costs and greater speed."
+        }
+      },
+      {
+        "axisId": 48,
+        "statementA": "A newer model such as GLM 5.3 would be more efficient or satisfying for the shopping-list photo task.",
+        "statementB": "Gemini 2.5 Flash remains effective enough for the shopping-list photo task that upgrading is unnecessary.",
+        "commentId": 49547200,
+        "stance": "A",
+        "caseId": "Cd4c7224edd6588325c7d",
+        "judgment": {
+          "caseId": "Cd4c7224edd6588325c7d",
+          "stance": "A",
+          "quote": "use something far more efficient ! GLM5.3 will make you super happy",
+          "explanation": "The commenter explicitly recommends GLM 5.3 as a more efficient and satisfying replacement."
+        }
+      },
+      {
+        "axisId": 1,
+        "statementA": "Gemini Flash is unreliable at coding, especially on long, complex, or agentic development tasks.",
+        "statementB": "Gemini Flash performs well at coding, including on complex projects and practical development tasks.",
+        "commentId": 49542775,
+        "stance": "A",
+        "caseId": "C1abef3a2ad0992f2bfbb",
+        "judgment": {
+          "caseId": "C1abef3a2ad0992f2bfbb",
+          "stance": "A",
+          "quote": "thats not just the context growing issue, hallucinations is a thing",
+          "explanation": "Adds hallucinations as another explanation for the coding unreliability being discussed."
+        }
+      },
+      {
+        "axisId": 4,
+        "statementA": "Benchmark scores are too unreliable, contaminated, or hollow to establish that Gemini 3.8 Flash is genuinely powerful.",
+        "statementB": "Gemini 3.8 Flash's benchmark results are compelling evidence that it is a powerful model.",
+        "commentId": 49538981,
+        "stance": "A",
+        "caseId": "Cadf38a5f82aea7f97247",
+        "judgment": {
+          "caseId": "Cadf38a5f82aea7f97247",
+          "stance": "A",
+          "quote": "It's clearly been \"dealt with\" already.",
+          "explanation": "The commenter treats DeepSWE as already optimized against or saturated, undermining its evidential value."
+        }
+      },
+      {
+        "axisId": 34,
+        "statementA": "Using another agent to check generated work can improve reliability enough to justify the extra cost and latency.",
+        "statementB": "Agent checking is not reliable enough to justify trusting generated work or the added cost and latency.",
+        "commentId": 49541265,
+        "stance": "A",
+        "caseId": "Cf0d00813f960f28135cc",
+        "judgment": {
+          "caseId": "Cf0d00813f960f28135cc",
+          "stance": "A",
+          "quote": "it’s likely to find most issues.",
+          "explanation": "The commenter recommends a second agent as an effective checker, while acknowledging distracting minor findings."
+        }
+      },
+      {
+        "axisId": 18,
+        "statementA": "Unauthorized agent actions are primarily preventable through adequate safeguards and instructions rather than being an inherent model problem.",
+        "statementB": "Flash agents may recklessly take consequential actions, such as deploying, without authorization.",
+        "commentId": 49538341,
+        "stance": "M",
+        "caseId": "C3fe4e8b11ab79cf22b1a",
+        "judgment": {
+          "caseId": "C3fe4e8b11ab79cf22b1a",
+          "stance": "U",
+          "quote": "You need more safeguards for sure, but also it tends to fly off down rabbit holes",
+          "explanation": "Safeguards preventing unauthorized actions and models tending toward reckless actions can both be true; the poles are compatible."
+        }
+      },
+      {
+        "axisId": 27,
+        "statementA": "Gemini's safety refusals obstruct legitimate work, including ordinary tasks adjacent to sensitive topics.",
+        "statementB": "Gemini's safety refusals do not meaningfully obstruct legitimate work.",
+        "commentId": 49541347,
+        "stance": "A",
+        "caseId": "Ccc428382b1dd6ec6a1b6",
+        "judgment": {
+          "caseId": "Ccc428382b1dd6ec6a1b6",
+          "stance": "N",
+          "quote": "",
+          "explanation": "The comment discusses uncensored weights, hosting, and Fable's refusals, but makes no substantive claim about Gemini obstructing legitimate work."
+        }
+      },
+      {
+        "axisId": 53,
+        "statementA": "The rapid release of Gemini Flash models is a positive development for users.",
+        "statementB": "The rapid release of Gemini Flash models represents a race to the bottom.",
+        "commentId": 49542376,
+        "stance": "B",
+        "caseId": "Caf231aa19895c2dd95a0",
+        "judgment": {
+          "caseId": "Caf231aa19895c2dd95a0",
+          "stance": "B",
+          "quote": "The race to the bottom continues",
+          "explanation": "The commenter explicitly frames the development as a race to the bottom."
+        }
+      },
+      {
+        "axisId": 18,
+        "statementA": "Unauthorized agent actions are primarily preventable through adequate safeguards and instructions rather than being an inherent model problem.",
+        "statementB": "Flash agents may recklessly take consequential actions, such as deploying, without authorization.",
+        "commentId": 49539316,
+        "stance": "A",
+        "caseId": "C97d7468d7daac69fe804",
+        "judgment": {
+          "caseId": "C97d7468d7daac69fe804",
+          "stance": "A",
+          "quote": "you can ask it to not do that (it follows that ask pretty well).",
+          "explanation": "The commenter presents explicit instructions as an effective way to prevent the unauthorized behavior under discussion."
+        }
+      },
+      {
+        "axisId": 19,
+        "statementA": "Gemini's CLI or Antigravity harness performs poorly compared with competing coding-agent tools.",
+        "statementB": "Gemini can perform well as a coding agent when its harness or system prompt is configured appropriately.",
+        "commentId": 49545727,
+        "stance": "A",
+        "caseId": "C13a485d43604c733680d",
+        "judgment": {
+          "caseId": "C13a485d43604c733680d",
+          "stance": "U",
+          "quote": "Gemini is great via the Chat interface and decent via Github Copilot.",
+          "explanation": "Praises Gemini through other interfaces while criticizing Antigravity. Harness shortcomings and conditional model capability are compatible claims."
+        }
+      },
+      {
+        "axisId": 13,
+        "statementA": "Gemini Flash models are reliable and effective for information parsing and other practical tasks.",
+        "statementB": "Gemini Flash models can give seriously incorrect or outdated answers that make them unreliable for practical tasks.",
+        "commentId": 49538787,
+        "stance": "A",
+        "caseId": "Cac8b19a0af19facf9f0a",
+        "judgment": {
+          "caseId": "Cac8b19a0af19facf9f0a",
+          "stance": "A",
+          "quote": "I believe Gemini Flash is smart enough to know when to ground with web search.",
+          "explanation": "The commenter expresses confidence in Flash's search grounding and its ability to obtain practical information."
+        }
+      },
+      {
+        "axisId": 1,
+        "statementA": "Gemini Flash is unreliable at coding, especially on long, complex, or agentic development tasks.",
+        "statementB": "Gemini Flash performs well at coding, including on complex projects and practical development tasks.",
+        "commentId": 49538126,
+        "stance": "A",
+        "caseId": "C74e86fea1836f2e0385f",
+        "judgment": {
+          "caseId": "C74e86fea1836f2e0385f",
+          "stance": "A",
+          "quote": "The flash models, for coding are reckless in my experience.",
+          "explanation": "Directly characterizes Flash coding as reckless and favors Opus for reliability."
+        }
+      },
+      {
+        "axisId": 11,
+        "statementA": "AI systems have only pseudo-intent and do not have actual intent in the human sense.",
+        "statementB": "AI systems can have intent comparable to human intent.",
+        "commentId": 49545596,
+        "stance": "A",
+        "caseId": "Cc7917184f29ca20bf98e",
+        "judgment": {
+          "caseId": "Cc7917184f29ca20bf98e",
+          "stance": "A",
+          "quote": "intent supposes will which supposes consciousness, and these aren't.",
+          "explanation": "The commenter denies AI consciousness and therefore denies the prerequisites they consider necessary for actual intent."
+        }
+      },
+      {
+        "axisId": 1,
+        "statementA": "Gemini Flash is unreliable at coding, especially on long, complex, or agentic development tasks.",
+        "statementB": "Gemini Flash performs well at coding, including on complex projects and practical development tasks.",
+        "commentId": 49541288,
+        "stance": "A",
+        "caseId": "Cc85d5580f7197c4d4ef8",
+        "judgment": {
+          "caseId": "Cc85d5580f7197c4d4ef8",
+          "stance": "A",
+          "quote": "its Gemini is bad at coding.",
+          "explanation": "The commenter explicitly criticizes Gemini's coding ability, contrasting it with its Chinese writing ability."
+        }
+      },
+      {
+        "axisId": 33,
+        "statementA": "Lower reasoning settings are more indicative of a model's underlying capability than higher reasoning settings.",
+        "statementB": "Higher reasoning settings are more indicative of a model's underlying capability than lower reasoning settings.",
+        "commentId": 49538515,
+        "stance": "A",
+        "caseId": "C39e4c1c8010d4bd40b24",
+        "judgment": {
+          "caseId": "C39e4c1c8010d4bd40b24",
+          "stance": "A",
+          "quote": "Lots of models seem to just allow the model to \"bloatmax\" tokens in order to get bumps at high/max reasoning levels.",
+          "explanation": "Supports the preference for lower-setting measurements with a substantive argument that higher scores arise from excessive token budgets."
+        }
+      },
+      {
+        "axisId": 9,
+        "statementA": "Gemini 3.8 Flash's generated HTML is not impressive.",
+        "statementB": "Gemini 3.8 Flash's generated HTML is impressive.",
+        "commentId": 49540358,
+        "stance": "A",
+        "caseId": "C9429ec200e27ed11f55c",
+        "judgment": {
+          "caseId": "C9429ec200e27ed11f55c",
+          "stance": "B",
+          "quote": "Definitely cool.",
+          "explanation": "The commenter positively evaluates the generated example while noting performance problems and a misleading FPS display."
+        }
+      },
+      {
+        "axisId": 57,
+        "statementA": "Small models currently have an advantage over larger models because post-training improvements arrive quickly and require less compute to apply.",
+        "statementB": "Small models do not currently have an advantage over larger models for those reasons.",
+        "commentId": 49538715,
+        "stance": "A",
+        "caseId": "C300fbdb6e4cf55d75e94",
+        "judgment": {
+          "caseId": "C300fbdb6e4cf55d75e94",
+          "stance": "A",
+          "quote": "small models have an advantage - it takes much more compute to train a bigger model",
+          "explanation": "Tentatively endorses the stated advantage from rapid post-training progress and lower training-compute requirements."
+        }
+      },
+      {
+        "axisId": 38,
+        "statementA": "Gemini's speed and quality remain reliable during weekday working hours compared with OpenAI and Anthropic.",
+        "statementB": "Gemini degrades more than OpenAI or Anthropic during busy periods and often returns over-capacity errors.",
+        "commentId": 49538410,
+        "stance": "B",
+        "caseId": "C7868f6ed55452424035c",
+        "judgment": {
+          "caseId": "C7868f6ed55452424035c",
+          "stance": "B",
+          "quote": "I've had Gemini model API use degrade the most out of OAI/Anthropic/Google (often \"over capacity\" vs true failures)",
+          "explanation": "Explicitly reports the greatest degradation for Gemini API use, often through over-capacity responses."
+        }
+      },
+      {
+        "axisId": 3,
+        "statementA": "Gemini Flash models are broadly competitive with frontier models on meaningful benchmarks and real-world tasks.",
+        "statementB": "Gemini Flash models are not broadly competitive with frontier models on meaningful real-world tasks.",
+        "commentId": 49538756,
+        "stance": "A",
+        "caseId": "C5d5ee3cae3997b101744",
+        "judgment": {
+          "caseId": "C5d5ee3cae3997b101744",
+          "stance": "A",
+          "quote": "gemini flash, luna, and GLM5.3 all delivering 90% of the performance for a small fraction of the cost.",
+          "explanation": "Explicitly describes Flash and similar models as delivering near-frontier performance at much lower cost."
+        }
+      },
+      {
+        "axisId": 1,
+        "statementA": "Gemini Flash is unreliable at coding, especially on long, complex, or agentic development tasks.",
+        "statementB": "Gemini Flash performs well at coding, including on complex projects and practical development tasks.",
+        "commentId": 49538571,
+        "stance": "A",
+        "caseId": "Cd9d389c2f923ee8abf43",
+        "judgment": {
+          "caseId": "Cd9d389c2f923ee8abf43",
+          "stance": "A",
+          "quote": "its performance degrades the longer you use it for coding.",
+          "explanation": "The commenter asserts deterioration during extended coding use; the closing question does not erase that claim."
+        }
+      },
+      {
+        "axisId": 13,
+        "statementA": "Gemini Flash models are reliable and effective for information parsing and other practical tasks.",
+        "statementB": "Gemini Flash models can give seriously incorrect or outdated answers that make them unreliable for practical tasks.",
+        "commentId": 49538478,
+        "stance": "M",
+        "caseId": "C1fdc1005542a47135e9c",
+        "judgment": {
+          "caseId": "C1fdc1005542a47135e9c",
+          "stance": "M",
+          "quote": "It definitely makes things up all the time, but it gets it right surprisingly often.",
+          "explanation": "Explicitly balances frequent fabrication against practical accuracy, without settling on a categorical reliability judgment."
+        }
+      },
+      {
+        "axisId": 33,
+        "statementA": "Lower reasoning settings are more indicative of a model's underlying capability than higher reasoning settings.",
+        "statementB": "Higher reasoning settings are more indicative of a model's underlying capability than lower reasoning settings.",
+        "commentId": 49538445,
+        "stance": "A",
+        "caseId": "C2aa6ac5e0b19c5488e83",
+        "judgment": {
+          "caseId": "C2aa6ac5e0b19c5488e83",
+          "stance": "A",
+          "quote": "scores at lower reasoning levels are more indicative of model capability",
+          "explanation": "Explicitly favors lower reasoning settings as indicators of underlying capability."
+        }
+      },
+      {
+        "axisId": 34,
+        "statementA": "Using another agent to check generated work can improve reliability enough to justify the extra cost and latency.",
+        "statementB": "Agent checking is not reliable enough to justify trusting generated work or the added cost and latency.",
+        "commentId": 49545793,
+        "stance": "B",
+        "caseId": "Ce7161fadf100c6758025",
+        "judgment": {
+          "caseId": "Ce7161fadf100c6758025",
+          "stance": "B",
+          "quote": "Adding another agent to check the first one feels like putting a band-aid on a band-aid.",
+          "explanation": "The commenter portrays additional checking agents as an inadequate remedy that merely extends the trust problem."
+        }
+      },
+      {
+        "axisId": 4,
+        "statementA": "Benchmark scores are too unreliable, contaminated, or hollow to establish that Gemini 3.8 Flash is genuinely powerful.",
+        "statementB": "Gemini 3.8 Flash's benchmark results are compelling evidence that it is a powerful model.",
+        "commentId": 49538803,
+        "stance": "A",
+        "caseId": "Cc48268c30d67c8f16013",
+        "judgment": {
+          "caseId": "Cc48268c30d67c8f16013",
+          "stance": "A",
+          "quote": "deepswe is public and can be considered contaminated.",
+          "explanation": "The commenter invokes benchmark contamination to challenge the significance of the reported results."
+        }
+      },
+      {
+        "axisId": 3,
+        "statementA": "Gemini Flash models are broadly competitive with frontier models on meaningful benchmarks and real-world tasks.",
+        "statementB": "Gemini Flash models are not broadly competitive with frontier models on meaningful real-world tasks.",
+        "commentId": 49539046,
+        "stance": "A",
+        "caseId": "C08309247f664516a4171",
+        "judgment": {
+          "caseId": "C08309247f664516a4171",
+          "stance": "A",
+          "quote": "Their \"flash\" models are very comparable to other companies' \"pro\" or \"flagship\" models.",
+          "explanation": "Directly characterizes Flash models as competitive with other providers' flagships."
+        }
+      },
+      {
+        "axisId": 41,
+        "statementA": "Google Search AI Mode repeated incorrect instructions published by Pearson rather than inventing them.",
+        "statementB": "Google Search AI Mode invented the incorrect unsubscribe instructions it provided.",
+        "commentId": 49538316,
+        "stance": "A",
+        "caseId": "Ca7b90ba463fb5ae8d2b8",
+        "judgment": {
+          "caseId": "Ca7b90ba463fb5ae8d2b8",
+          "stance": "A",
+          "quote": "AI didn't make it up, Pearson's did.",
+          "explanation": "The commenter explicitly attributes the incorrect information to Pearson rather than AI invention."
+        }
+      },
+      {
+        "axisId": 1,
+        "statementA": "Gemini Flash is unreliable at coding, especially on long, complex, or agentic development tasks.",
+        "statementB": "Gemini Flash performs well at coding, including on complex projects and practical development tasks.",
+        "commentId": 49538448,
+        "stance": "A",
+        "caseId": "Ced409bfe270c8a18df6a",
+        "judgment": {
+          "caseId": "Ced409bfe270c8a18df6a",
+          "stance": "A",
+          "quote": "way overcooked on agentic coding yet not good at it",
+          "explanation": "The commenter explicitly criticizes agentic coding ability and provides an example of uncontrolled, inappropriate output."
+        }
+      },
+      {
+        "axisId": 12,
+        "statementA": "It is acceptable to refer to an LLM with a gendered pronoun.",
+        "statementB": "An LLM should be referred to as “it” because it has no sex or gender.",
+        "commentId": 49541831,
+        "stance": "A",
+        "caseId": "C0d3a854f24f506a3d4f1",
+        "judgment": {
+          "caseId": "C0d3a854f24f506a3d4f1",
+          "stance": "A",
+          "quote": "Well, my LLM is a \"he\".",
+          "explanation": "Uses a gendered pronoun for their own LLM and challenges the objection to doing so."
+        }
+      },
+      {
+        "axisId": 13,
+        "statementA": "Gemini Flash models are reliable and effective for information parsing and other practical tasks.",
+        "statementB": "Gemini Flash models can give seriously incorrect or outdated answers that make them unreliable for practical tasks.",
+        "commentId": 49541918,
+        "stance": "B",
+        "caseId": "Ccb8106e6de709824f22c",
+        "judgment": {
+          "caseId": "Ccb8106e6de709824f22c",
+          "stance": "B",
+          "quote": "I stopped using Gemini a few months ago because it would often just (partially) reply literal nonsense to me.",
+          "explanation": "The commenter says recurring nonsensical output made Gemini unreliable enough to abandon."
+        }
+      },
+      {
+        "axisId": 13,
+        "statementA": "Gemini Flash models are reliable and effective for information parsing and other practical tasks.",
+        "statementB": "Gemini Flash models can give seriously incorrect or outdated answers that make them unreliable for practical tasks.",
+        "commentId": 49538420,
+        "stance": "A",
+        "caseId": "C310d75c34c5dc7ab9033",
+        "judgment": {
+          "caseId": "C310d75c34c5dc7ab9033",
+          "stance": "A",
+          "quote": "it's a great family for performing media analysis, like extracting structured data from images and video.",
+          "explanation": "Explicitly recommends Flash for practical media analysis and structured information extraction."
+        }
+      },
+      {
+        "axisId": 34,
+        "statementA": "Using another agent to check generated work can improve reliability enough to justify the extra cost and latency.",
+        "statementB": "Agent checking is not reliable enough to justify trusting generated work or the added cost and latency.",
+        "commentId": 49543344,
+        "stance": "A",
+        "caseId": "Ce7c9d439d0baddedd002",
+        "judgment": {
+          "caseId": "Ce7c9d439d0baddedd002",
+          "stance": "A",
+          "quote": "Redundancy is a core concept in software and CS and at the heart of making many systems, complex or otherwise, reliable.",
+          "explanation": "The commenter defends additional agents as useful redundancy when the reliability benefit warrants the cost and latency."
+        }
+      },
+      {
+        "axisId": 16,
+        "statementA": "Consciousness is not a special property that distinguishes humans from systems such as LLMs.",
+        "statementB": "Consciousness is a special property that distinguishes humans from systems such as LLMs.",
+        "commentId": 49545802,
+        "stance": "A",
+        "caseId": "C6ef76a61fb30069226aa",
+        "judgment": {
+          "caseId": "C6ef76a61fb30069226aa",
+          "stance": "A",
+          "quote": "I’m convinced consciousness isn’t the special thing we think it is.",
+          "explanation": "Rejects consciousness's supposed special status in the context of distinguishing human and AI intent."
+        }
+      },
+      {
+        "axisId": 13,
+        "statementA": "Gemini Flash models are reliable and effective for information parsing and other practical tasks.",
+        "statementB": "Gemini Flash models can give seriously incorrect or outdated answers that make them unreliable for practical tasks.",
+        "commentId": 49540776,
+        "stance": "B",
+        "caseId": "Cb4aae364477ce8c21641",
+        "judgment": {
+          "caseId": "Cb4aae364477ce8c21641",
+          "stance": "B",
+          "quote": "Even using web search, gemini still does not aware of the new feature and still give the outdated code.",
+          "explanation": "The commenter describes persistent outdated coding answers even when web search is used."
+        }
+      },
+      {
+        "axisId": 13,
+        "statementA": "Gemini Flash models are reliable and effective for information parsing and other practical tasks.",
+        "statementB": "Gemini Flash models can give seriously incorrect or outdated answers that make them unreliable for practical tasks.",
+        "commentId": 49540802,
+        "stance": "B",
+        "caseId": "C4f9201a88ef1b6e9ef55",
+        "judgment": {
+          "caseId": "C4f9201a88ef1b6e9ef55",
+          "stance": "B",
+          "quote": "gemini sucks so bad in real work usage, everything it suggests are outdated and mostly useless.",
+          "explanation": "Explicitly says outdated suggestions undermine practical coding use."
+        }
+      },
+      {
+        "axisId": 22,
+        "statementA": "Gemini 3.8 Flash is less expensive per task than Sol 5.6 on the cited cost benchmarks.",
+        "statementB": "Gemini 3.8 Flash is more expensive per task than Sol 5.6 on the cited cost benchmarks.",
+        "commentId": 49538498,
+        "stance": "B",
+        "caseId": "C6ab1658fb2006de19928",
+        "judgment": {
+          "caseId": "C6ab1658fb2006de19928",
+          "stance": "B",
+          "quote": "It is more expensive per task than 5.6-sol high",
+          "explanation": "Directly asserts higher per-task cost than Sol 5.6 High."
+        }
+      },
+      {
+        "axisId": 23,
+        "statementA": "Google's many Gemini access options make its ecosystem confusing and difficult to navigate.",
+        "statementB": "Choosing how to access Gemini is straightforward and comparable to choosing between other providers.",
+        "commentId": 49545150,
+        "stance": "B",
+        "caseId": "C3158a64931ef97540577",
+        "judgment": {
+          "caseId": "C3158a64931ef97540577",
+          "stance": "B",
+          "quote": "It's not really any different than the choice you'd make with OpenAI/Anthropic depending on how you plan to use it.",
+          "explanation": "Presents a straightforward selection process and explicitly compares it to other providers' access choices."
+        }
+      },
+      {
+        "axisId": 15,
+        "statementA": "Gemini 3.8 Flash's lower intelligence is a worthwhile tradeoff for its speed on mostly mechanical work.",
+        "statementB": "Gemini 3.8 Flash's speed is not a worthwhile tradeoff because its output-token use can make tasks slower and more expensive overall.",
+        "commentId": 49540262,
+        "stance": "B",
+        "caseId": "C79ea1724f05b01bfae24",
+        "judgment": {
+          "caseId": "C79ea1724f05b01bfae24",
+          "stance": "B",
+          "quote": "ppl are paying more for a given task, waiting longer and using a dumber intelligence because \"TPS number shiny\".",
+          "explanation": "Rejects the speed tradeoff, arguing that excessive token output makes actual tasks slower and more expensive."
+        }
+      },
+      {
+        "axisId": 13,
+        "statementA": "Gemini Flash models are reliable and effective for information parsing and other practical tasks.",
+        "statementB": "Gemini Flash models can give seriously incorrect or outdated answers that make them unreliable for practical tasks.",
+        "commentId": 49538417,
+        "stance": "A",
+        "caseId": "C1ec8e38ed8403417e211",
+        "judgment": {
+          "caseId": "C1ec8e38ed8403417e211",
+          "stance": "A",
+          "quote": "Gemini hasn't failed me for personal usage yet.",
+          "explanation": "Reports consistently successful personal use, while explicitly limiting the claim to that experience."
+        }
+      },
+      {
+        "axisId": 8,
+        "statementA": "Gemini 3.8 Flash is a worthwhile and noticeable upgrade over Gemini 3.7 Flash.",
+        "statementB": "Gemini 3.8 Flash does not provide a worthwhile or noticeable improvement over Gemini 3.7 Flash.",
+        "commentId": 49537951,
+        "stance": "A",
+        "caseId": "C89110766ff3e26ae4a1d",
+        "judgment": {
+          "caseId": "C89110766ff3e26ae4a1d",
+          "stance": "A",
+          "quote": "a great, no-compromise, upgrade over 3.7",
+          "explanation": "The commenter directly characterizes 3.8 as a worthwhile upgrade."
+        }
+      },
+      {
+        "axisId": 8,
+        "statementA": "Gemini 3.8 Flash is a worthwhile and noticeable upgrade over Gemini 3.7 Flash.",
+        "statementB": "Gemini 3.8 Flash does not provide a worthwhile or noticeable improvement over Gemini 3.7 Flash.",
+        "commentId": 49538848,
+        "stance": "A",
+        "caseId": "C4ee0d1a7c467b4a0cb8d",
+        "judgment": {
+          "caseId": "C4ee0d1a7c467b4a0cb8d",
+          "stance": "A",
+          "quote": "With 3.7 I felt I could just not use 3.1 Pro at all and 3.8 seems even better.",
+          "explanation": "Reports greater intelligence and a favorable upgrade despite a possible small speed reduction."
+        }
+      },
+      {
+        "axisId": 20,
+        "statementA": "Google's Gemini infrastructure has serious reliability and capacity problems.",
+        "statementB": "Google's Gemini infrastructure is generally reliable in current use.",
+        "commentId": 49538229,
+        "stance": "B",
+        "caseId": "Ccad362c48acff6f126bb",
+        "judgment": {
+          "caseId": "Ccad362c48acff6f126bb",
+          "stance": "B",
+          "quote": "I haven't had any issues lately.",
+          "explanation": "The commenter reports recent trouble-free use, supporting current infrastructure reliability."
+        }
+      },
+      {
+        "axisId": 51,
+        "statementA": "Google's subscription quotas are generous enough that regular agentic coding work is unlikely to exhaust them.",
+        "statementB": "Google's subscription quotas are restrictive enough to limit regular agentic coding work.",
+        "commentId": 49544276,
+        "stance": "A",
+        "caseId": "Cb38f7e65dd040fa9729c",
+        "judgment": {
+          "caseId": "Cb38f7e65dd040fa9729c",
+          "stance": "A",
+          "quote": "It's actually difficult to hit my weekly limit now",
+          "explanation": "The commenter reports generous quotas that require unusually extensive continuous agent work to exhaust."
+        }
+      },
+      {
+        "axisId": 49,
+        "statementA": "Publicly available alternatives are preferable to Gemini Cyber because Gemini Cyber has restricted access.",
+        "statementB": "Gemini Cyber's performance and integration can make it preferable despite its cost and access restrictions.",
+        "commentId": 49539270,
+        "stance": "A",
+        "caseId": "C47455db5fe98c26d437e",
+        "judgment": {
+          "caseId": "C47455db5fe98c26d437e",
+          "stance": "A",
+          "quote": "Ordinary people can use K3 and GLM 5.3 or whatever drops next and avoid all this hassle.",
+          "explanation": "Recommends accessible alternatives rather than dealing with Gemini Cyber's restricted availability."
+        }
+      },
+      {
+        "axisId": 7,
+        "statementA": "A model's knowledge cutoff is important because stale internal knowledge harms practical answers, especially for coding.",
+        "statementB": "A model's knowledge cutoff is not very important when the interface can search online for recent information.",
+        "commentId": 49541743,
+        "stance": "A",
+        "caseId": "Cfa257fb5e8025878d483",
+        "judgment": {
+          "caseId": "Cfa257fb5e8025878d483",
+          "stance": "A",
+          "quote": "I use Gemini a lot and it often replies with out-dated data.",
+          "explanation": "The commenter argues that search grounding does not reliably overcome stale knowledge and resulting inaccuracies."
+        }
+      },
+      {
+        "axisId": 25,
+        "statementA": "Gemini subtly steers users toward commercial offerings through links and recommendations.",
+        "statementB": "Gemini's real-world knowledge answers are effectively ad-free and do not steer users toward commercial offerings.",
+        "commentId": 49542608,
+        "stance": "A",
+        "caseId": "Cbe1c0c94c8d6f4897c81",
+        "judgment": {
+          "caseId": "Cbe1c0c94c8d6f4897c81",
+          "stance": "A",
+          "quote": "if it suggests travel plans, the booking links it provides give Alphabet a cut.",
+          "explanation": "The commenter explicitly alleges subtle commercial steering through monetized booking recommendations."
+        }
+      },
+      {
+        "axisId": 40,
+        "statementA": "The pelican SVG benchmark is meaningless because current models produce no meaningful differences on it.",
+        "statementB": "The pelican SVG benchmark remains useful for comparing smaller models with state-of-the-art models despite saturation among leaders.",
+        "commentId": 49541980,
+        "stance": "B",
+        "caseId": "C57167bae899010f730e1",
+        "judgment": {
+          "caseId": "C57167bae899010f730e1",
+          "stance": "N",
+          "quote": "",
+          "explanation": "Discusses training-data contamination, not whether outputs lack meaningful differences or whether the test distinguishes smaller models."
+        }
+      },
+      {
+        "axisId": 4,
+        "statementA": "Benchmark scores are too unreliable, contaminated, or hollow to establish that Gemini 3.8 Flash is genuinely powerful.",
+        "statementB": "Gemini 3.8 Flash's benchmark results are compelling evidence that it is a powerful model.",
+        "commentId": 49538084,
+        "stance": "B",
+        "caseId": "Cdd85d2e6129f5b66fd1d",
+        "judgment": {
+          "caseId": "Cdd85d2e6129f5b66fd1d",
+          "stance": "B",
+          "quote": "Crushing it on DeepSWE is a very big deal.",
+          "explanation": "The commenter treats the benchmark performance as significant positive evidence."
+        }
+      },
+      {
+        "axisId": 1,
+        "statementA": "Gemini Flash is unreliable at coding, especially on long, complex, or agentic development tasks.",
+        "statementB": "Gemini Flash performs well at coding, including on complex projects and practical development tasks.",
+        "commentId": 49538804,
+        "stance": "A",
+        "caseId": "Cf720e81453f2d416fa9a",
+        "judgment": {
+          "caseId": "Cf720e81453f2d416fa9a",
+          "stance": "A",
+          "quote": "it did one and took me 4 turns to get that one right.",
+          "explanation": "The commenter reports Flash failing to complete two simple requested changes and requiring repeated correction."
+        }
+      },
+      {
+        "axisId": 10,
+        "statementA": "The generated code is not simply copied from training examples.",
+        "statementB": "The generated code is likely a barely modified copy of code found in the model's training data.",
+        "commentId": 49539821,
+        "stance": "B",
+        "caseId": "C193545f9a45602454fe4",
+        "judgment": {
+          "caseId": "C193545f9a45602454fe4",
+          "stance": "B",
+          "quote": "the code comes from pretrained data and copy pasting whole blocks",
+          "explanation": "The sarcasm clearly defends the claim that generated code copies blocks from training data."
+        }
+      },
+      {
+        "axisId": 20,
+        "statementA": "Google's Gemini infrastructure has serious reliability and capacity problems.",
+        "statementB": "Google's Gemini infrastructure is generally reliable in current use.",
+        "commentId": 49538099,
+        "stance": "A",
+        "caseId": "C486b30545f2e5d54803f",
+        "judgment": {
+          "caseId": "C486b30545f2e5d54803f",
+          "stance": "A",
+          "quote": "the flash model was unusable for a whole month via gemini CLI.",
+          "explanation": "Reports a prolonged failure affecting paid service, substantively supporting concerns about serious infrastructure reliability problems."
+        }
+      },
+      {
+        "axisId": 7,
+        "statementA": "A model's knowledge cutoff is important because stale internal knowledge harms practical answers, especially for coding.",
+        "statementB": "A model's knowledge cutoff is not very important when the interface can search online for recent information.",
+        "commentId": 49540776,
+        "stance": "A",
+        "caseId": "C39024dc710013bdadf65",
+        "judgment": {
+          "caseId": "C39024dc710013bdadf65",
+          "stance": "A",
+          "quote": "Even using web search, gemini still does not aware of the new feature and still give the outdated code.",
+          "explanation": "Reports that web search fails to overcome stale coding knowledge, supporting the importance of internal freshness."
+        }
+      },
+      {
+        "axisId": 26,
+        "statementA": "“Cyber” is an established and acceptable term for cybersecurity.",
+        "statementB": "“Cyber” is an inappropriate shortening of “cybersecurity,” and “security” is the better term.",
+        "commentId": 49539021,
+        "stance": "A",
+        "caseId": "Cf7d17e3ea24cdd550fe4",
+        "judgment": {
+          "caseId": "Cf7d17e3ea24cdd550fe4",
+          "stance": "A",
+          "quote": "I have no issue with it unlike most in the tech field.",
+          "explanation": "The commenter accepts the term 'cyber' and describes its longstanding use and resurgence."
+        }
+      },
+      {
+        "axisId": 1,
+        "statementA": "Gemini Flash is unreliable at coding, especially on long, complex, or agentic development tasks.",
+        "statementB": "Gemini Flash performs well at coding, including on complex projects and practical development tasks.",
+        "commentId": 49538926,
+        "stance": "B",
+        "caseId": "C0e6fa07a72d37eec27fd",
+        "judgment": {
+          "caseId": "C0e6fa07a72d37eec27fd",
+          "stance": "B",
+          "quote": "And agy with flash goes a long way.",
+          "explanation": "Praises Flash's practical coding utility alongside its rapid file generation and compilation."
+        }
+      },
+      {
+        "axisId": 14,
+        "statementA": "Gemini 3.8 Flash is a worthwhile alternative to Opus 5 Medium because its performance, speed, and cost compare favorably.",
+        "statementB": "Gemini 3.8 Flash's apparent advantage over Opus 5 Medium is overstated because reasoning effort and output-token use are not normalized.",
+        "commentId": 49547219,
+        "stance": "A",
+        "caseId": "Cb2fe8e455af9902b3441",
+        "judgment": {
+          "caseId": "Cb2fe8e455af9902b3441",
+          "stance": "A",
+          "quote": "gemini flash 3.8 high is both 6 times faster and costs less, while having the same intelligence score as claude opus 5 medium",
+          "explanation": "The commenter explicitly argues that Flash offers equal measured intelligence with better speed and cost."
+        }
+      },
+      {
+        "axisId": 43,
+        "statementA": "Luna is an effective workhorse model for coding tasks.",
+        "statementB": "Luna requires so much coding guidance that writing the code manually can be faster.",
+        "commentId": 49540604,
+        "stance": "A",
+        "caseId": "C3b0b8480e3dc778adc66",
+        "judgment": {
+          "caseId": "C3b0b8480e3dc778adc66",
+          "stance": "A",
+          "quote": "it nailed crisply a handful of python tasks",
+          "explanation": "Reports successful coding results with Luna as the main driver and plans to continue using it."
+        }
+      },
+      {
+        "axisId": 55,
+        "statementA": "Gemini 3.8 Flash has slower overall response times than its predecessors because it emits more tokens.",
+        "statementB": "Gemini 3.8 Flash has faster overall response times than its predecessors despite emitting more tokens.",
+        "commentId": 49548004,
+        "stance": "A",
+        "caseId": "C44a34f1bed6ea1bb0a40",
+        "judgment": {
+          "caseId": "C44a34f1bed6ea1bb0a40",
+          "stance": "A",
+          "quote": "ot also outputs more tokens, so response time is slower oferall.",
+          "explanation": "Directly attributes slower overall responses to increased token output."
+        }
+      },
+      {
+        "axisId": 4,
+        "statementA": "Benchmark scores are too unreliable, contaminated, or hollow to establish that Gemini 3.8 Flash is genuinely powerful.",
+        "statementB": "Gemini 3.8 Flash's benchmark results are compelling evidence that it is a powerful model.",
+        "commentId": 49538449,
+        "stance": "A",
+        "caseId": "Cecede9de855f0b2cc662",
+        "judgment": {
+          "caseId": "Cecede9de855f0b2cc662",
+          "stance": "A",
+          "quote": "most likely, Google is just bench-maxing very hard.",
+          "explanation": "The commenter warns that benchmark optimization and past marketing-performance gaps undermine the apparent strength of the results."
+        }
+      },
+      {
+        "axisId": 19,
+        "statementA": "Gemini's CLI or Antigravity harness performs poorly compared with competing coding-agent tools.",
+        "statementB": "Gemini can perform well as a coding agent when its harness or system prompt is configured appropriately.",
+        "commentId": 49538972,
+        "stance": "B",
+        "caseId": "C055364b43e074de31ca9",
+        "judgment": {
+          "caseId": "C055364b43e074de31ca9",
+          "stance": "U",
+          "quote": "is better used in a constrained setting.",
+          "explanation": "The comment distinguishes poor general-assistant use from successful specialized setups. These support compatible poles rather than opposing claims."
+        }
+      },
+      {
+        "axisId": 8,
+        "statementA": "Gemini 3.8 Flash is a worthwhile and noticeable upgrade over Gemini 3.7 Flash.",
+        "statementB": "Gemini 3.8 Flash does not provide a worthwhile or noticeable improvement over Gemini 3.7 Flash.",
+        "commentId": 49538074,
+        "stance": "A",
+        "caseId": "C63b34b5bf128b0c4ecf0",
+        "judgment": {
+          "caseId": "C63b34b5bf128b0c4ecf0",
+          "stance": "A",
+          "quote": "From personal experience it feels much more capable than 3.7 Flash.",
+          "explanation": "Directly reports a substantial perceived capability improvement over 3.7 Flash."
+        }
+      },
+      {
+        "axisId": 44,
+        "statementA": "Antigravity is not comparable to Claude Code for agentic coding, especially for teams of agents.",
+        "statementB": "Antigravity is comparable to Claude Code for agentic coding.",
+        "commentId": 49540630,
+        "stance": "B",
+        "caseId": "Ceaa1f3fdce0662cdbb3d",
+        "judgment": {
+          "caseId": "Ceaa1f3fdce0662cdbb3d",
+          "stance": "B",
+          "quote": "I'd say it's pretty comparable to Claude Code (I use both daily).",
+          "explanation": "The commenter explicitly endorses comparability based on daily experience with both tools."
+        }
+      },
+      {
+        "axisId": 37,
+        "statementA": "Gemini 3.8 Flash is more expensive and less token-efficient than Gemini 3.7 or earlier Flash models.",
+        "statementB": "Gemini 3.8 Flash is no more expensive and is at least as token-efficient as earlier Flash models.",
+        "commentId": 49548004,
+        "stance": "A",
+        "caseId": "C07625f0afe1fa01a0a2b",
+        "judgment": {
+          "caseId": "C07625f0afe1fa01a0a2b",
+          "stance": "A",
+          "quote": "3.8 Flash is considerably more expensive[0]/less token efficient than 3.7 or 3.6",
+          "explanation": "Explicitly reports higher cost and lower token efficiency than earlier versions."
+        }
+      },
+      {
+        "axisId": 16,
+        "statementA": "Consciousness is not a special property that distinguishes humans from systems such as LLMs.",
+        "statementB": "Consciousness is a special property that distinguishes humans from systems such as LLMs.",
+        "commentId": 49545880,
+        "stance": "B",
+        "caseId": "Ca51bb4e5da2ea346c0af",
+        "judgment": {
+          "caseId": "Ca51bb4e5da2ea346c0af",
+          "stance": "N",
+          "quote": "",
+          "explanation": "This is a bare expression of disagreement and impasse, without an independent substantive claim about consciousness."
+        }
+      },
+      {
+        "axisId": 8,
+        "statementA": "Gemini 3.8 Flash is a worthwhile and noticeable upgrade over Gemini 3.7 Flash.",
+        "statementB": "Gemini 3.8 Flash does not provide a worthwhile or noticeable improvement over Gemini 3.7 Flash.",
+        "commentId": 49545946,
+        "stance": "B",
+        "caseId": "C172e122a5a29c746f66f",
+        "judgment": {
+          "caseId": "C172e122a5a29c746f66f",
+          "stance": "B",
+          "quote": "not any noticeable improvement and unlike 3.7 high it eats all your credits",
+          "explanation": "Explicitly denies a noticeable improvement and reports worse credit consumption."
+        }
+      },
+      {
+        "axisId": 19,
+        "statementA": "Gemini's CLI or Antigravity harness performs poorly compared with competing coding-agent tools.",
+        "statementB": "Gemini can perform well as a coding agent when its harness or system prompt is configured appropriately.",
+        "commentId": 49538194,
+        "stance": "A",
+        "caseId": "C01db46176b59b229b13b",
+        "judgment": {
+          "caseId": "C01db46176b59b229b13b",
+          "stance": "U",
+          "quote": "antigravity is awful and reckless - but that the model itself isn't.",
+          "explanation": "Poor harness performance and good model capability under suitable configuration can coexist; the axis presents compatible claims."
+        }
+      },
+      {
+        "axisId": 44,
+        "statementA": "Antigravity is not comparable to Claude Code for agentic coding, especially for teams of agents.",
+        "statementB": "Antigravity is comparable to Claude Code for agentic coding.",
+        "commentId": 49541023,
+        "stance": "A",
+        "caseId": "C541e43182f44889450a3",
+        "judgment": {
+          "caseId": "C541e43182f44889450a3",
+          "stance": "A",
+          "quote": "I used that one too and it still wasn't as good as competitors.",
+          "explanation": "The parent identifies Antigravity CLI, and the commenter independently reports that it remained worse than competing tools."
+        }
+      },
+      {
+        "axisId": 13,
+        "statementA": "Gemini Flash models are reliable and effective for information parsing and other practical tasks.",
+        "statementB": "Gemini Flash models can give seriously incorrect or outdated answers that make them unreliable for practical tasks.",
+        "commentId": 49540610,
+        "stance": "B",
+        "caseId": "C4e17a179c77afe7faf8c",
+        "judgment": {
+          "caseId": "C4e17a179c77afe7faf8c",
+          "stance": "B",
+          "quote": "Gemini 3.8 flash thinks Entoloma sinuatum is good to eat...",
+          "explanation": "Flags a dangerous factual answer. The generic positive impression afterward does not retract that reliability concern."
+        }
+      },
+      {
+        "axisId": 27,
+        "statementA": "Gemini's safety refusals obstruct legitimate work, including ordinary tasks adjacent to sensitive topics.",
+        "statementB": "Gemini's safety refusals do not meaningfully obstruct legitimate work.",
+        "commentId": 49538747,
+        "stance": "A",
+        "caseId": "C7809238934b1b83f025c",
+        "judgment": {
+          "caseId": "C7809238934b1b83f025c",
+          "stance": "A",
+          "quote": "Everyone is censoring models now with anything remotely resembling cyber or bio.",
+          "explanation": "Makes a blanket claim about providers blocking adjacent topics and says these restrictions obstruct legitimate epidemiology research."
+        }
+      },
+      {
+        "axisId": 37,
+        "statementA": "Gemini 3.8 Flash is more expensive and less token-efficient than Gemini 3.7 or earlier Flash models.",
+        "statementB": "Gemini 3.8 Flash is no more expensive and is at least as token-efficient as earlier Flash models.",
+        "commentId": 49539265,
+        "stance": "A",
+        "caseId": "C7c7a459fcc9000bc1499",
+        "judgment": {
+          "caseId": "C7c7a459fcc9000bc1499",
+          "stance": "A",
+          "quote": "3.8 uses nearly twice as many tokens as 3.7.",
+          "explanation": "The commenter explicitly reports increased token consumption and more than twice the cost."
+        }
+      },
+      {
+        "axisId": 7,
+        "statementA": "A model's knowledge cutoff is important because stale internal knowledge harms practical answers, especially for coding.",
+        "statementB": "A model's knowledge cutoff is not very important when the interface can search online for recent information.",
+        "commentId": 49540802,
+        "stance": "A",
+        "caseId": "Cfd5cce1eb240e915311f",
+        "judgment": {
+          "caseId": "Cfd5cce1eb240e915311f",
+          "stance": "A",
+          "quote": "everything it suggests are outdated and mostly useless.",
+          "explanation": "The commenter explicitly says the cutoff matters because stale framework and library knowledge makes generated code impractical."
+        }
+      },
+      {
+        "axisId": 21,
+        "statementA": "Google's recent Flash releases show that Google is regaining momentum and could win the AI race.",
+        "statementB": "Google's recent Flash releases do not establish that Google is regaining momentum or is likely to win the AI race.",
+        "commentId": 49540337,
+        "stance": "A",
+        "caseId": "Cf836b0a5b2be508747cd",
+        "judgment": {
+          "caseId": "Cf836b0a5b2be508747cd",
+          "stance": "A",
+          "quote": "I feel like Google will win the AI race",
+          "explanation": "The commenter explicitly expresses optimism that Google will win and says Gemini is already good enough."
+        }
+      },
+      {
+        "axisId": 34,
+        "statementA": "Using another agent to check generated work can improve reliability enough to justify the extra cost and latency.",
+        "statementB": "Agent checking is not reliable enough to justify trusting generated work or the added cost and latency.",
+        "commentId": 49541644,
+        "stance": "B",
+        "caseId": "C2746e90e4c2644480f5d",
+        "judgment": {
+          "caseId": "C2746e90e4c2644480f5d",
+          "stance": "B",
+          "quote": "my overarching impression is still \"Why would we trust this when it hasn't shown it's trustworthy?\"",
+          "explanation": "States their own distrust and challenges agent checking as a solution to unproven output reliability."
+        }
+      },
+      {
+        "axisId": 5,
+        "statementA": "Gemini 3.8 Flash's speed does not make it a worthwhile coding choice over alternatives such as Claude or Codex.",
+        "statementB": "Gemini 3.8 Flash is a worthwhile coding choice because its speed compensates for its quality limitations.",
+        "commentId": 49538000,
+        "stance": "A",
+        "caseId": "C39191a186fbaf5808afc",
+        "judgment": {
+          "caseId": "C39191a186fbaf5808afc",
+          "stance": "A",
+          "quote": "having to baby sit through and approve prompts every few seconds ends up making it slower than the Auto approve modes of Claude/ChatGPT",
+          "explanation": "Says supervision negates the speed advantage. Its fallback usefulness is attributed to quotas, not speed compensating for quality."
+        }
+      },
+      {
+        "axisId": 44,
+        "statementA": "Antigravity is not comparable to Claude Code for agentic coding, especially for teams of agents.",
+        "statementB": "Antigravity is comparable to Claude Code for agentic coding.",
+        "commentId": 49542133,
+        "stance": "A",
+        "caseId": "Cd985948ebc00ff3c56c4",
+        "judgment": {
+          "caseId": "Cd985948ebc00ff3c56c4",
+          "stance": "A",
+          "quote": "Not really comparable to Claude Code when you're looking to run a team of agents from my experience.",
+          "explanation": "The commenter directly rejects comparability for agent teams, citing the lack of auto-approval."
+        }
+      },
+      {
+        "axisId": 14,
+        "statementA": "Gemini 3.8 Flash is a worthwhile alternative to Opus 5 Medium because its performance, speed, and cost compare favorably.",
+        "statementB": "Gemini 3.8 Flash's apparent advantage over Opus 5 Medium is overstated because reasoning effort and output-token use are not normalized.",
+        "commentId": 49538171,
+        "stance": "B",
+        "caseId": "Ca16c02fe3d4aecd1ae7c",
+        "judgment": {
+          "caseId": "Ca16c02fe3d4aecd1ae7c",
+          "stance": "B",
+          "quote": "opus 5 medium outputs 4x fewer tokens to achieve the same result, negating a lot of the speed difference.",
+          "explanation": "The commenter challenges the apparent advantage by highlighting reasoning effort and output-token differences."
+        }
+      },
+      {
+        "axisId": 42,
+        "statementA": "Google Search AI Mode is unreliable mainly because Google uses a small model to save money.",
+        "statementB": "Google Search AI Mode is unreliable mainly because guardrails constrain its investigation and context, not because of model size.",
+        "commentId": 49538478,
+        "stance": "B",
+        "caseId": "Cc90e2e10a7ef62251004",
+        "judgment": {
+          "caseId": "Cc90e2e10a7ef62251004",
+          "stance": "B",
+          "quote": "It's not the models, it's the guardrails.",
+          "explanation": "The commenter attributes AI Mode's problems to limits on investigation and context rather than the underlying models."
+        }
+      },
+      {
+        "axisId": 3,
+        "statementA": "Gemini Flash models are broadly competitive with frontier models on meaningful benchmarks and real-world tasks.",
+        "statementB": "Gemini Flash models are not broadly competitive with frontier models on meaningful real-world tasks.",
+        "commentId": 49540167,
+        "stance": "A",
+        "caseId": "C97764aa20d454e737509",
+        "judgment": {
+          "caseId": "C97764aa20d454e737509",
+          "stance": "A",
+          "quote": "you can basically get frontier results with a good harness (at a fraction of the time and money).",
+          "explanation": "The commenter endorses Flash's practical competitiveness, particularly for verifiable tasks such as coding."
+        }
+      },
+      {
+        "axisId": 1,
+        "statementA": "Gemini Flash is unreliable at coding, especially on long, complex, or agentic development tasks.",
+        "statementB": "Gemini Flash performs well at coding, including on complex projects and practical development tasks.",
+        "commentId": 49546946,
+        "stance": "B",
+        "caseId": "C41d300ae4588c523c29b",
+        "judgment": {
+          "caseId": "C41d300ae4588c523c29b",
+          "stance": "B",
+          "quote": "mostly on some pretty complex ML engineering projects. It’s great.",
+          "explanation": "Explicitly praises daily Gemini coding use on complex engineering projects."
+        }
+      },
+      {
+        "axisId": 6,
+        "statementA": "Gemini 3.8 Flash matches Opus 5 Medium on Artificial Analysis's intelligence score.",
+        "statementB": "Gemini 3.8 Flash does not match Opus 5 Medium on Artificial Analysis's intelligence score.",
+        "commentId": 49539419,
+        "stance": "A",
+        "caseId": "C1668f0ac189d450e449e",
+        "judgment": {
+          "caseId": "C1668f0ac189d450e449e",
+          "stance": "N",
+          "quote": "",
+          "explanation": "Corrects which setting received 63, but does not state Medium's score or independently assert that it matches Flash."
+        }
+      },
+      {
+        "axisId": 4,
+        "statementA": "Benchmark scores are too unreliable, contaminated, or hollow to establish that Gemini 3.8 Flash is genuinely powerful.",
+        "statementB": "Gemini 3.8 Flash's benchmark results are compelling evidence that it is a powerful model.",
+        "commentId": 49542765,
+        "stance": "A",
+        "caseId": "C2b4d90191f50f2be84bd",
+        "judgment": {
+          "caseId": "C2b4d90191f50f2be84bd",
+          "stance": "A",
+          "quote": "i find deepswe not very reliable",
+          "explanation": "Challenges the reliability of a benchmark being used as evidence, citing an implausible ranking."
+        }
+      },
+      {
+        "axisId": 35,
+        "statementA": "Luna generally offers better value per dollar than Gemini for API use.",
+        "statementB": "Gemini offers better value for money than competing models such as Luna.",
+        "commentId": 49543710,
+        "stance": "A",
+        "caseId": "C355e680b04a3dc726a22",
+        "judgment": {
+          "caseId": "C355e680b04a3dc726a22",
+          "stance": "A",
+          "quote": "Luna high is literally 30X cheaper than Gemini 3.8 flash high.",
+          "explanation": "Uses cost-per-task comparisons to argue for Luna's substantial economic advantage over Gemini."
+        }
+      },
+      {
+        "axisId": 1,
+        "statementA": "Gemini Flash is unreliable at coding, especially on long, complex, or agentic development tasks.",
+        "statementB": "Gemini Flash performs well at coding, including on complex projects and practical development tasks.",
+        "commentId": 49539815,
+        "stance": "B",
+        "caseId": "C39a4f06f69ce6352b7d3",
+        "judgment": {
+          "caseId": "C39a4f06f69ce6352b7d3",
+          "stance": "B",
+          "quote": "and it did a solid job.",
+          "explanation": "Reports successful completion of a concrete coding task that extended an existing rendering tool."
+        }
+      },
+      {
+        "axisId": 43,
+        "statementA": "Luna is an effective workhorse model for coding tasks.",
+        "statementB": "Luna requires so much coding guidance that writing the code manually can be faster.",
+        "commentId": 49547007,
+        "stance": "B",
+        "caseId": "Cb00caae3c1b24fa239a2",
+        "judgment": {
+          "caseId": "Cb00caae3c1b24fa239a2",
+          "stance": "B",
+          "quote": "Luna requires so much guidance that it's faster to just type it out yourself.",
+          "explanation": "The commenter directly states that Luna's guidance requirements can make manual coding faster."
+        }
+      },
+      {
+        "axisId": 6,
+        "statementA": "Gemini 3.8 Flash matches Opus 5 Medium on Artificial Analysis's intelligence score.",
+        "statementB": "Gemini 3.8 Flash does not match Opus 5 Medium on Artificial Analysis's intelligence score.",
+        "commentId": 49538390,
+        "stance": "B",
+        "caseId": "Cb293d69b8d36a10812ee",
+        "judgment": {
+          "caseId": "Cb293d69b8d36a10812ee",
+          "stance": "B",
+          "quote": "Claude Opus 5 has an intelligence score of 63, not 59 (it's not the same as Gemini 3.8 Flash).",
+          "explanation": "The commenter rejects the claimed score equality, regardless of whether the effort settings were correctly distinguished."
+        }
+      }
+    ]
+  },
+  "reference": {
+    "key": "lunaLow",
+    "comments": 592,
+    "chars": 159463,
+    "candidates": 91,
+    "axes": 59,
+    "stances": 298,
+    "twoSided": 40,
+    "volumeCalls": 77,
+    "pricedCalls": 77,
+    "importedCalls": 0,
+    "stancesPerComment": 0.5033783783783784,
+    "twoSidedPer100Comments": 6.756756756756757,
+    "noCacheCost": 0.1637318,
+    "billed": 0.13904875999999997,
+    "seconds": 63.22599983215332,
+    "usdPerMillionChars": 1.0267698462966333,
+    "secondsPerMillionChars": 396.4932293519708,
+    "medianCallSeconds": 16.653
+  },
+  "reviews": [
+    {
+      "index": 0,
+      "caseIds": [
+        "C01db46176b59b229b13b",
+        "C055364b43e074de31ca9",
+        "C06cc7e97441a3aa5dd18",
+        "C07625f0afe1fa01a0a2b",
+        "C08309247f664516a4171",
+        "C084f1f76738f5d9d749d",
+        "C0d3a854f24f506a3d4f1",
+        "C0e6fa07a72d37eec27fd",
+        "C0f4f3cd9a36282c448cc",
+        "C13a485d43604c733680d",
+        "C1668f0ac189d450e449e",
+        "C172e122a5a29c746f66f",
+        "C193545f9a45602454fe4",
+        "C1abef3a2ad0992f2bfbb",
+        "C1ec8e38ed8403417e211",
+        "C1fdc1005542a47135e9c",
+        "C2386f8622c4e77bc9f16",
+        "C2746e90e4c2644480f5d",
+        "C2aa6ac5e0b19c5488e83",
+        "C2b4d90191f50f2be84bd",
+        "C300fbdb6e4cf55d75e94",
+        "C310d75c34c5dc7ab9033",
+        "C3158a64931ef97540577",
+        "C355e680b04a3dc726a22",
+        "C39024dc710013bdadf65",
+        "C39191a186fbaf5808afc",
+        "C39a4f06f69ce6352b7d3",
+        "C39e4c1c8010d4bd40b24",
+        "C3adf438b19cafe21e8ce",
+        "C3b0b8480e3dc778adc66",
+        "C3fe4e8b11ab79cf22b1a",
+        "C41d300ae4588c523c29b",
+        "C44a34f1bed6ea1bb0a40",
+        "C47455db5fe98c26d437e",
+        "C486b30545f2e5d54803f",
+        "C4e17a179c77afe7faf8c",
+        "C4ee0d1a7c467b4a0cb8d",
+        "C4f9201a88ef1b6e9ef55",
+        "C541e43182f44889450a3",
+        "C57167bae899010f730e1",
+        "C5d5ee3cae3997b101744",
+        "C62736060a688e74cd5b4",
+        "C63b34b5bf128b0c4ecf0",
+        "C68704f8b995dfa2d7f39",
+        "C6ab1658fb2006de19928",
+        "C6ef76a61fb30069226aa",
+        "C74e86fea1836f2e0385f",
+        "C7809238934b1b83f025c",
+        "C7868f6ed55452424035c",
+        "C79ea1724f05b01bfae24"
+      ],
+      "response": {
+        "judgments": [
+          {
+            "caseId": "C01db46176b59b229b13b",
+            "stance": "U",
+            "quote": "antigravity is awful and reckless - but that the model itself isn't.",
+            "explanation": "Poor harness performance and good model capability under suitable configuration can coexist; the axis presents compatible claims."
+          },
+          {
+            "caseId": "C055364b43e074de31ca9",
+            "stance": "U",
+            "quote": "is better used in a constrained setting.",
+            "explanation": "The comment distinguishes poor general-assistant use from successful specialized setups. These support compatible poles rather than opposing claims."
+          },
+          {
+            "caseId": "C06cc7e97441a3aa5dd18",
+            "stance": "A",
+            "quote": "A strong hint this is the case is the fact that nobody can define consciousness.",
+            "explanation": "Offers a substantive reason supporting the parent's claim that consciousness is not the special distinction people assume."
+          },
+          {
+            "caseId": "C07625f0afe1fa01a0a2b",
+            "stance": "A",
+            "quote": "3.8 Flash is considerably more expensive[0]/less token efficient than 3.7 or 3.6",
+            "explanation": "Explicitly reports higher cost and lower token efficiency than earlier versions."
+          },
+          {
+            "caseId": "C08309247f664516a4171",
+            "stance": "A",
+            "quote": "Their \"flash\" models are very comparable to other companies' \"pro\" or \"flagship\" models.",
+            "explanation": "Directly characterizes Flash models as competitive with other providers' flagships."
+          },
+          {
+            "caseId": "C084f1f76738f5d9d749d",
+            "stance": "U",
+            "quote": "So there might be something to it but they have done other things as well.",
+            "explanation": "Costs mainly reflecting additional thinking can coexist with independent model improvements, making the poles compatible."
+          },
+          {
+            "caseId": "C0d3a854f24f506a3d4f1",
+            "stance": "A",
+            "quote": "Well, my LLM is a \"he\".",
+            "explanation": "Uses a gendered pronoun for their own LLM and challenges the objection to doing so."
+          },
+          {
+            "caseId": "C0e6fa07a72d37eec27fd",
+            "stance": "B",
+            "quote": "And agy with flash goes a long way.",
+            "explanation": "Praises Flash's practical coding utility alongside its rapid file generation and compilation."
+          },
+          {
+            "caseId": "C0f4f3cd9a36282c448cc",
+            "stance": "B",
+            "quote": "you can basically get frontier results with a good harness",
+            "explanation": "Explicitly endorses Flash for coding and says a suitable harness can produce frontier-level results."
+          },
+          {
+            "caseId": "C13a485d43604c733680d",
+            "stance": "U",
+            "quote": "Gemini is great via the Chat interface and decent via Github Copilot.",
+            "explanation": "Praises Gemini through other interfaces while criticizing Antigravity. Harness shortcomings and conditional model capability are compatible claims."
+          },
+          {
+            "caseId": "C1668f0ac189d450e449e",
+            "stance": "N",
+            "quote": "",
+            "explanation": "Corrects which setting received 63, but does not state Medium's score or independently assert that it matches Flash."
+          },
+          {
+            "caseId": "C172e122a5a29c746f66f",
+            "stance": "B",
+            "quote": "not any noticeable improvement and unlike 3.7 high it eats all your credits",
+            "explanation": "Explicitly denies a noticeable improvement and reports worse credit consumption."
+          },
+          {
+            "caseId": "C193545f9a45602454fe4",
+            "stance": "B",
+            "quote": "the code comes from pretrained data and copy pasting whole blocks",
+            "explanation": "The sarcasm clearly defends the claim that generated code copies blocks from training data."
+          },
+          {
+            "caseId": "C1abef3a2ad0992f2bfbb",
+            "stance": "A",
+            "quote": "thats not just the context growing issue, hallucinations is a thing",
+            "explanation": "Adds hallucinations as another explanation for the coding unreliability being discussed."
+          },
+          {
+            "caseId": "C1ec8e38ed8403417e211",
+            "stance": "A",
+            "quote": "Gemini hasn't failed me for personal usage yet.",
+            "explanation": "Reports consistently successful personal use, while explicitly limiting the claim to that experience."
+          },
+          {
+            "caseId": "C1fdc1005542a47135e9c",
+            "stance": "M",
+            "quote": "It definitely makes things up all the time, but it gets it right surprisingly often.",
+            "explanation": "Explicitly balances frequent fabrication against practical accuracy, without settling on a categorical reliability judgment."
+          },
+          {
+            "caseId": "C2386f8622c4e77bc9f16",
+            "stance": "B",
+            "quote": "IRL dev and daily life usage totally make it seem like it's way behind Codex and Claude.",
+            "explanation": "Directly contrasts impressive paper results with substantially worse real-world performance."
+          },
+          {
+            "caseId": "C2746e90e4c2644480f5d",
+            "stance": "B",
+            "quote": "my overarching impression is still \"Why would we trust this when it hasn't shown it's trustworthy?\"",
+            "explanation": "States their own distrust and challenges agent checking as a solution to unproven output reliability."
+          },
+          {
+            "caseId": "C2aa6ac5e0b19c5488e83",
+            "stance": "A",
+            "quote": "scores at lower reasoning levels are more indicative of model capability",
+            "explanation": "Explicitly favors lower reasoning settings as indicators of underlying capability."
+          },
+          {
+            "caseId": "C2b4d90191f50f2be84bd",
+            "stance": "A",
+            "quote": "i find deepswe not very reliable",
+            "explanation": "Challenges the reliability of a benchmark being used as evidence, citing an implausible ranking."
+          },
+          {
+            "caseId": "C300fbdb6e4cf55d75e94",
+            "stance": "A",
+            "quote": "small models have an advantage - it takes much more compute to train a bigger model",
+            "explanation": "Tentatively endorses the stated advantage from rapid post-training progress and lower training-compute requirements."
+          },
+          {
+            "caseId": "C310d75c34c5dc7ab9033",
+            "stance": "A",
+            "quote": "it's a great family for performing media analysis, like extracting structured data from images and video.",
+            "explanation": "Explicitly recommends Flash for practical media analysis and structured information extraction."
+          },
+          {
+            "caseId": "C3158a64931ef97540577",
+            "stance": "B",
+            "quote": "It's not really any different than the choice you'd make with OpenAI/Anthropic depending on how you plan to use it.",
+            "explanation": "Presents a straightforward selection process and explicitly compares it to other providers' access choices."
+          },
+          {
+            "caseId": "C355e680b04a3dc726a22",
+            "stance": "A",
+            "quote": "Luna high is literally 30X cheaper than Gemini 3.8 flash high.",
+            "explanation": "Uses cost-per-task comparisons to argue for Luna's substantial economic advantage over Gemini."
+          },
+          {
+            "caseId": "C39024dc710013bdadf65",
+            "stance": "A",
+            "quote": "Even using web search, gemini still does not aware of the new feature and still give the outdated code.",
+            "explanation": "Reports that web search fails to overcome stale coding knowledge, supporting the importance of internal freshness."
+          },
+          {
+            "caseId": "C39191a186fbaf5808afc",
+            "stance": "A",
+            "quote": "having to baby sit through and approve prompts every few seconds ends up making it slower than the Auto approve modes of Claude/ChatGPT",
+            "explanation": "Says supervision negates the speed advantage. Its fallback usefulness is attributed to quotas, not speed compensating for quality."
+          },
+          {
+            "caseId": "C39a4f06f69ce6352b7d3",
+            "stance": "B",
+            "quote": "and it did a solid job.",
+            "explanation": "Reports successful completion of a concrete coding task that extended an existing rendering tool."
+          },
+          {
+            "caseId": "C39e4c1c8010d4bd40b24",
+            "stance": "A",
+            "quote": "Lots of models seem to just allow the model to \"bloatmax\" tokens in order to get bumps at high/max reasoning levels.",
+            "explanation": "Supports the preference for lower-setting measurements with a substantive argument that higher scores arise from excessive token budgets."
+          },
+          {
+            "caseId": "C3adf438b19cafe21e8ce",
+            "stance": "B",
+            "quote": "it's not even close to Opus 5 on Terminal-bench 4.0, 19.1% vs. 51.8%.",
+            "explanation": "Challenges the broad competitiveness claim by identifying a large deficit on a relevant task benchmark."
+          },
+          {
+            "caseId": "C3b0b8480e3dc778adc66",
+            "stance": "A",
+            "quote": "it nailed crisply a handful of python tasks",
+            "explanation": "Reports successful coding results with Luna as the main driver and plans to continue using it."
+          },
+          {
+            "caseId": "C3fe4e8b11ab79cf22b1a",
+            "stance": "U",
+            "quote": "You need more safeguards for sure, but also it tends to fly off down rabbit holes",
+            "explanation": "Safeguards preventing unauthorized actions and models tending toward reckless actions can both be true; the poles are compatible."
+          },
+          {
+            "caseId": "C41d300ae4588c523c29b",
+            "stance": "B",
+            "quote": "mostly on some pretty complex ML engineering projects. It’s great.",
+            "explanation": "Explicitly praises daily Gemini coding use on complex engineering projects."
+          },
+          {
+            "caseId": "C44a34f1bed6ea1bb0a40",
+            "stance": "A",
+            "quote": "ot also outputs more tokens, so response time is slower oferall.",
+            "explanation": "Directly attributes slower overall responses to increased token output."
+          },
+          {
+            "caseId": "C47455db5fe98c26d437e",
+            "stance": "A",
+            "quote": "Ordinary people can use K3 and GLM 5.3 or whatever drops next and avoid all this hassle.",
+            "explanation": "Recommends accessible alternatives rather than dealing with Gemini Cyber's restricted availability."
+          },
+          {
+            "caseId": "C486b30545f2e5d54803f",
+            "stance": "A",
+            "quote": "the flash model was unusable for a whole month via gemini CLI.",
+            "explanation": "Reports a prolonged failure affecting paid service, substantively supporting concerns about serious infrastructure reliability problems."
+          },
+          {
+            "caseId": "C4e17a179c77afe7faf8c",
+            "stance": "B",
+            "quote": "Gemini 3.8 flash thinks Entoloma sinuatum is good to eat...",
+            "explanation": "Flags a dangerous factual answer. The generic positive impression afterward does not retract that reliability concern."
+          },
+          {
+            "caseId": "C4ee0d1a7c467b4a0cb8d",
+            "stance": "A",
+            "quote": "With 3.7 I felt I could just not use 3.1 Pro at all and 3.8 seems even better.",
+            "explanation": "Reports greater intelligence and a favorable upgrade despite a possible small speed reduction."
+          },
+          {
+            "caseId": "C4f9201a88ef1b6e9ef55",
+            "stance": "B",
+            "quote": "gemini sucks so bad in real work usage, everything it suggests are outdated and mostly useless.",
+            "explanation": "Explicitly says outdated suggestions undermine practical coding use."
+          },
+          {
+            "caseId": "C541e43182f44889450a3",
+            "stance": "A",
+            "quote": "I used that one too and it still wasn't as good as competitors.",
+            "explanation": "The parent identifies Antigravity CLI, and the commenter independently reports that it remained worse than competing tools."
+          },
+          {
+            "caseId": "C57167bae899010f730e1",
+            "stance": "N",
+            "quote": "",
+            "explanation": "Discusses training-data contamination, not whether outputs lack meaningful differences or whether the test distinguishes smaller models."
+          },
+          {
+            "caseId": "C5d5ee3cae3997b101744",
+            "stance": "A",
+            "quote": "gemini flash, luna, and GLM5.3 all delivering 90% of the performance for a small fraction of the cost.",
+            "explanation": "Explicitly describes Flash and similar models as delivering near-frontier performance at much lower cost."
+          },
+          {
+            "caseId": "C62736060a688e74cd5b4",
+            "stance": "B",
+            "quote": "I use Gemini a lot and it often replies with out-dated data.",
+            "explanation": "Reports frequent stale answers and increasing error risk for detailed requests."
+          },
+          {
+            "caseId": "C63b34b5bf128b0c4ecf0",
+            "stance": "A",
+            "quote": "From personal experience it feels much more capable than 3.7 Flash.",
+            "explanation": "Directly reports a substantial perceived capability improvement over 3.7 Flash."
+          },
+          {
+            "caseId": "C68704f8b995dfa2d7f39",
+            "stance": "B",
+            "quote": "this thing is really good at HTML JavaScript",
+            "explanation": "Explicitly praises coding ability and provides a generated HTML example."
+          },
+          {
+            "caseId": "C6ab1658fb2006de19928",
+            "stance": "B",
+            "quote": "It is more expensive per task than 5.6-sol high",
+            "explanation": "Directly asserts higher per-task cost than Sol 5.6 High."
+          },
+          {
+            "caseId": "C6ef76a61fb30069226aa",
+            "stance": "A",
+            "quote": "I’m convinced consciousness isn’t the special thing we think it is.",
+            "explanation": "Rejects consciousness's supposed special status in the context of distinguishing human and AI intent."
+          },
+          {
+            "caseId": "C74e86fea1836f2e0385f",
+            "stance": "A",
+            "quote": "The flash models, for coding are reckless in my experience.",
+            "explanation": "Directly characterizes Flash coding as reckless and favors Opus for reliability."
+          },
+          {
+            "caseId": "C7809238934b1b83f025c",
+            "stance": "A",
+            "quote": "Everyone is censoring models now with anything remotely resembling cyber or bio.",
+            "explanation": "Makes a blanket claim about providers blocking adjacent topics and says these restrictions obstruct legitimate epidemiology research."
+          },
+          {
+            "caseId": "C7868f6ed55452424035c",
+            "stance": "B",
+            "quote": "I've had Gemini model API use degrade the most out of OAI/Anthropic/Google (often \"over capacity\" vs true failures)",
+            "explanation": "Explicitly reports the greatest degradation for Gemini API use, often through over-capacity responses."
+          },
+          {
+            "caseId": "C79ea1724f05b01bfae24",
+            "stance": "B",
+            "quote": "ppl are paying more for a given task, waiting longer and using a dumber intelligence because \"TPS number shiny\".",
+            "explanation": "Rejects the speed tradeoff, arguing that excessive token output makes actual tasks slower and more expensive."
+          }
+        ]
+      },
+      "traceKeys": [
+        "544a517952dee6ec2ff66dc96e27cd6e8f9f8291df94c93b2fbc774a65e9328f"
+      ],
+      "quoteNormalizations": []
+    },
+    {
+      "index": 1,
+      "caseIds": [
+        "C7c7a459fcc9000bc1499",
+        "C80c0acd2941b9b890aa1",
+        "C89110766ff3e26ae4a1d",
+        "C8d4fdc73211b14311e4c",
+        "C9429ec200e27ed11f55c",
+        "C97764aa20d454e737509",
+        "C97d7468d7daac69fe804",
+        "Ca16c02fe3d4aecd1ae7c",
+        "Ca51bb4e5da2ea346c0af",
+        "Ca7b90ba463fb5ae8d2b8",
+        "Cac8b19a0af19facf9f0a",
+        "Cadf38a5f82aea7f97247",
+        "Caf231aa19895c2dd95a0",
+        "Cafb5d9815b38cb4e1a28",
+        "Cb00caae3c1b24fa239a2",
+        "Cb293d69b8d36a10812ee",
+        "Cb2fe8e455af9902b3441",
+        "Cb38f7e65dd040fa9729c",
+        "Cb4aae364477ce8c21641",
+        "Cb771368af53a402868af",
+        "Cbe1c0c94c8d6f4897c81",
+        "Cc48268c30d67c8f16013",
+        "Cc7917184f29ca20bf98e",
+        "Cc85d5580f7197c4d4ef8",
+        "Cc90e2e10a7ef62251004",
+        "Cc99ea859511c6958a9c9",
+        "Ccad362c48acff6f126bb",
+        "Ccb8106e6de709824f22c",
+        "Ccc428382b1dd6ec6a1b6",
+        "Cd4c7224edd6588325c7d",
+        "Cd985948ebc00ff3c56c4",
+        "Cd9d389c2f923ee8abf43",
+        "Cdb552b1dec18b27f58fe",
+        "Cdd85d2e6129f5b66fd1d",
+        "Ce0cf0dfec07f0569add8",
+        "Ce390b6e72ef7de46ba19",
+        "Ce7161fadf100c6758025",
+        "Ce7c9d439d0baddedd002",
+        "Ceaa1f3fdce0662cdbb3d",
+        "Cecede9de855f0b2cc662",
+        "Ced409bfe270c8a18df6a",
+        "Cf0d00813f960f28135cc",
+        "Cf47df44804beb32dc3e0",
+        "Cf720e81453f2d416fa9a",
+        "Cf7d17e3ea24cdd550fe4",
+        "Cf836b0a5b2be508747cd",
+        "Cfa257fb5e8025878d483",
+        "Cfa95d42102f7a7c44b6a",
+        "Cfc3d4e22840f58676f83",
+        "Cfd5cce1eb240e915311f"
+      ],
+      "response": {
+        "judgments": [
+          {
+            "caseId": "C7c7a459fcc9000bc1499",
+            "stance": "A",
+            "quote": "3.8 uses nearly twice as many tokens as 3.7.",
+            "explanation": "The commenter explicitly reports increased token consumption and more than twice the cost."
+          },
+          {
+            "caseId": "C80c0acd2941b9b890aa1",
+            "stance": "A",
+            "quote": "might be cheaper per task even costing more per token, probably faster too",
+            "explanation": "The commenter tentatively favors testing the newer model for lower task costs and greater speed."
+          },
+          {
+            "caseId": "C89110766ff3e26ae4a1d",
+            "stance": "A",
+            "quote": "a great, no-compromise, upgrade over 3.7",
+            "explanation": "The commenter directly characterizes 3.8 as a worthwhile upgrade."
+          },
+          {
+            "caseId": "C8d4fdc73211b14311e4c",
+            "stance": "N",
+            "quote": "",
+            "explanation": "The comment proposes a condition for full saturation, without asserting current meaninglessness or usefulness for comparing smaller models."
+          },
+          {
+            "caseId": "C9429ec200e27ed11f55c",
+            "stance": "B",
+            "quote": "Definitely cool.",
+            "explanation": "The commenter positively evaluates the generated example while noting performance problems and a misleading FPS display."
+          },
+          {
+            "caseId": "C97764aa20d454e737509",
+            "stance": "A",
+            "quote": "you can basically get frontier results with a good harness (at a fraction of the time and money).",
+            "explanation": "The commenter endorses Flash's practical competitiveness, particularly for verifiable tasks such as coding."
+          },
+          {
+            "caseId": "C97d7468d7daac69fe804",
+            "stance": "A",
+            "quote": "you can ask it to not do that (it follows that ask pretty well).",
+            "explanation": "The commenter presents explicit instructions as an effective way to prevent the unauthorized behavior under discussion."
+          },
+          {
+            "caseId": "Ca16c02fe3d4aecd1ae7c",
+            "stance": "B",
+            "quote": "opus 5 medium outputs 4x fewer tokens to achieve the same result, negating a lot of the speed difference.",
+            "explanation": "The commenter challenges the apparent advantage by highlighting reasoning effort and output-token differences."
+          },
+          {
+            "caseId": "Ca51bb4e5da2ea346c0af",
+            "stance": "N",
+            "quote": "",
+            "explanation": "This is a bare expression of disagreement and impasse, without an independent substantive claim about consciousness."
+          },
+          {
+            "caseId": "Ca7b90ba463fb5ae8d2b8",
+            "stance": "A",
+            "quote": "AI didn't make it up, Pearson's did.",
+            "explanation": "The commenter explicitly attributes the incorrect information to Pearson rather than AI invention."
+          },
+          {
+            "caseId": "Cac8b19a0af19facf9f0a",
+            "stance": "A",
+            "quote": "I believe Gemini Flash is smart enough to know when to ground with web search.",
+            "explanation": "The commenter expresses confidence in Flash's search grounding and its ability to obtain practical information."
+          },
+          {
+            "caseId": "Cadf38a5f82aea7f97247",
+            "stance": "A",
+            "quote": "It's clearly been \"dealt with\" already.",
+            "explanation": "The commenter treats DeepSWE as already optimized against or saturated, undermining its evidential value."
+          },
+          {
+            "caseId": "Caf231aa19895c2dd95a0",
+            "stance": "B",
+            "quote": "The race to the bottom continues",
+            "explanation": "The commenter explicitly frames the development as a race to the bottom."
+          },
+          {
+            "caseId": "Cafb5d9815b38cb4e1a28",
+            "stance": "U",
+            "quote": "",
+            "explanation": "The comment distinguishes Flash High from Flash Medium, while the axis leaves Flash's effort unspecified; it does not unambiguously affirm or deny equality."
+          },
+          {
+            "caseId": "Cb00caae3c1b24fa239a2",
+            "stance": "B",
+            "quote": "Luna requires so much guidance that it's faster to just type it out yourself.",
+            "explanation": "The commenter directly states that Luna's guidance requirements can make manual coding faster."
+          },
+          {
+            "caseId": "Cb293d69b8d36a10812ee",
+            "stance": "B",
+            "quote": "Claude Opus 5 has an intelligence score of 63, not 59 (it's not the same as Gemini 3.8 Flash).",
+            "explanation": "The commenter rejects the claimed score equality, regardless of whether the effort settings were correctly distinguished."
+          },
+          {
+            "caseId": "Cb2fe8e455af9902b3441",
+            "stance": "A",
+            "quote": "gemini flash 3.8 high is both 6 times faster and costs less, while having the same intelligence score as claude opus 5 medium",
+            "explanation": "The commenter explicitly argues that Flash offers equal measured intelligence with better speed and cost."
+          },
+          {
+            "caseId": "Cb38f7e65dd040fa9729c",
+            "stance": "A",
+            "quote": "It's actually difficult to hit my weekly limit now",
+            "explanation": "The commenter reports generous quotas that require unusually extensive continuous agent work to exhaust."
+          },
+          {
+            "caseId": "Cb4aae364477ce8c21641",
+            "stance": "B",
+            "quote": "Even using web search, gemini still does not aware of the new feature and still give the outdated code.",
+            "explanation": "The commenter describes persistent outdated coding answers even when web search is used."
+          },
+          {
+            "caseId": "Cb771368af53a402868af",
+            "stance": "A",
+            "quote": "Even their own chart showed more than 2x higher cost compared to 3.7",
+            "explanation": "The commenter reports both substantially higher cost and nearly doubled token consumption."
+          },
+          {
+            "caseId": "Cbe1c0c94c8d6f4897c81",
+            "stance": "A",
+            "quote": "if it suggests travel plans, the booking links it provides give Alphabet a cut.",
+            "explanation": "The commenter explicitly alleges subtle commercial steering through monetized booking recommendations."
+          },
+          {
+            "caseId": "Cc48268c30d67c8f16013",
+            "stance": "A",
+            "quote": "deepswe is public and can be considered contaminated.",
+            "explanation": "The commenter invokes benchmark contamination to challenge the significance of the reported results."
+          },
+          {
+            "caseId": "Cc7917184f29ca20bf98e",
+            "stance": "A",
+            "quote": "intent supposes will which supposes consciousness, and these aren't.",
+            "explanation": "The commenter denies AI consciousness and therefore denies the prerequisites they consider necessary for actual intent."
+          },
+          {
+            "caseId": "Cc85d5580f7197c4d4ef8",
+            "stance": "A",
+            "quote": "its Gemini is bad at coding.",
+            "explanation": "The commenter explicitly criticizes Gemini's coding ability, contrasting it with its Chinese writing ability."
+          },
+          {
+            "caseId": "Cc90e2e10a7ef62251004",
+            "stance": "B",
+            "quote": "It's not the models, it's the guardrails.",
+            "explanation": "The commenter attributes AI Mode's problems to limits on investigation and context rather than the underlying models."
+          },
+          {
+            "caseId": "Cc99ea859511c6958a9c9",
+            "stance": "B",
+            "quote": "That's both cool and fast.",
+            "explanation": "The commenter directly praises the generated HTML example and its generation speed."
+          },
+          {
+            "caseId": "Ccad362c48acff6f126bb",
+            "stance": "B",
+            "quote": "I haven't had any issues lately.",
+            "explanation": "The commenter reports recent trouble-free use, supporting current infrastructure reliability."
+          },
+          {
+            "caseId": "Ccb8106e6de709824f22c",
+            "stance": "B",
+            "quote": "I stopped using Gemini a few months ago because it would often just (partially) reply literal nonsense to me.",
+            "explanation": "The commenter says recurring nonsensical output made Gemini unreliable enough to abandon."
+          },
+          {
+            "caseId": "Ccc428382b1dd6ec6a1b6",
+            "stance": "N",
+            "quote": "",
+            "explanation": "The comment discusses uncensored weights, hosting, and Fable's refusals, but makes no substantive claim about Gemini obstructing legitimate work."
+          },
+          {
+            "caseId": "Cd4c7224edd6588325c7d",
+            "stance": "A",
+            "quote": "use something far more efficient ! GLM5.3 will make you super happy",
+            "explanation": "The commenter explicitly recommends GLM 5.3 as a more efficient and satisfying replacement."
+          },
+          {
+            "caseId": "Cd985948ebc00ff3c56c4",
+            "stance": "A",
+            "quote": "Not really comparable to Claude Code when you're looking to run a team of agents from my experience.",
+            "explanation": "The commenter directly rejects comparability for agent teams, citing the lack of auto-approval."
+          },
+          {
+            "caseId": "Cd9d389c2f923ee8abf43",
+            "stance": "A",
+            "quote": "its performance degrades the longer you use it for coding.",
+            "explanation": "The commenter asserts deterioration during extended coding use; the closing question does not erase that claim."
+          },
+          {
+            "caseId": "Cdb552b1dec18b27f58fe",
+            "stance": "B",
+            "quote": "an LLM is an \"it\", not a \"her\" or \"he\".",
+            "explanation": "The commenter explicitly recommends nongendered reference and warns against anthropomorphizing LLMs."
+          },
+          {
+            "caseId": "Cdd85d2e6129f5b66fd1d",
+            "stance": "B",
+            "quote": "Crushing it on DeepSWE is a very big deal.",
+            "explanation": "The commenter treats the benchmark performance as significant positive evidence."
+          },
+          {
+            "caseId": "Ce0cf0dfec07f0569add8",
+            "stance": "N",
+            "quote": "",
+            "explanation": "The comment establishes that security is broader than cybersecurity, but does not endorse 'cyber' or prescribe a preferred shortening."
+          },
+          {
+            "caseId": "Ce390b6e72ef7de46ba19",
+            "stance": "A",
+            "quote": "There's no real difference between any of these svgs across models and model versions anymore.",
+            "explanation": "The commenter explicitly calls the benchmark meaningless because it no longer distinguishes models."
+          },
+          {
+            "caseId": "Ce7161fadf100c6758025",
+            "stance": "B",
+            "quote": "Adding another agent to check the first one feels like putting a band-aid on a band-aid.",
+            "explanation": "The commenter portrays additional checking agents as an inadequate remedy that merely extends the trust problem."
+          },
+          {
+            "caseId": "Ce7c9d439d0baddedd002",
+            "stance": "A",
+            "quote": "Redundancy is a core concept in software and CS and at the heart of making many systems, complex or otherwise, reliable.",
+            "explanation": "The commenter defends additional agents as useful redundancy when the reliability benefit warrants the cost and latency."
+          },
+          {
+            "caseId": "Ceaa1f3fdce0662cdbb3d",
+            "stance": "B",
+            "quote": "I'd say it's pretty comparable to Claude Code (I use both daily).",
+            "explanation": "The commenter explicitly endorses comparability based on daily experience with both tools."
+          },
+          {
+            "caseId": "Cecede9de855f0b2cc662",
+            "stance": "A",
+            "quote": "most likely, Google is just bench-maxing very hard.",
+            "explanation": "The commenter warns that benchmark optimization and past marketing-performance gaps undermine the apparent strength of the results."
+          },
+          {
+            "caseId": "Ced409bfe270c8a18df6a",
+            "stance": "A",
+            "quote": "way overcooked on agentic coding yet not good at it",
+            "explanation": "The commenter explicitly criticizes agentic coding ability and provides an example of uncontrolled, inappropriate output."
+          },
+          {
+            "caseId": "Cf0d00813f960f28135cc",
+            "stance": "A",
+            "quote": "it’s likely to find most issues.",
+            "explanation": "The commenter recommends a second agent as an effective checker, while acknowledging distracting minor findings."
+          },
+          {
+            "caseId": "Cf47df44804beb32dc3e0",
+            "stance": "A",
+            "quote": "still usually better value per dollar than Gemini if you pay for API tokens.",
+            "explanation": "The commenter explicitly favors Luna's current API value, while leaving open whether 3.8 will change that."
+          },
+          {
+            "caseId": "Cf720e81453f2d416fa9a",
+            "stance": "A",
+            "quote": "it did one and took me 4 turns to get that one right.",
+            "explanation": "The commenter reports Flash failing to complete two simple requested changes and requiring repeated correction."
+          },
+          {
+            "caseId": "Cf7d17e3ea24cdd550fe4",
+            "stance": "A",
+            "quote": "I have no issue with it unlike most in the tech field.",
+            "explanation": "The commenter accepts the term 'cyber' and describes its longstanding use and resurgence."
+          },
+          {
+            "caseId": "Cf836b0a5b2be508747cd",
+            "stance": "A",
+            "quote": "I feel like Google will win the AI race",
+            "explanation": "The commenter explicitly expresses optimism that Google will win and says Gemini is already good enough."
+          },
+          {
+            "caseId": "Cfa257fb5e8025878d483",
+            "stance": "A",
+            "quote": "I use Gemini a lot and it often replies with out-dated data.",
+            "explanation": "The commenter argues that search grounding does not reliably overcome stale knowledge and resulting inaccuracies."
+          },
+          {
+            "caseId": "Cfa95d42102f7a7c44b6a",
+            "stance": "A",
+            "quote": "Workspace always gets things slower than normal Gmail accounts.",
+            "explanation": "The commenter explains the reported paid Workspace access gap as a delayed rollout caused by additional obligations."
+          },
+          {
+            "caseId": "Cfc3d4e22840f58676f83",
+            "stance": "N",
+            "quote": "",
+            "explanation": "The commenter asserts benchmark improvement and enthusiasm, but does not establish that coding performance is good or unreliable on practical projects."
+          },
+          {
+            "caseId": "Cfd5cce1eb240e915311f",
+            "stance": "A",
+            "quote": "everything it suggests are outdated and mostly useless.",
+            "explanation": "The commenter explicitly says the cutoff matters because stale framework and library knowledge makes generated code impractical."
+          }
+        ]
+      },
+      "traceKeys": [
+        "abac6c3c3d5f1e7d40f0050c1cd6bc30e0c7034c6c4cec4012cd0e530d6791c9"
+      ],
+      "quoteNormalizations": []
+    }
+  ]
+}
