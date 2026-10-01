@@ -76,26 +76,26 @@ function buildReport(root) {
             'Prices come from a later catalog snapshot than the matched experiment; costs use uncached token prices.'],
         models: Object.fromEntries(MODELS.map(key => [key, { name: ADDITIONS[key].name, effort: ADDITIONS[key].effort, model: ADDITIONS[key].model, ...aggregate(runs[key]) }])), reviews };
 }
-function markdown(report) {
+function markdown(report, root) {
     const lines = ['# Summary additions', '', report.method, '',
         '| Model | Quality /100 | Failed / major error | Cost /1k comments | Time /1k comments |', '| --- | ---: | ---: | ---: | ---: |'];
     for (const model of Object.values(report.models)) {
         lines.push(`| ${model.name} (${model.effort}) | ${model.weighted.toFixed(1)} | ${model.errorPercent.toFixed(0)}% | $${model.benchmark.costPer1k.toFixed(2)} | ${(model.benchmark.secondsPer1k / 60).toFixed(1)} min |`);
     }
     lines.push('', ...report.limitations.map(text => '- ' + text), '', ...report.adjustments.map(change => 'Protocol adjustment: ' + change.reason), '',
-        `Total new spending: $${report.spent.toFixed(6)}, including quality reviews. Raw requests and responses: outputs/summary-additions/.`, '');
+        `Total new spending: $${report.spent.toFixed(6)}, including quality reviews. Raw requests and responses: ${path.relative(process.cwd(), root).replaceAll('\\', '/')}/.`, '');
     return lines.join('\n');
 }
 function main() {
     const root = path.resolve(process.argv.find(arg => arg.startsWith('--out-dir='))?.slice(10) || 'outputs/summary-additions');
     const report = buildReport(root);
     save(path.join(root, 'report.json'), report);
-    fs.writeFileSync(path.join(root, 'report.md'), markdown(report));
+    fs.writeFileSync(path.join(root, 'report.md'), markdown(report, root));
     if (process.argv.includes('--write-data')) {
         save('data/summary-additions.json', report);
-        fs.writeFileSync('docs/summary-additions.md', markdown(report));
+        fs.writeFileSync('docs/summary-additions.md', markdown(report, root));
     }
-    console.log(markdown(report));
+    console.log(markdown(report, root));
 }
 module.exports = { buildReport, markdown };
 if (require.main === module) main();

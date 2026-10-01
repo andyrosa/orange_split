@@ -19,13 +19,14 @@ const ADDITIONS = Object.freeze({
     sonnet55: { name: 'Claude Sonnet 5.5', effort: 'adaptive', model: 'anthropic/claude-sonnet-5.5', sampling: null, reasoning: null },
 });
 const MODELS = Object.keys(ADDITIONS);
-// Opus 5.5 rejects the synthesis schema's lookaround pattern (HTTP 400 from every provider, before generation).
+// Opus 5.5 and Sonnet 5.5 reject the synthesis schema's lookaround pattern (HTTP 400 from every provider,
+// before generation; Sonnet 5.5: "Invalid regex in pattern field: Quantifier '?' without preceding element").
 // The frozen core gets the production fix: the lookaround-free pattern OpenAI models already receive. Requests
-// for every model other than Opus 5.5 are unchanged.
+// for every other model are unchanged.
 const CORE_ADJUSTMENT = Object.freeze({
-    reason: 'Opus 5.5 rejects regex lookaround in the synthesis schema; it receives the lookaround-free pattern already sent to OpenAI models, as in production.',
+    reason: 'Opus 5.5 and Sonnet 5.5 reject regex lookaround in the synthesis schema; they receive the lookaround-free pattern already sent to OpenAI models, as in production.',
     find: "    if (!request.model.startsWith('openai/') || request.schema.name !== 'thread_synthesis') return request.schema.schema;",
-    replace: "    if (!(request.model.startsWith('openai/') || request.model === 'anthropic/claude-opus-5.5') || request.schema.name !== 'thread_synthesis') return request.schema.schema;",
+    replace: "    if (!(request.model.startsWith('openai/') || request.model === 'anthropic/claude-opus-5.5' || request.model === 'anthropic/claude-sonnet-5.5') || request.schema.name !== 'thread_synthesis') return request.schema.schema;",
 });
 function adjustCore(baseSource) {
     const occurrences = baseSource.split(CORE_ADJUSTMENT.find).length - 1;

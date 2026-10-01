@@ -33,9 +33,12 @@ test('summary details distinguish tied ranks, support errors and untested models
 });
 
 test('every summary row exposes the same matched quality and cost/time measurements as retained evidence', () => {
-    const matched = require('../data/summary-matched.json').models, added = require('../data/summary-additions.json').models;
+    const matched = require('../data/summary-matched.json').models, added = require('../data/summary-additions.json').models,
+        added2 = require('../data/summary-additions-2.json').models;
     assert.deepEqual(Object.keys(matched).filter(key => key in added), []);
-    const report = { models: { ...matched, ...added } };
+    assert.deepEqual(Object.keys(matched).filter(key => key in added2), []);
+    assert.deepEqual(Object.keys(added).filter(key => key in added2), []);
+    const report = { models: { ...matched, ...added, ...added2 } };
     assert.deepEqual(Object.keys(report.models).sort(), Object.keys(core.SUMMARY_MODELS).sort());
     assert.deepEqual(core.SUMMARY_METRIC_COLUMNS.map(([key]) => key), ['model', 'cost', 'time', 'summaryQuality', 'summaryErrors']);
     for (const [key, choice] of Object.entries(core.SUMMARY_MODELS)) {

@@ -67,7 +67,7 @@ function buildReport(root) {
             'Prices come from a later catalog snapshot than the matched experiment; costs use uncached token prices.'],
         models, reviews };
 }
-function markdown(report) {
+function markdown(report, root) {
     const lines = ['# Consolidation additions', '', report.method, '',
         '| Model | Cost / 1k comments | Minutes / 1k comments | Two-sided / 1k comments | Axes flagged | Candidates preserved |',
         '| --- | ---: | ---: | ---: | ---: | ---: |'];
@@ -76,19 +76,19 @@ function markdown(report) {
         lines.push(`| ${model.name} (${model.effort}) | $${b.costPer1k.toFixed(2)} | ${(b.secondsPer1k / 60).toFixed(1)} | ${(1000 * b.twoSided / b.comments).toFixed(1)} | ${(100 * r.flaggedAxes / b.axes).toFixed(1)}% (${r.flaggedAxes}/${b.axes}) | ${(100 * r.fullyPreserved / (r.candidates - r.excluded)).toFixed(1)}% (${r.fullyPreserved}/${r.candidates - r.excluded}) |`);
     }
     lines.push('', ...report.limitations.map(text => '- ' + text), '',
-        `Completed ${report.completedAt}. Evaluation spend: $${report.spent.toFixed(6)}. Raw requests and responses: outputs/consolidation-additions/.`, '');
+        `Completed ${report.completedAt}. Evaluation spend: $${report.spent.toFixed(6)}. Raw requests and responses: ${path.relative(process.cwd(), root).replaceAll('\\', '/')}/.`, '');
     return lines.join('\n');
 }
 function main() {
     const root = path.resolve(process.argv.find(a => a.startsWith('--out-dir='))?.slice(10) || 'outputs/consolidation-additions');
     const report = buildReport(root);
     fs.writeFileSync(path.join(root, 'report.json'), JSON.stringify(report, null, 2) + '\n');
-    fs.writeFileSync(path.join(root, 'report.md'), markdown(report));
+    fs.writeFileSync(path.join(root, 'report.md'), markdown(report, root));
     if (process.argv.includes('--write-data')) {
         fs.writeFileSync('data/consolidation-additions.json', JSON.stringify(report, null, 2) + '\n');
-        fs.writeFileSync('docs/consolidation-additions.md', markdown(report));
+        fs.writeFileSync('docs/consolidation-additions.md', markdown(report, root));
     }
-    console.log(markdown(report));
+    console.log(markdown(report, root));
 }
 module.exports = { buildReport, markdown, BASE_DIR };
 if (require.main === module) main();
