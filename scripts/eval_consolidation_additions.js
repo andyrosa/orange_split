@@ -10,10 +10,12 @@ const BASE_DIR = 'outputs/consolidation-matched-eight';
 const BUDGET_USD = 5;
 const SCORING_CONCURRENCY = 10;
 // The added consolidation profiles. Sampling and reasoning follow the providers' accepted parameters:
-// GPT-6 Sol takes seed and a reasoning effort; Opus 5.5 runs adaptive like Opus 5.
+// GPT-6.1 Sol takes seed and a reasoning effort like GPT-6 Sol; Sonnet 5.5 runs adaptive like Sonnet 5.
+// The first additions pair (GPT-6 Sol, Opus 5.5) is complete in outputs/consolidation-additions and
+// data/consolidation-additions.json; rebuilding its report needs that pair restored here.
 const ADDITIONS = Object.freeze({
-    sol6Low: { name: 'GPT-6 Sol', effort: 'low', model: 'openai/gpt-6-sol', sampling: 'seedOnly', reasoning: { effort: 'low' } },
-    opus55: { name: 'Claude Opus 5.5', effort: 'adaptive', model: 'anthropic/claude-opus-5.5', sampling: null, reasoning: null },
+    sol61Low: { name: 'GPT-6.1 Sol', effort: 'low', model: 'openai/gpt-6.1-sol', sampling: 'seedOnly', reasoning: { effort: 'low' } },
+    sonnet55: { name: 'Claude Sonnet 5.5', effort: 'adaptive', model: 'anthropic/claude-sonnet-5.5', sampling: null, reasoning: null },
 });
 const MODELS = Object.keys(ADDITIONS);
 const read = file => JSON.parse(fs.readFileSync(file, 'utf8'));

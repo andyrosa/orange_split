@@ -6,19 +6,19 @@ const { readPage } = require('../scripts/load_core');
 function storageHarness(snapshots = []) {
     const source = readPage();
     const elements = Object.fromEntries([
-        'cachedCallCount', 'cachedThreadsToggle', 'cachedResultCount', 'cachedDateRange',
-        'cachedThreadsList', 'exportCache', 'deleteCached',
+        'cachedCallCount', 'cachedThreadsToggle', 'cachedResultsToggle', 'cachedDateRange',
+        'cachedThreadsList', 'cachedResultsList', 'exportCache', 'deleteCached',
     ].map(name => [name, { replaceChildren() {}, setAttribute() {} }]));
     const sandbox = {
         elements,
-        CONSTANTS: { THREAD_KEY_PREFIX: 'thread:' },
+        CONSTANTS: { THREAD_KEY_PREFIX: 'thread:', RESULT_KEY_PREFIX: 'result:' },
         snapshotStore: {
             keys: () => snapshots.map((_, index) => `thread:${index}`),
             get: id => snapshots[Number(id)],
             count: () => snapshots.length,
         },
         cacheStore: { count: () => 2502 },
-        resultStore: { count: () => 13 },
+        resultStore: { count: () => 13, keys: () => [] },
         storedThread: () => ({ title: 'Example', commentCount: 10 }),
         formatLocalDateTime: value => value,
         makeElement: () => ({ addEventListener() {}, appendChild() {} }),
@@ -41,7 +41,7 @@ test('cache summary shows snapshot extremes in local YYYY/MM/DD HH:mm and keeps 
     const page = storageHarness(snapshots);
     page.refreshStorageInfo();
     const { elements } = page;
-    const summary = `Cached locally: ${elements.cachedThreadsToggle.textContent}, ${elements.cachedCallCount.textContent}, ${elements.cachedResultCount.textContent}${elements.cachedDateRange.textContent}`;
+    const summary = `Cached locally: ${elements.cachedThreadsToggle.textContent}, ${elements.cachedCallCount.textContent}, ${elements.cachedResultsToggle.textContent}${elements.cachedDateRange.textContent}`;
     assert.equal(summary, 'Cached locally: 29 threads, 2502 AI calls, 13 summaries 2026/09/02 19:21 to 2026/09/12 09:04');
     assert.equal(elements.exportCache.disabled, false);
     assert.equal(elements.deleteCached.hidden, false);
@@ -69,7 +69,7 @@ test('cache summary labels handle singular and zero counts', () => {
         page.resultStore.count = () => count;
         page.refreshStorageInfo();
         assert.equal(page.elements.cachedCallCount.textContent, `${count} AI call${count === 1 ? '' : 's'}`);
-        assert.equal(page.elements.cachedResultCount.textContent, `${count} ${count === 1 ? 'summary' : 'summaries'}`);
+        assert.equal(page.elements.cachedResultsToggle.textContent, `${count} ${count === 1 ? 'summary' : 'summaries'}`);
     }
 });
 

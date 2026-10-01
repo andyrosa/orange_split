@@ -1906,10 +1906,10 @@ test('buildStageConfig merges one volume choice with one consolidation choice', 
 test('option labels are built from the entry constants and quality record', () => {
     const haiku = core.VOLUME_MODELS.haiku;
     const usd = (haiku.usdPerMillionChars * core.CHARS_PER_COMMENT / 1000).toFixed(2);
-    assert.equal(haiku.label, `Claude Haiku 4.5: $${usd} and ${core.formatDuration(haiku.secondsPerMillionChars * core.CHARS_PER_COMMENT / 1000)} per 1000 comments. 0.5 stances per comment; 3.5 two-sided rows per 100 comments; 59% of stances held under blind review, 12% wrong; clean output.`);
+    assert.equal(haiku.label, `Claude Haiku 4.5 (none): $${usd} and ${core.formatDuration(haiku.secondsPerMillionChars * core.CHARS_PER_COMMENT / 1000)} per 1000 comments. 0.5 stances per comment; 3.5 two-sided rows per 100 comments; 59% of stances held under blind review, 12% wrong; clean output.`);
     const sonnet = { ...core.CONSOLIDATION_MODELS.sonnet5, usdPerMillionChars: 1.733, secondsPerMillionChars: 600,
         quality: { twoSidedPercent: [81.82], runs: '5 threads', note: 'Example review evidence' } };
-    assert.equal(core.consolidationLabel(sonnet), 'Claude Sonnet 5: $0.55 and 3 minutes per 1000 comments. 81.82% of axes two-sided across 5 threads; Example review evidence.');
+    assert.equal(core.consolidationLabel(sonnet), 'Claude Sonnet 5 (adaptive): $0.55 and 3 minutes per 1000 comments. 81.82% of axes two-sided across 5 threads; Example review evidence.');
     const withoutNote = { ...sonnet, quality: { twoSidedPercent: [56] } };
     assert.equal(core.consolidationLabel(withoutNote).endsWith('. 56% of axes two-sided.'), true, 'no note, no runs');
 });

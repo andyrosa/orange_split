@@ -12,9 +12,11 @@ const BASE_DIR = 'outputs/summary-matched';
 const BUDGET_USD = 8;
 const REVIEW_CONCURRENCY = 1;
 // The same added profiles as the consolidation additions; the summary role reuses them.
+// The first additions pair (GPT-6 Sol, Opus 5.5) is complete in outputs/summary-additions and
+// data/summary-additions.json; rebuilding its report needs that pair restored here.
 const ADDITIONS = Object.freeze({
-    sol6Low: { name: 'GPT-6 Sol', effort: 'low', model: 'openai/gpt-6-sol', sampling: 'seedOnly', reasoning: { effort: 'low' } },
-    opus55: { name: 'Claude Opus 5.5', effort: 'adaptive', model: 'anthropic/claude-opus-5.5', sampling: null, reasoning: null },
+    sol61Low: { name: 'GPT-6.1 Sol', effort: 'low', model: 'openai/gpt-6.1-sol', sampling: 'seedOnly', reasoning: { effort: 'low' } },
+    sonnet55: { name: 'Claude Sonnet 5.5', effort: 'adaptive', model: 'anthropic/claude-sonnet-5.5', sampling: null, reasoning: null },
 });
 const MODELS = Object.keys(ADDITIONS);
 // Opus 5.5 rejects the synthesis schema's lookaround pattern (HTTP 400 from every provider, before generation).

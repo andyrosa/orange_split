@@ -18,7 +18,13 @@ async function sentSynthesisPattern(model) {
 
 test('Opus 5.5 receives the lookaround-free synthesis pattern; other Anthropic models keep the full pattern', async () => {
     assert.equal((await sentSynthesisPattern('anthropic/claude-opus-5.5')).includes('(?'), false);
-    for (const model of ['anthropic/claude-opus-5', 'anthropic/claude-sonnet-5', 'anthropic/claude-fable-5.1']) {
+    for (const model of ['anthropic/claude-opus-5', 'anthropic/claude-sonnet-5', 'anthropic/claude-sonnet-5.5', 'anthropic/claude-fable-5.1']) {
         assert.equal(await sentSynthesisPattern(model), core.SYNTHESIS_SCHEMA.schema.properties.sections.items.properties.text.pattern, model);
+    }
+});
+
+test('OpenAI models, GPT-6.1 Sol included, receive the lookaround-free synthesis pattern', async () => {
+    for (const model of ['openai/gpt-6-sol', 'openai/gpt-6.1-sol']) {
+        assert.equal((await sentSynthesisPattern(model)).includes('(?'), false, model);
     }
 });

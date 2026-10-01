@@ -36,7 +36,7 @@ test('compact model pickers retain metrics, selection events and keyboard contro
     pickers[2].metrics = choice => core.summaryMetrics(choice, pickers[1].select.value, pickers[0].select.value);
     const selectedQuality = () => core.summaryQualityText(pickers[2].choices[pickers[2].select.value], pickers[1].select.value, pickers[0].select.value);
     const sandbox = { document, makeElement, Event, modelPickers: pickers, summaryQualityText: core.summaryQualityText,
-        perThousandCommentsRates: core.perThousandCommentsRates,
+        perThousandCommentsRates: core.perThousandCommentsRates, modelDisplayName: core.modelDisplayName,
         elements: { volumeModel: pickers[0].select, consolidationModel: pickers[1].select, summaryModel: pickers[2].select,
             summaryQualityLabel: new Element(), summaryQualityScores: new Element(), summaryQualityMethod: new Element() } };
     const start = source.indexOf('function renderModelGrid(');
@@ -57,7 +57,7 @@ test('compact model pickers retain metrics, selection events and keyboard contro
         });
         sandbox.initializeModelPicker(picker);
         if (picker === pickers[2]) assert.equal(sandbox.elements.summaryQualityLabel.textContent, selectedQuality().label);
-        assert.equal(picker.button.textContent, picker.choices[picker.select.value].name);
+        assert.equal(picker.button.textContent, core.modelDisplayName(picker.choices[picker.select.value]));
         assert.equal(picker.options.hidden, true);
         assert.equal(picker.options.children[0], picker.header);
         assert.equal(picker.header.children.length, picker.columns.length);
@@ -81,7 +81,7 @@ test('compact model pickers retain metrics, selection events and keyboard contro
             assert.equal(sandbox.elements.summaryQualityScores.textContent, quality.scores);
             assert.equal(sandbox.elements.summaryQualityMethod.textContent, quality.method);
         }
-        assert.equal(picker.button.textContent, picker.choices[picker.select.value].name);
+        assert.equal(picker.button.textContent, core.modelDisplayName(picker.choices[picker.select.value]));
         assert.equal(options[1].getAttribute('aria-selected'), 'true');
         assert.equal(picker.options.hidden, true);
         assert.equal(document.activeElement, picker.button);

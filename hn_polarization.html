@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-EbrCwe4Sj7tVNHVeAjNI39QG65vwm8jt7vrxWLQFa/U=' 'sha256-nftCwfZZNnppLSCIPysGfXGtsf4WqzqbCVTIHHMF0G4='; style-src 'sha256-vsUkom2Dud9bUYKsSLUxZbQefZM1pTL+Qj/hGxsWQpQ='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-aRUcLcXQolKx+CtlvD4lPG3QDfQTQjJOWYeZk4gVeNo=' 'sha256-jIuFtIxKzy9F8sy1Hk5Kf3ISbv5K5i8AxzQcm0FLP8Q='; style-src 'sha256-li0rSkU8O04KVy33LfUv05EePim8zmLrCbOJxja23xY='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
 <title>Orange Split - For and Against on Hacker News</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EOS%3C/text%3E%3C/svg%3E">
 <style>
@@ -55,12 +55,12 @@ input[type="number"] { width: 5em; }
     .story-title { min-width: 0; }
     .story-detail { line-height: 1.4; }
 }
-#cached-threads-toggle { border: 0; background: none; color: #0645ad; cursor: pointer; font: inherit; margin: 0; padding: 0; text-decoration: underline; }
-#cached-threads-toggle:disabled { color: #666; cursor: default; text-decoration: none; }
-#cached-threads-list { margin: -0.5rem 0 1rem; padding-left: 1.5rem; }
-#cached-threads-list li { margin: 0.25rem 0; }
-#cached-threads-list button { border: 0; background: none; color: #0645ad; cursor: pointer; font: inherit; margin: 0; padding: 0; text-align: left; text-decoration: underline; }
-#cached-threads-list button:disabled { color: #666; cursor: default; }
+#cached-threads-toggle, #cached-results-toggle { border: 0; background: none; color: #0645ad; cursor: pointer; font: inherit; margin: 0; padding: 0; text-decoration: underline; }
+#cached-threads-toggle:disabled, #cached-results-toggle:disabled { color: #666; cursor: default; text-decoration: none; }
+#cached-threads-list, #cached-results-list { margin: -0.5rem 0 1rem; padding-left: 1.5rem; }
+#cached-threads-list li, #cached-results-list li { margin: 0.25rem 0; }
+#cached-threads-list button, #cached-results-list button { border: 0; background: none; color: #0645ad; cursor: pointer; font: inherit; margin: 0; padding: 0; text-align: left; text-decoration: underline; }
+#cached-threads-list button:disabled, #cached-results-list button:disabled { color: #666; cursor: default; }
 input[type="range"] { width: 8rem; vertical-align: middle; }
 #share { accent-color: #b91c1c; }
 #share.full-share { accent-color: #15803d; }
@@ -233,7 +233,7 @@ button { margin-right: 0.5rem; }
 <label>OpenRouter key <input id="api-key" type="password" autocomplete="off"></label> <label><input id="remember-key" type="checkbox"> Remember pasted key</label> <button id="connect-openrouter" type="button" hidden>Sign in with OpenRouter instead</button>
 </p>
 <p>
-<span id="storage-info">Cached locally: <button id="cached-threads-toggle" type="button" aria-expanded="false" aria-controls="cached-threads-list"></button>, <span id="cached-call-count"></span>, <span id="cached-result-count" title="Finished runs stored for immediate page restoration"></span><span id="cached-date-range" title="Earliest and latest thread snapshot fetch times, in local time"></span></span>
+<span id="storage-info">Cached locally: <button id="cached-threads-toggle" type="button" aria-expanded="false" aria-controls="cached-threads-list"></button>, <span id="cached-call-count"></span>, <button id="cached-results-toggle" type="button" aria-expanded="false" aria-controls="cached-results-list" title="Finished runs stored for immediate page restoration; selecting one restores its models, share and budget"></button><span id="cached-date-range" title="Earliest and latest thread snapshot fetch times, in local time"></span></span>
 <button id="export-cache" type="button">Export</button>
 <button id="import-cache" type="button">Import</button>
 <input id="import-cache-file" type="file" accept=".json,application/json" hidden>
@@ -241,6 +241,7 @@ button { margin-right: 0.5rem; }
 <span id="key-stored" hidden>OpenRouter key <button id="wipe-key" type="button">Delete</button></span>
 </p>
 <ul id="cached-threads-list" hidden></ul>
+<ul id="cached-results-list" hidden></ul>
 <div id="status"></div>
 <details id="warnings" hidden><summary></summary><ul></ul></details>
 <div id="results"></div>
@@ -284,8 +285,10 @@ const CONSTANTS = Object.freeze({
 // null omits the field from the request.
 //
 // The cost and time rates are per million characters of comment text, framing included, from measured
-// runs on a 1300-comment thread (about 412k characters), a 484-comment thread (about 132k), and a
-// 38-comment thread; both cost and wall time scaled with the characters in those runs, consolidation
+// runs on thread 49525378 at a 1300-comment snapshot (about 412k characters), thread 49537553 at a
+// 484-comment snapshot (about 132k; later refrozen at 592 comments as the volume-addition fixture), and
+// a 38-comment timing probe whose thread id was not recorded; both cost and wall time scaled with the
+// characters in those runs, consolidation
 // included, since its thinking grows with the number of candidates. minimumSeconds is the latency of one
 // call of the model in its role, the floor for a stage no matter how small the thread.
 const SAMPLING_SEED = 12345;
@@ -604,9 +607,15 @@ function perThousandCommentsText(choice) {
 }
 
 // The name, the rates, then the quality parts and the note when the entry has one.
+// The model name a person sees anywhere outside the picker grids, which have their own reasoning column:
+// the effort distinguishes entries that share a model, such as GPT-5.6 Luna low and max consolidation.
+function modelDisplayName(choice) {
+    return choice.effort === 'default' ? choice.name : `${choice.name} (${choice.effort})`;
+}
+
 function optionLabel(choice, qualityParts) {
     const parts = choice.quality.note ? [...qualityParts, choice.quality.note] : qualityParts;
-    return `${choice.name}: ${perThousandCommentsText(choice)}. ${parts.join('; ')}.`;
+    return `${modelDisplayName(choice)}: ${perThousandCommentsText(choice)}. ${parts.join('; ')}.`;
 }
 
 // Extraction and scoring: stances per comment, two-sided rows per 100 comments, the blind-review shares
@@ -664,7 +673,7 @@ function consolidationMetrics(choice) {
     const benchmark = quality.benchmark;
     const review = benchmark?.review;
     return {
-        model: choice.effort === 'default' ? choice.name : `${choice.name} (${choice.effort})`,
+        model: modelDisplayName(choice),
         reasoning: choice.effort,
         cost: `$${usd.toFixed(2)}`,
         time: (seconds / 60).toFixed(1),
@@ -688,7 +697,7 @@ function summaryLabel(choice) {
 
 function summaryMetrics(choice) {
     const q = choice.summaryQuality, rates = perThousandCommentsRates(choice);
-    return { model: choice.effort === 'default' ? choice.name : `${choice.name} (${choice.effort})`,
+    return { model: modelDisplayName(choice),
         summaryQuality: q.weighted.toFixed(1), summaryErrors: `${q.errorPercent.toFixed(0)}%`,
         cost: `$${rates.usd.toFixed(2)}`, time: (rates.seconds / 60).toFixed(1),
     };
@@ -2975,7 +2984,7 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        CONSTANTS, DEFAULT_CONFIG, VOLUME_MODELS, CONSOLIDATION_MODELS, SUMMARY_MODELS, DEFAULT_VOLUME_KEY, DEFAULT_CONSOLIDATION_KEY, DEFAULT_SUMMARY_KEY, volumeLabel, VOLUME_METRIC_COLUMNS, volumeMetrics, CONSOLIDATION_METRIC_COLUMNS, consolidationMetrics, consolidationLabel, summaryQualityText, SUMMARY_METRIC_COLUMNS, summaryMetrics, CHARS_PER_COMMENT,
+        CONSTANTS, DEFAULT_CONFIG, VOLUME_MODELS, CONSOLIDATION_MODELS, SUMMARY_MODELS, DEFAULT_VOLUME_KEY, DEFAULT_CONSOLIDATION_KEY, DEFAULT_SUMMARY_KEY, modelDisplayName, volumeLabel, VOLUME_METRIC_COLUMNS, volumeMetrics, CONSOLIDATION_METRIC_COLUMNS, consolidationMetrics, consolidationLabel, summaryQualityText, SUMMARY_METRIC_COLUMNS, summaryMetrics, CHARS_PER_COMMENT,
         roleChoice, buildStageConfig, combinedRate, estimateRunSeconds, applyToAllStages, stepMinComments, perThousandCommentsRates,
         isArticle, isArticleId, createArticleSource, sourceFromSnapshot, parseArticlePreparation, buildArticlePrepareMessages, parseAxisReview, parseSynthesisReview, estimateSourceRun, ARTICLE_MAX_CHARS,
         stripHtml, flattenThread, makeExtractBatches, makeScoreBatches, seededShuffle,
@@ -3211,7 +3220,8 @@ const elements = {
     cachedCallCount: document.getElementById('cached-call-count'),
     cachedThreadsToggle: document.getElementById('cached-threads-toggle'),
     cachedThreadsList: document.getElementById('cached-threads-list'),
-    cachedResultCount: document.getElementById('cached-result-count'),
+    cachedResultsToggle: document.getElementById('cached-results-toggle'),
+    cachedResultsList: document.getElementById('cached-results-list'),
     cachedDateRange: document.getElementById('cached-date-range'),
     exportCache: document.getElementById('export-cache'),
     importCache: document.getElementById('import-cache'),
@@ -3569,7 +3579,7 @@ function setRunning() {
     elements.exportCache.disabled = isBusy || cacheStore.count() + snapshotStore.count() + resultStore.count() === 0;
     elements.importCache.disabled = isBusy;
     elements.deleteCached.disabled = isBusy;
-    for (const button of elements.cachedThreadsList.querySelectorAll('button')) {
+    for (const button of [...elements.cachedThreadsList.querySelectorAll('button'), ...elements.cachedResultsList.querySelectorAll('button')]) {
         button.disabled = isBusy;
     }
     refreshRunButton();
@@ -3589,6 +3599,66 @@ function counted(count, singular, plural = `${singular}s`) {
 function closeCachedThreads() {
     elements.cachedThreadsList.hidden = true;
     elements.cachedThreadsToggle.setAttribute('aria-expanded', 'false');
+}
+
+function closeCachedResults() {
+    elements.cachedResultsList.hidden = true;
+    elements.cachedResultsToggle.setAttribute('aria-expanded', 'false');
+}
+
+// Writes a stored result's selection into the model pickers and the Max cost box, so the controls agree
+// with the result about to be shown. The share slider is set by loadThreadFromPage from the same selection.
+function applyRunSelection(selection) {
+    elements.maxCost.value = selection.budget;
+    elements.volumeModel.value = selection.volume;
+    elements.consolidationModel.value = selection.consolidation;
+    elements.summaryModel.value = selection.summary ?? selection.consolidation;
+    for (const picker of modelPickers) {
+        syncModelPicker(picker);
+    }
+}
+
+// A stored result is listed only while its selection still names known model keys; a result saved under
+// a model key this page version no longer defines stays stored but cannot be restored, so it is not shown.
+function restorableResultRecords() {
+    const records = [];
+    for (const fullKey of resultStore.keys()) {
+        const record = resultStore.get(fullKey.slice(CONSTANTS.RESULT_KEY_PREFIX.length));
+        if (record === null || record.version !== RESULT_CACHE_VERSION || record.result === undefined
+            || !Array.isArray(record.comments) || record.selection === undefined) continue;
+        const selection = record.selection;
+        if (!Object.hasOwn(VOLUME_MODELS, selection.volume) || !Object.hasOwn(CONSOLIDATION_MODELS, selection.consolidation)
+            || !Object.hasOwn(SUMMARY_MODELS, selection.summary ?? selection.consolidation)) continue;
+        records.push(record);
+    }
+    return records.sort((left, right) => String(right.savedAt).localeCompare(String(left.savedAt)));
+}
+
+function renderCachedResults() {
+    const rows = restorableResultRecords().map(record => {
+        const selection = record.selection;
+        const title = storedThread(selection.article)?.title
+            ?? (isArticleId(selection.article) ? 'Pasted article' : `Thread ${selection.article}`);
+        const models = [VOLUME_MODELS[selection.volume], CONSOLIDATION_MODELS[selection.consolidation],
+            SUMMARY_MODELS[selection.summary ?? selection.consolidation]].map(modelDisplayName).join(' / ');
+        const item = makeElement('li');
+        const button = makeElement('button', { text: `${title} (${models}, ${selection.share}% share, saved ${formatLocalDateTime(record.savedAt)})` });
+        button.type = 'button';
+        button.disabled = activeController !== null;
+        button.addEventListener('click', () => {
+            closeCachedResults();
+            applyRunSelection(selection);
+            loadThreadFromPage(selection.article, { share: selection.share, runSelection: selection,
+                cachedResult: record.result, cachedComments: record.comments });
+        });
+        item.appendChild(button);
+        return item;
+    });
+    elements.cachedResultsList.replaceChildren(...rows);
+    elements.cachedResultsToggle.disabled = rows.length === 0;
+    if (rows.length === 0) {
+        closeCachedResults();
+    }
 }
 
 function cachedSnapshotDateRange(records) {
@@ -3651,8 +3721,9 @@ function refreshStorageInfo() {
     elements.cachedCallCount.textContent = counted(cachedCalls, 'AI call');
     const hasArticles = snapshotStore.keys().some(key => snapshotStore.get(key.slice(CONSTANTS.THREAD_KEY_PREFIX.length))?.source?.kind === 'article');
     elements.cachedThreadsToggle.textContent = counted(storedThreads, hasArticles ? 'source' : 'thread');
-    elements.cachedResultCount.textContent = counted(storedResults, 'summary', 'summaries');
+    elements.cachedResultsToggle.textContent = counted(storedResults, 'summary', 'summaries');
     renderCachedThreads();
+    renderCachedResults();
     elements.exportCache.disabled = activeController !== null || importActive || cachedCalls + storedThreads + storedResults === 0;
     elements.deleteCached.hidden = cachedCalls === 0 && storedThreads === 0 && storedResults === 0;
 }
@@ -3814,7 +3885,7 @@ function focusModelOption(picker, offset) {
 
 function syncModelPicker(picker) {
     const selected = picker.choices[picker.select.value];
-    picker.button.textContent = selected.name;
+    picker.button.textContent = modelDisplayName(selected);
     const roleName = picker.select === elements.volumeModel ? 'Extraction and scoring' : picker.select === elements.consolidationModel ? 'Consolidation' : 'Summary';
     picker.button.title = `${roleName}: ${selected.label}`;
     if (picker.select === elements.summaryModel) {
@@ -4830,8 +4901,15 @@ elements.deleteCached.addEventListener('click', async () => {
 elements.loadThread.addEventListener('click', loadThreadFromBox);
 elements.cachedThreadsToggle.addEventListener('click', () => {
     const opening = elements.cachedThreadsList.hidden;
+    closeCachedResults();
     elements.cachedThreadsList.hidden = !opening;
     elements.cachedThreadsToggle.setAttribute('aria-expanded', String(opening));
+});
+elements.cachedResultsToggle.addEventListener('click', () => {
+    const opening = elements.cachedResultsList.hidden;
+    closeCachedThreads();
+    elements.cachedResultsList.hidden = !opening;
+    elements.cachedResultsToggle.setAttribute('aria-expanded', String(opening));
 });
 let articleModeSelected = false;
 let renderedArticle = null;
