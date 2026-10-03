@@ -6,8 +6,8 @@ const { readPage } = require('../scripts/load_core');
 function storageHarness(snapshots = []) {
     const source = readPage();
     const elements = Object.fromEntries([
-        'cachedCallCount', 'cachedThreadsToggle', 'cachedResultsToggle', 'cachedDateRange',
-        'cachedThreadsList', 'cachedResultsList', 'exportCache', 'deleteCached',
+        'cachedCallCount', 'cachedResultsToggle', 'cachedDateRange',
+        'cachedResultsList', 'exportCache', 'deleteCached',
     ].map(name => [name, { replaceChildren() {}, setAttribute() {} }]));
     const sandbox = {
         elements,
@@ -41,11 +41,12 @@ test('cache summary shows snapshot extremes in local YYYY/MM/DD HH:mm and keeps 
     const page = storageHarness(snapshots);
     page.refreshStorageInfo();
     const { elements } = page;
-    const summary = `Cached locally: ${elements.cachedThreadsToggle.textContent}, ${elements.cachedCallCount.textContent}, ${elements.cachedResultsToggle.textContent}${elements.cachedDateRange.textContent}`;
-    assert.equal(summary, 'Cached locally: 29 threads, 2502 AI calls, 13 summaries 2026/09/02 19:21 to 2026/09/12 09:04');
+    const summary = `Cached locally: ${elements.cachedCallCount.textContent}, ${elements.cachedResultsToggle.textContent}${elements.cachedDateRange.textContent}`;
+    assert.equal(summary, 'Cached locally: 2502 AI calls, 13 summaries 2026/09/02 19:21 to 2026/09/12 09:04');
     assert.equal(elements.exportCache.disabled, false);
     assert.equal(elements.deleteCached.hidden, false);
-    assert.match(readPage(), /id="storage-info">Cached locally: /);
+    assert.match(readPage(), /id="storage-info">Cached locally: <span id="cached-call-count"><\/span>, <button id="cached-results-toggle"/);
+    assert.doesNotMatch(readPage(), /cached-threads/);
     assert.match(readPage(), /id="cached-date-range"[^>]*><\/span><\/span>/);
     assert.match(readPage(), /cachedDateRange: document\.getElementById\('cached-date-range'\)/);
 });
@@ -58,8 +59,6 @@ test('cache summary updates its range after snapshots are removed', () => {
     snapshots.length = 0;
     page.refreshStorageInfo();
     assert.equal(page.elements.cachedDateRange.textContent, '');
-    assert.equal(page.elements.cachedThreadsToggle.textContent, '0 threads');
-    assert.equal(page.elements.cachedThreadsToggle.disabled, true);
 });
 
 test('cache summary labels handle singular and zero counts', () => {

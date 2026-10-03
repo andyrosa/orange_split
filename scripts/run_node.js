@@ -148,7 +148,9 @@ async function main() {
     process.stderr.write(articleFile ? `${thread.title} (complete article, ${thread.text.length} characters)\n` : `${thread.title} (${thread.comments.length} of ${fullThread.comments.length} comments)\n`);
 
     const cacheDirectory = readArgument('cache-dir');
-    const directCallChat = core.makeOpenRouterCallChat({ apiKey });
+    // runPipeline applies DEFAULT_CONFIG under these flags; the spending cap uses the same effective budget.
+    const budgetUsd = { ...core.DEFAULT_CONFIG, ...config }.budgetUsd;
+    const directCallChat = core.makeBudgetedCallChat(core.makeOpenRouterCallChat({ apiKey }), () => core.fetchModelPriceTable(globalThis.fetch), budgetUsd);
     const callChat = cacheDirectory ? core.makeCachedCallChat(directCallChat, makeFileStore(cacheDirectory)) : directCallChat;
 
     const startedAt = Date.now();

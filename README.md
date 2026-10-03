@@ -100,7 +100,7 @@ A final model synthesis leads with the main disagreements and their reasoning, i
 
 - No human review.
 - Models are called through OpenRouter. Defaults: GPT-5.6 Luna low for extraction and scoring, GPT-5.6 Sol low for consolidation, and GPT-6 Sol low for final synthesis.
-- A run stops scheduling calls when its spend reaches the Max cost box, default 1 dollar. Already in-flight calls finish and are accounted for; their charges can exceed that budget.
+- A run never spends past the Max cost box (default 1 dollar) on extraction and scoring calls, which run up to 30 at once. Before sending each of those calls, the page and runner reserve the most it can cost: its request bytes plus 4,096 at the higher of the input and cache-write prices, plus its output ceiling at the output price, from OpenRouter's model list; a model with a variable price, such as Jev Router, gets the highest listed price. The call is sent only while spent plus reserved stays within the budget. Consolidation, summary, and the article stages make one call at a time, whose worst case is far above its usual cost, so each is sent while spend is under the budget, and that one call can pass it. Cached calls reserve nothing. A refused call stops the run; finished calls stay cached, so a rerun with a higher Max cost does not pay for them again.
 - If OpenRouter omits `usage.cost`, the client reads the generation's billed `total_cost` from [generation metadata](https://openrouter.ai/docs/api/api-reference/generations/get-generation), with up to three reads (10-second timeout each) for delayed billing. It never substitutes zero or a price estimate. If billing remains unknown, new work stops, already in-flight calls finish and cache normally, and the raw response is saved for a same-settings retry that checks billing without repeating the paid generation. Unresolved responses are not free cache hits; recovered charges count toward the retry's budget. Reported spend excludes unresolved charges (explicitly warned). If storage fails, the error warns that reloading or starting another run can lose this protection.
 - Two runs on the same stored copy of a thread should produce similar top-20 lists.
 
@@ -183,20 +183,6 @@ node scripts/run_node.js --thread=49525378 [--key=sk-or-...] [--out=result.json]
 
 The key comes from `--key` or `OPENROUTER_API_KEY`. `--cache-dir` stores each finished call as a file and reuses it. `--thread-file` reads the thread from that file when it exists, else fetches and saves it, which keeps reruns comparable. `--config-file` is a JSON object of `DEFAULT_CONFIG` overrides; `--extraction`, `--consolidation`, `--scoring`, and `--summary` pick option entries by key, each setting only its own role's stages; `--model`, `--temperature`, and `--seed` apply to every stage; `--share` keeps the top N percent of comments; `--budget` sets the stop.
 
-## Astra low replay evaluation
-
-`scripts/eval_astra.js` compares three fresh Astra-low consolidations and summaries with an exact cached Sonnet baseline, without repeating extraction or scoring. It selects a current-format saved result only when both reconstructed requests match their original cached responses. A dry run prepares the frozen inputs and makes no API calls:
-
-```
-node scripts/eval_astra.js --cache=export.json --thread=22866284 --out-dir=outputs/astra-low
-node scripts/eval_astra.js --cache=export.json --thread=22866284 --out-dir=outputs/astra-low --run
-node scripts/eval_astra.js --cache=export.json --thread=22866284 --out-dir=outputs/astra-low --judge
-```
-
-Use the same cache, thread and output-directory flags on each command when overriding the defaults. Paid commands use `OPENROUTER_API_KEY` and only `openai/gpt-6-astra` with reasoning `low`. `--repeats=3` and `--budget=5` are the defaults; the budget stops new calls, but an in-flight call can exceed it. Separate sample files prevent repeats from hitting each other's response cache; rerunning in the same directory resumes completed attempts. Unknown billing or interrupted requests stop further spending. Input fixtures, responses, costs, elapsed times, validator results, anonymous judge mappings, and a Markdown report are saved under the ignored output directory.
-
-The optional judge uses Astra low, so its semantic grades are uncalibrated same-model assessments. This is a single-thread stage evaluation, not a measurement of new two-sided counts, full-pipeline accuracy, or independent human preference. Cached Sonnet timing is unavailable; historical costs and repeated-input Astra costs are not controlled cold-cache price measurements.
-
 ## Astra low: five-thread measurement
 
 This benchmark compares Astra low and Sonnet 5 pipelines. The selectors use separate matched experiments for [consolidation](docs/consolidation-matched.md) and [summary](docs/summary-matched.md).
@@ -214,29 +200,13 @@ The benchmark uses five frozen HN snapshots with Luna-low extraction and two-pas
 
 Astra's per-thread two-sided share is 65–85% rounded. More two-sided comparisons coexist with lower overall scoring agreement. Costs include the cached baseline's original billed work; this is not a controlled cold-cache comparison. Astra's consolidation/scoring/summary path took 48–103 seconds per thread at concurrency 10, with extraction replayed. Cached Sonnet timings are unavailable. Opus 5 independently reviewed anonymized consolidation and summary outputs against their supplied evidence. It favored Astra consolidation on all five threads; summaries split two wins each and one tie. These are model judgments, not human labels. The benchmark, independent reviews, and article smoke test cost $4.566884. These results do not establish an overall summary winner.
 
-Reproduction requires a cache export containing the five frozen snapshots and their cached Luna-low extraction responses, plus an OpenRouter key. Pass the export file with `--cache`, as shown here:
-
-```
-node scripts/benchmark_astra.js --cache=export.json --run
-node scripts/benchmark_astra.js --cache=export.json --judge
-node scripts/benchmark_astra.js --cache=export.json --article
-node scripts/report_astra_benchmark.js
-```
-
-The benchmark saves frozen sources, raw paid-call records and provider cache accounting, pipeline results, anonymous-review mappings, metrics, and a report under `outputs/astra-benchmark/`. `--thread=<id>` selects one of the five frozen threads; `--out-dir`, `--cache`, and `--page` override the defaults. The $15 default spending stop applies to new calls across the benchmark; calls already in flight can exceed it. Missing HN extraction is rejected instead of silently changing the input. Completed calls resume from cache. The synthetic article smoke exercises preparation, consolidation, axis review, scoring, summary and evidence review; it is excluded from HN metrics and is a functional check, not an article-quality benchmark.
-
 ## Matched summary quality in the selector
 
 All eight summary rows use one five-thread benchmark, with identical Sol-low consolidation and two-pass Luna-low scoring evidence. Quality /100, failed-or-major-error percentage, uncached cost per 1,000 comments, and service time per 1,000 comments appear directly in the alphabetized selector. Quality is weighted 60% faithfulness, 30% coverage and 10% clarity. An unavailable summary scores zero; the error percentage counts either a production failure after one repair or a reviewed major support error. Failures are not silently excluded or regenerated until successful.
 
 Each thread receives one Astra-high review of all eight anonymous attempts, against complete source comments and shared citation evidence. The report retains component grades, separate failure and major-error counts, per-thread evidence, request hashes and the frozen protocol. Five outputs per model and one model judge provide preliminary comparison, without a statistical rank. Astra also grades its own family. The benchmark uses fixed inputs and does not evaluate every runtime model combination.
 
-```powershell
-node scripts/eval_summary_matched.js --run
-node scripts/report_summary_matched.js --write-data
-```
-
-The runner freezes production code and inputs under `outputs/summary-matched`, reserves request cost ceilings within a $15 budget, and checkpoints paid responses to prevent duplicate billing on resume. Summary generation and reviews use five independent thread workers. Requests rejected before generation are resumable; unknown billing stops resumption. [Matched results](docs/summary-matched.md) and [retained evidence](data/summary-matched.json) are embedded in the page, so opening the selector makes no API calls.
+[Matched results](docs/summary-matched.md) and [retained evidence](data/summary-matched.json) are embedded in the page, so opening the selector makes no API calls.
 
 ## Astra/Sonnet pipeline summary evaluation
 
@@ -248,14 +218,7 @@ Astra high grades ten summaries from the five frozen HN threads, using the same 
 
 The policy is fixed before grading: faithfulness 60%, coverage 30%, clarity 10%, equally averaged across threads and order passes. Gaps under five points share a rank. A major support error in either order withholds a numeric rank, even if the average is high; if both models have major support errors, neither receives a numeric rank. Scores are reported even when ranks are withheld. This is a conservative practical rule, not a statistical significance claim. HN rankings do not establish article quality.
 
-Reproduce the evaluation from the cached five-thread benchmark artifacts:
-
-```powershell
-node scripts/eval_summary_quality.js --run
-node scripts/report_summary_quality.js
-```
-
-The evaluator uses `OPENROUTER_API_KEY`, caches exact requests and raw responses in `outputs/summary-quality`, and defaults to a $15 spending stop. One in-flight call can exceed the stop. Run without `--run` to rebuild from cached grades without new calls; unresolved requests stop resumption to avoid accidental duplicate billing. `--input`, `--out`, and `--budget` override the defaults. The report script retains compact results and evidence in [data/summary-quality.json](data/summary-quality.json) and [docs/summary-quality.md](docs/summary-quality.md). Numeric rubric grading uses the model-grader approach described in the [OpenAI grader documentation](https://developers.openai.com/api/reference/resources/graders); the rubric and ranking policy here are specific to this project.
+Compact results and evidence are in [data/summary-quality.json](data/summary-quality.json) and [docs/summary-quality.md](docs/summary-quality.md). Numeric rubric grading uses the model-grader approach described in the [OpenAI grader documentation](https://developers.openai.com/api/reference/resources/graders); the rubric and ranking policy here are specific to this project.
 
 ## Gemini 3.8 Flash standalone evaluation
 
@@ -263,13 +226,7 @@ Standalone results: faithfulness 74.5/100, coverage 68.5/100, clarity 89.7/100; 
 
 Gemini consolidation and summary can be evaluated alone on the five frozen snapshots listed in **Astra low: five-thread measurement**. Luna-low extraction is replayed; Gemini axes receive fresh two-pass Luna-low scoring. Each generated summary receives two separate Astra-high reviews against its complete source discussion, with no competing output or reference summary. Scores weight faithfulness 60%, coverage 30% and clarity 10%. No comparative rank is assigned.
 
-```powershell
-node scripts/benchmark_astra.js --candidate=geminiFlash --cache=export.json --run
-node scripts/eval_gemini_standalone.js --run
-node scripts/report_gemini_standalone.js
-```
-
-Generation defaults to `outputs/gemini-standalone`; grading defaults to `outputs/gemini-summary-quality`. Both scripts default to a $15 spending stop. Grading runs at most two calls concurrently, and in-flight calls can exceed the stop. Completed calls are cached; unfinished requests block resumption to avoid duplicate billing. Omitting `--run` on the grading script permits only cached replay. Five threads produce five summaries and ten reviews, not ten independently generated summaries. Compact measurements and cited issues are saved to [data/gemini-summary-quality.json](data/gemini-summary-quality.json) and the [standalone report](docs/gemini-summary-quality.md).
+Compact measurements and cited issues are in [data/gemini-summary-quality.json](data/gemini-summary-quality.json) and the [standalone report](docs/gemini-summary-quality.md).
 
 ## Controlled model comparison on thread 49537553
 
@@ -291,5 +248,3 @@ The `Pareto role` column evaluates full-thread and top-50% runs separately on th
 | Haiku 4.5 / Sonnet 5, top 50%               | 242      | 29         | 16   | 11        | 5       | 83 (0.34)                    | 0.54           | $0.29 | 126 s     | dominated, reduced coverage       |
 | Opus 5 / Sonnet 5                           | 484      | 134        | 85   | 63        | 22      | 354 (0.73)                   | 0.72           | $4.86 | 607 s     | highest quality                   |
 | Opus 5 / Sonnet 5, top 50%                  | 242      | 65         | 41   | 36        | 5       | 173 (0.71)                   | 0.81           | $2.75 | 316 s     | highest quality, reduced coverage |
-
-Run links include a `summary` model parameter. If it is omitted, the consolidation model is also used for summary. Each combination has a distinct result key.

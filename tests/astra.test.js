@@ -11,7 +11,7 @@ test('Astra API summary compatibility preserves prompts, schema identity and loc
         { id: 1, author: 'a', text: 'Adopt a four-day workweek.', parentId: null, depth: 0 },
         { id: 2, author: 'b', text: 'Keep a five-day workweek.', parentId: null, depth: 0 },
     ] };
-    const result = await core.runPipeline({ thread, config: { ...core.buildStageConfig('lunaLow', 'sonnet5'),
+    const result = await core.runPipeline({ thread, config: { ...core.buildRunConfig({ extraction: 'lunaLow', consolidation: 'sonnet5', scoring: 'lunaLow', summary: 'sonnet5' }),
         modelConsolidate: 'openai/gpt-6-astra', modelSynthesize: 'openai/gpt-6-astra',
         reasoningConsolidate: { effort: 'low' }, reasoningSynthesize: { effort: 'low' }, budgetUsd: 2 },
     onProgress() {}, callChat: async call => {
@@ -21,7 +21,7 @@ test('Astra API summary compatibility preserves prompts, schema identity and loc
         if (call.stage === 'score') json = { stances: [{ comment: 1, axis: 1, stance: call.meta.swapPoles ? 'B' : 'A' }, { comment: 2, axis: 1, stance: call.meta.swapPoles ? 'A' : 'B' }] };
         if (call.stage !== 'synthesize') return { json, usage: { cost: 0.01 } };
         originalRequests.push(JSON.stringify(call.schema));
-        json = { sections: [{ text: call.meta.formatRepair ? 'The voices disagree about the workweek[[axis:1]].' : 'word '.repeat(101) + 'claim[[axis:1]].', axisIds: [1] }], caveats: [] };
+        json = { sections: [{ text: call.meta.formatRepair ? 'The voices disagree about the workweek[[axis:1:A]].' : 'word '.repeat(101) + 'claim[[axis:1:A]].', axisIds: [1] }], caveats: [] };
         const response = await core.callOpenRouter({ apiKey: 'test', request: call, fetchImpl: async (url, options) => {
             const body = JSON.parse(options.body); sent.push(body);
             return { ok: true, status: 200, json: async () => ({ choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(json) } }], usage: { cost: 0.01 } }) };
@@ -43,7 +43,7 @@ test('Astra API summary compatibility preserves prompts, schema identity and loc
 });
 
 test('Astra selector choice keeps extraction/scoring on the chosen volume model', () => {
-    const cfg = core.buildStageConfig('lunaLow', 'astraLow');
+    const cfg = core.buildRunConfig({ extraction: 'lunaLow', consolidation: 'astraLow', scoring: 'lunaLow', summary: 'astraLow' });
     assert.equal(cfg.modelExtract, 'openai/gpt-5.6-luna');
     assert.equal(cfg.modelScore, 'openai/gpt-5.6-luna');
     assert.equal(cfg.modelConsolidate, 'openai/gpt-6-astra');
@@ -56,8 +56,12 @@ test('Astra selector choice keeps extraction/scoring on the chosen volume model'
     assert.match(display.twoSided, /%/);
     const volume = core.VOLUME_MODELS.opus5;
     const astra = core.CONSOLIDATION_MODELS.astraLow;
-    assert.equal(core.combinedRate('opus5', 'astraLow', 'usdPerMillionChars'),
-        volume.usdPerMillionChars + astra.usdPerMillionChars * volume.candidateFactor + core.SUMMARY_MODELS.astraLow.usdPerMillionChars);
-    assert.equal(core.estimateRunSeconds(0, 'lunaLow', 'astraLow'),
-        2 * core.VOLUME_MODELS.lunaLow.minimumSeconds + astra.minimumSeconds + core.SUMMARY_MODELS.astraLow.minimumSeconds);
+    // Extraction and scoring split one measured extraction-and-scoring rate by EXTRACTION_RATE_SHARE.
+    const share = core.EXTRACTION_RATE_SHARE;
+    assert.equal(core.combinedRate({ extraction: 'opus5', consolidation: 'astraLow', scoring: 'opus5', summary: 'astraLow' }, 'usdPerMillionChars'),
+        volume.usdPerMillionChars * share + volume.usdPerMillionChars * (1 - share) + astra.usdPerMillionChars * volume.candidateFactor + core.SUMMARY_MODELS.astraLow.usdPerMillionChars);
+    const keys = { extraction: 'lunaLow', consolidation: 'astraLow', scoring: 'lunaLow', summary: 'astraLow' };
+    const luna = core.VOLUME_MODELS.lunaLow.minimumSeconds;
+    assert.equal(core.estimateRunSeconds(0, keys, core.ALL_UNCACHED),
+        luna + astra.minimumSeconds + luna + core.SUMMARY_MODELS.astraLow.minimumSeconds);
 });

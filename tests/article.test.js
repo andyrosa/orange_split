@@ -23,7 +23,7 @@ const preparation = {
 };
 const axis = { statementA: 'Development should slow down.', statementB: 'Development should continue at its current pace.' };
 const incompatibleQuestion = { statementA: 'AI is not currently safe.', statementB: 'AI could become safe in the future.' };
-const summary = { sections: [{ text: 'The selected voices disagree about slowing development[[axis:1]].', axisIds: [1] }], caveats: ['This is a selected article, not a survey.'] };
+const summary = { sections: [{ text: 'The selected voices disagree about slowing development[[axis:1:A]].', axisIds: [1] }], caveats: ['This is a selected article, not a survey.'] };
 function fakeProvider(calls, override) {
     return async call => {
         calls.push(call);
@@ -49,7 +49,7 @@ const memoryStore = () => {
 
 test('mixed article pipeline sends axis review to consolidation and evidence review to summary', async () => {
     const calls = [];
-    const result = await run(fakeProvider(calls), article, core.buildStageConfig('lunaLow', 'geminiFlash', 'astraLow'));
+    const result = await run(fakeProvider(calls), article, core.buildRunConfig({ extraction: 'lunaLow', consolidation: 'geminiFlash', scoring: 'lunaLow', summary: 'astraLow' }));
     assert.ok(result.synthesis);
     for (const stage of ['consolidate', 'reviewAxes']) {
         assert.equal(calls.find(c => c.stage === stage).model, 'google/gemini-3.8-flash');
@@ -62,7 +62,7 @@ test('mixed article pipeline sends axis review to consolidation and evidence rev
 
 test('Astra selector settings reach article axis review, summary, and evidence review', async () => {
     const calls = [];
-    const result = await run(fakeProvider(calls), article, core.buildStageConfig('lunaLow', 'astraLow'));
+    const result = await run(fakeProvider(calls), article, core.buildRunConfig({ extraction: 'lunaLow', consolidation: 'astraLow', scoring: 'lunaLow', summary: 'astraLow' }));
     assert.ok(result.synthesis);
     for (const stage of ['consolidate', 'reviewAxes', 'synthesize', 'reviewSynthesis']) {
         const call = calls.find(call => call.stage === stage);
@@ -155,7 +155,7 @@ test('all article stages cache and probe without making calls; changed text miss
 
 test('a summary claiming nonexistent opposition is repaired and audited again, with no rescoring', async () => {
     const calls = [];
-    const repairedText = 'A corrected description of the supported views[[axis:1]].';
+    const repairedText = 'A corrected description of the supported views[[axis:1:A]].';
     const result = await run(fakeProvider(calls, call => {
         if (call.stage === 'reviewSynthesis') {
             const prior = calls.filter(c => c.stage === 'reviewSynthesis').length;
@@ -196,7 +196,7 @@ test('rejected semantic revisions are retried without paying for earlier stages 
     let fixed = false;
     const cached = core.makeCachedCallChat(fakeProvider(calls, call => {
         if (call.stage === 'reviewSynthesis') return { json: { valid: fixed && call.messages[1].content.includes('Corrected wording'), reason: 'Unsupported opposition' }, usage: { cost: 0.01 } };
-        if (call.stage === 'synthesize' && call.meta.evidenceRevision && fixed) return { json: { ...summary, sections: [{ text: 'Corrected wording about the positions[[axis:1]].', axisIds: [1] }] }, usage: { cost: 0.01 } };
+        if (call.stage === 'synthesize' && call.meta.evidenceRevision && fixed) return { json: { ...summary, sections: [{ text: 'Corrected wording about the positions[[axis:1:A]].', axisIds: [1] }] }, usage: { cost: 0.01 } };
     }), store);
     assert.equal((await run(cached)).synthesis, null);
     assert.equal((await core.probeCache({ thread: article, store })).complete, false);
@@ -244,7 +244,7 @@ test('a standalone soliloquy can retain a deliberated comparison as one middle v
         if (call.stage === 'extract') return { json: { candidates: [{ ...choice, commentsA: [], commentsB: [] }] }, usage: { cost: 0.01 } };
         if (call.stage === 'consolidate') return { json: { axes: [choice] }, usage: { cost: 0.01 } };
         if (call.stage === 'score') return { json: { stances: [{ comment: 1, axis: 1, stance: 'M' }] }, usage: { cost: 0.01 } };
-        if (call.stage === 'synthesize') return { json: { sections: [{ text: 'The speaker weighs continuing to suffer against dying, with uncertainty about death preventing a settled choice[[axis:1]].', axisIds: [1] }], caveats: [] }, usage: { cost: 0.01 } };
+        if (call.stage === 'synthesize') return { json: { sections: [{ text: 'The speaker weighs continuing to suffer against dying, with uncertainty about death preventing a settled choice[[axis:1:A]].', axisIds: [1] }], caveats: [] }, usage: { cost: 0.01 } };
     }), source);
     assert.equal(result.article.coverage, 'complete');
     assert.equal(result.comments[0].text, source.text);
@@ -289,9 +289,9 @@ test('updated article attribution misses old responses without invalidating HN r
     const probe = await core.probeCache({ thread: source, store });
     assert.equal(probe.complete, false);
     assert.deepEqual(probe.stages, [{ stage: 'prepare', hits: 0, total: 1 }]);
-    const selection = { article: source.id, snapshot: '2026-09-12T08:00:00.000Z', share: 100, volume: 'lunaLow', consolidation: 'sonnet5', budget: 1 };
+    const selection = { article: source.id, snapshot: '2026-09-12T08:00:00.000Z', share: 100, extraction: 'lunaLow', consolidation: 'sonnet5', scoring: 'lunaLow', summary: 'sonnet5', budget: 1 };
     assert.match(core.runResultCacheKey(selection), /&articleAnalysis=2$/);
-    assert.equal(core.runResultCacheKey({ ...selection, article: 123 }), 'article=123&snapshot=2026-09-12T08%3A00%3A00.000Z&share=100&volume=lunaLow&consolidation=sonnet5&budget=1');
+    assert.equal(core.runResultCacheKey({ ...selection, article: 123 }), 'article=123&snapshot=2026-09-12T08%3A00%3A00.000Z&share=100&extraction=lunaLow&consolidation=sonnet5&scoring=lunaLow&summary=sonnet5&budget=1');
     assert.ok(!core.makeRunPageUrl('https://example.test/', selection).includes('articleAnalysis'));
 });
 
@@ -302,7 +302,7 @@ test('a single-author essay counts one voice across multiple supporting passages
             { firstWord: 1, lastWord: 4, kind: 'author', speakerId: 0 },
             { firstWord: 5, lastWord: 8, kind: 'author', speakerId: 0 },
         ] }, usage: { cost: 0.01 } };
-        if (call.stage === 'synthesize') return { json: { sections: [{ text: 'The author supports slowing development to allow safety work[[axis:1]].', axisIds: [1] }], caveats: [] }, usage: { cost: 0.01 } };
+        if (call.stage === 'synthesize') return { json: { sections: [{ text: 'The author supports slowing development to allow safety work[[axis:1:A]].', axisIds: [1] }], caveats: [] }, usage: { cost: 0.01 } };
     }), source);
     assert.equal(result.stats.authors, 1);
     assert.equal(result.stats.comments, 2);
@@ -310,9 +310,9 @@ test('a single-author essay counts one voice across multiple supporting passages
 });
 
 test('pasted article URLs and cache exports round trip without putting source text into the URL', () => {
-    const selection = { article: article.id, snapshot: '2026-09-12T08:00:00.000Z', share: 100, volume: core.DEFAULT_VOLUME_KEY, consolidation: core.DEFAULT_CONSOLIDATION_KEY, budget: 1 };
+    const selection = { article: article.id, snapshot: '2026-09-12T08:00:00.000Z', share: 100, extraction: core.DEFAULT_EXTRACTION_KEY, consolidation: core.DEFAULT_CONSOLIDATION_KEY, scoring: core.DEFAULT_SCORING_KEY, summary: core.DEFAULT_SUMMARY_KEY, budget: 1 };
     const url = core.makeRunPageUrl('https://example.test/', selection);
-    assert.deepEqual(core.parseRunPageUrl(url), { ...selection, summary: selection.consolidation });
+    assert.deepEqual(core.parseRunPageUrl(url), selection);
     assert.ok(!url.includes('Alex'));
     assert.equal(core.parseRunPageUrl(url.replace('share=100', 'share=50')), null);
     const entries = { [core.CONSTANTS.THREAD_KEY_PREFIX + article.id]: { fetchedAt: selection.snapshot, source: article } };
@@ -321,7 +321,8 @@ test('pasted article URLs and cache exports round trip without putting source te
 });
 
 test('article forecasts include preparation and both reviews', () => {
-    const estimate = core.estimateSourceRun(article, core.DEFAULT_VOLUME_KEY, core.DEFAULT_CONSOLIDATION_KEY);
-    const hn = core.estimateSourceRun({ comments: [{ text: article.text }] }, core.DEFAULT_VOLUME_KEY, core.DEFAULT_CONSOLIDATION_KEY);
+    const keys = { extraction: core.DEFAULT_EXTRACTION_KEY, consolidation: core.DEFAULT_CONSOLIDATION_KEY, scoring: core.DEFAULT_SCORING_KEY, summary: core.DEFAULT_SUMMARY_KEY };
+    const estimate = core.estimateSourceRun(article, keys, core.ALL_UNCACHED);
+    const hn = core.estimateSourceRun({ comments: [{ text: article.text }] }, keys, core.ALL_UNCACHED);
     assert.ok(estimate.usd > hn.usd && estimate.seconds > hn.seconds);
 });

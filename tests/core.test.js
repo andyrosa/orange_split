@@ -845,7 +845,7 @@ function makeFakeCallChat(log) {
             return { json: { axes: TOY_AXES.map(axis => ({ statementA: axis.statementA, statementB: axis.statementB })) }, usage: fakeUsage };
         }
         if (call.stage === 'synthesize') {
-            return { json: { sections: [{ text: 'Portion value divides the discussion[[axis:1]].', axisIds: [1] }], caveats: [] }, usage: fakeUsage };
+            return { json: { sections: [{ text: 'Portion value divides the discussion[[axis:1:A]].', axisIds: [1] }], caveats: [] }, usage: fakeUsage };
         }
         if (call.stage === 'score') {
             const source = call.meta.swapPoles ? TOY_PASS2 : TOY_PASS1;
@@ -900,43 +900,49 @@ test('synthesis rejects missing prose, unsupported references and malformed cave
 
 test('synthesis requires exact, known, claim-local markers and rejects the old paragraph-end format', () => {
     const parse = (text, axisIds = [1]) => core.parseSynthesisResponse({ sections: [{ text, axisIds }], caveats: [] }, [1, 2]);
-    const text = 'Cost divides opinion[[axis:1]], but reliability raises another trade-off[[axis:2]]. Neither implies consensus.';
+    const text = 'Cost divides opinion[[axis:1:A]], but reliability raises another trade-off[[axis:2:B]]. Neither implies consensus.';
     assert.equal(parse(text, [1, 2]).sections[0].text, text);
     assert.deepEqual(core.synthesisTextParts(text), [
-        { text: 'Cost divides opinion' }, { axisId: 1 },
-        { text: ', but reliability raises another trade-off' }, { axisId: 2 },
+        { text: 'Cost divides opinion' }, { axisId: 1, stance: 'A' },
+        { text: ', but reliability raises another trade-off' }, { axisId: 2, stance: 'B' },
         { text: '. Neither implies consensus.' },
     ]);
+    // Both stances of one axis may each be marked once; the axis is listed once.
+    const bothSides = 'Some keep it[[axis:1:A]], while others change it[[axis:1:B]].';
+    assert.equal(parse(bothSides, [1]).sections[0].text, bothSides);
     for (const [text, ids] of [
         ['Old plain prose.', [1]],
-        ['Claim[[axis:999]].', [1]],
-        ['Claim[[axis:1]]. Another claim[[axis:2]].', [1]],
-        ['Claim[[axis:1]].', [1, 2]],
-        ['Claim[[axis:2]]. Another claim[[axis:1]].', [1, 2]],
-        ['Claim[[axis:1]]. Another claim[[axis:1]].', [1, 1]],
-        ['[[axis:1]]Unsupported leading marker.', [1]],
-        ['Claim[[axis:1]] [[axis:2]].', [1, 2]],
-        ['Claim[[axis:1]][[axis:2]].', [1, 2]],
-        ['Claim[[axis:9007199254740993]].', [1]],
-        ...['[[axis:01]]', '[[axis:0]]', '[[axis:-1]]', '[[axis:1.0]]', '[[axis:1,2]]',
-            '[[axis: 1]]', '[[Axis:1]]', '[axis:1]', '[[axis:1]', '[[axis:1]]]',
-            '[[1]]', '[[axis:1]] trailing[[', '[[axis:1]] stray]'].map(marker => [`Claim${marker}.`, [1]]),
+        ['Old stanceless claim[[axis:1]].', [1]],
+        ['Claim[[axis:999:A]].', [1]],
+        ['Claim[[axis:1:A]]. Another claim[[axis:2:A]].', [1]],
+        ['Claim[[axis:1:A]].', [1, 2]],
+        ['Claim[[axis:2:A]]. Another claim[[axis:1:A]].', [1, 2]],
+        ['Claim[[axis:1:A]]. Another claim[[axis:1:A]].', [1]],
+        ['Claim[[axis:1:A]]. Another claim[[axis:1:B]].', [1, 1]],
+        ['[[axis:1:A]]Unsupported leading marker.', [1]],
+        ['Claim[[axis:1:A]] [[axis:2:A]].', [1, 2]],
+        ['Claim[[axis:1:A]][[axis:2:A]].', [1, 2]],
+        ['Claim[[axis:9007199254740993:A]].', [1]],
+        ...['[[axis:01:A]]', '[[axis:0:A]]', '[[axis:-1:A]]', '[[axis:1.0:A]]', '[[axis:1,2:A]]',
+            '[[axis: 1:A]]', '[[Axis:1:A]]', '[axis:1:A]', '[[axis:1:A]', '[[axis:1:A]]]',
+            '[[axis:1:C]]', '[[axis:1:M]]', '[[axis:1:a]]', '[[axis:1:AB]]', '[[axis:1:]]',
+            '[[1]]', '[[axis:1:A]] trailing[[', '[[axis:1:A]] stray]'].map(marker => [`Claim${marker}.`, [1]]),
     ]) assert.throws(() => parse(text, ids), /citation marker/, text);
 });
 
 test('synthesis always enforces compact prose and references', () => {
-    const paragraph = words => ({ text: Array(words).fill('interpretation').join(' ') + '[[axis:1]]', axisIds: [1] });
+    const paragraph = words => ({ text: Array(words).fill('interpretation').join(' ') + '[[axis:1:A]]', axisIds: [1] });
     const valid = { sections: [paragraph(75), paragraph(75), paragraph(75)], caveats: [] };
     assert.equal(core.parseSynthesisResponse(valid, [1]).sections.length, 3);
-    assert.doesNotThrow(() => core.parseSynthesisResponse({ sections: [{ text: 'GPT-6 frames the discussion[[axis:1]].', axisIds: [1] }], caveats: [] }, [1]));
+    assert.doesNotThrow(() => core.parseSynthesisResponse({ sections: [{ text: 'GPT-6 frames the discussion[[axis:1:A]].', axisIds: [1] }], caveats: [] }, [1]));
     for (const sections of [
         [paragraph(101)],
         Array.from({ length: 4 }, () => paragraph(76)),
         Array.from({ length: 5 }, () => paragraph(20)),
-        [{ text: 'Interpretation[[axis:1]] of another view[[axis:2]] and a third[[axis:3]].', axisIds: [1, 2, 3] }],
-        [{ text: 'First paragraph.\nSecond paragraph[[axis:1]].', axisIds: [1] }],
-        [{ text: 'Supported by 64 people[[axis:1]]', axisIds: [1] }],
-        [{ text: 'The split (64–18) suggests tension[[axis:1]].', axisIds: [1] }],
+        [{ text: 'Interpretation[[axis:1:A]] of another view[[axis:2:B]] and a third[[axis:3:A]].', axisIds: [1, 2, 3] }],
+        [{ text: 'First paragraph.\nSecond paragraph[[axis:1:A]].', axisIds: [1] }],
+        [{ text: 'Supported by 64 people[[axis:1:A]]', axisIds: [1] }],
+        [{ text: 'The split (64–18) suggests tension[[axis:1:A]].', axisIds: [1] }],
     ]) {
         assert.throws(() => core.parseSynthesisResponse({ sections, caveats: [] }, [1, 2, 3]), /concise/);
     }
@@ -947,7 +953,8 @@ test('synthesis always enforces compact prose and references', () => {
     assert.match(prompt, /splitting on whitespace/);
     assert.match(prompt, /Return ONLY a JSON object/);
     assert.match(prompt, /not Markdown or standalone prose/);
-    assert.match(prompt, /immediately after the exact supported claim or sentence/);
+    assert.match(prompt, /^Short synthesis format v7\./);
+    assert.match(prompt, /put its stance marker immediately after those words: \[\[axis:ID:A\]\] after the words stating the axis's statementA position and \[\[axis:ID:B\]\] after the words stating its statementB position/);
     assert.match(prompt, /not in a reference list appended to the paragraph/);
     const outputSchema = JSON.parse(prompt.slice(prompt.lastIndexOf('\n') + 1));
     assert.deepEqual(outputSchema.required, ['sections', 'caveats']);
@@ -981,11 +988,11 @@ test('synthesis schema enforces the same paragraph boundary as validation', asyn
     const textSchema = schema.properties.sections.items.properties.text;
     const pattern = new RegExp(textSchema.pattern);
     for (const count of [1, 75, 100]) {
-        const text = Array(count).fill('word').join(' ') + '[[axis:1]]';
+        const text = Array(count).fill('word').join(' ') + '[[axis:1:A]]';
         assert.ok(pattern.test(text));
         assert.doesNotThrow(() => core.parseSynthesisResponse({ sections: [{ text, axisIds: [1] }], caveats: [] }, [1]));
     }
-    for (const text of ['', ' ', 'unmarked prose', 'one[[axis:1]]\ntwo', 'one[[axis:1]]\r\ntwo', 'one[[axis:1]]\n', 'one[[axis:1]]\r', Array(101).fill('word').join(' ') + '[[axis:1]]']) {
+    for (const text of ['', ' ', 'unmarked prose', 'stanceless[[axis:1]]', 'one[[axis:1:A]]\ntwo', 'one[[axis:1:A]]\r\ntwo', 'one[[axis:1:A]]\n', 'one[[axis:1:A]]\r', Array(101).fill('word').join(' ') + '[[axis:1:A]]']) {
         assert.equal(pattern.test(text), false, JSON.stringify(text));
     }
     assert.equal(schema.properties.sections.maxItems, 4);
@@ -1028,22 +1035,38 @@ test('claim-local inline counts preserve surrounding prose and toggle only local
         { id: 5, author: 'dana', text: 'For' }, { id: 6, author: 'dana', text: 'Against' },
     ]);
     const raw = { axisId: 1, statementA: 'Keep it', statementB: 'Change it', countA: 999, commentIdsA: [1, 2, 5], commentIdsB: [3, 6], commentIdsM: [4] };
-    const rows = [core.withAuthorCounts(raw, comments), core.withAuthorCounts({ ...raw, axisId: 2, commentIdsB: [], commentIdsM: [] }, comments)];
-    const text = 'Interpretation <img src=x onerror=alert(1)>[[axis:1]], but a different claim[[axis:2]]. The conclusion follows.';
+    const raw2 = { ...raw, axisId: 2, commentIdsB: [], commentIdsM: [] };
+    // Markers name stances of the saved rows; the displayed axis 2 is oriented the other way, so its stances resolve by statement text.
+    const shown2 = core.withAuthorCounts(raw2, comments);
+    const flipped2 = { ...shown2, statementA: shown2.statementB, statementB: shown2.statementA, countA: shown2.countB, countB: shown2.countA,
+        evidenceIds: { ...shown2.evidenceIds, A: shown2.evidenceIds.B, B: shown2.evidenceIds.A } };
+    const rows = [core.withAuthorCounts(raw, comments), flipped2];
+    const savedRows = [raw, raw2];
+    const text = 'Interpretation <img src=x onerror=alert(1)>[[axis:1:A]], against a change[[axis:1:B]], but a different claim[[axis:2:A]] without its opposite[[axis:2:B]]. The conclusion follows.';
     const section = core.parseSynthesisResponse({ sections: [{ text, axisIds: [1, 2] }], caveats: [] }, [1, 2]).sections[0];
-    const block = sandbox.renderNarrativeSection(section, rows, comments, 0);
+    assert.throws(() => sandbox.renderNarrativeSection(section, rows, [], comments, 0), /Axis 1: no saved row for the summary marker/);
+    const block = sandbox.renderNarrativeSection(section, rows, savedRows, comments, 0);
     const [paragraph, evidence] = block.children;
     assert.equal(paragraph.textContent, '');
-    assert.deepEqual(paragraph.children.map(child => child.tagName), ['#text', 'span', '#text', 'span', '#text']);
+    assert.deepEqual(paragraph.children.map(child => child.tagName), ['#text', 'span', '#text', 'span', '#text', 'span', '#text', 'span', '#text']);
     assert.equal(paragraph.children[0].textContent, 'Interpretation <img src=x onerror=alert(1)>');
-    assert.equal(paragraph.children[2].textContent, ', but a different claim');
-    assert.equal(paragraph.children[4].textContent, '. The conclusion follows.');
+    assert.equal(paragraph.children[2].textContent, ', against a change');
+    assert.equal(paragraph.children[4].textContent, ', but a different claim');
+    assert.equal(paragraph.children[6].textContent, ' without its opposite');
+    assert.equal(paragraph.children[8].textContent, '. The conclusion follows.');
     const content = node => node.textContent + node.children.map(content).join('');
-    assert.equal(content(paragraph), 'Interpretation <img src=x onerror=alert(1)> (1–1–1; 1 self contradiction), but a different claim (2–0). The conclusion follows.');
+    // Each marker shows only the count of its own stance; middle and self contradiction get no marker.
+    assert.equal(content(paragraph), 'Interpretation <img src=x onerror=alert(1)> (1), against a change (1), but a different claim (2) without its opposite (0). The conclusion follows.');
     assert.doesNotMatch(content(paragraph), /\[\[axis:|999/);
-    const counts = paragraph.children[1];
-    const buttons = counts.children.filter(child => child.tagName === 'button');
-    assert.deepEqual(buttons.map(button => button.textContent), ['1', '1', '1', '1 self contradiction']);
+    const countSpans = [1, 3, 5, 7].map(position => paragraph.children[position]);
+    assert.deepEqual(countSpans.map(span => span.title), ['Keep it; people, not comments', 'Change it; people, not comments', 'Keep it; people, not comments', 'Change it; people, not comments']);
+    const buttons = countSpans.map(span => {
+        const spanButtons = span.children.filter(child => child.tagName === 'button');
+        assert.equal(spanButtons.length, 1);
+        return spanButtons[0];
+    });
+    assert.deepEqual(buttons.map(button => button.textContent), ['1', '1', '2', '0']);
+    assert.deepEqual(buttons.map(button => button.dataset.evidenceKind), ['1-A', '1-B', '2-B', '2-A']);
     assert.equal(evidence.hidden, true);
     assert.ok(buttons.every(button => !/blue|orange/i.test(button.getAttribute('aria-label'))));
     const visible = () => evidence.children.filter(group => !group.hidden);
@@ -1057,16 +1080,14 @@ test('claim-local inline counts preserve surrounding prose and toggle only local
     buttons[1].click();
     assert.equal(visible()[0].dataset.evidenceKind, '1-B');
     assert.equal(buttons[0].getAttribute('aria-expanded'), 'false');
-    buttons[2].click();
-    assert.equal(visible()[0].dataset.evidenceKind, '1-M');
-    buttons[3].click();
-    assert.equal(visible()[0].dataset.evidenceKind, '1-C');
-    assert.equal(commentsIn(visible()[0]), 2);
-    buttons[3].click();
+    buttons[1].click();
     assert.equal(evidence.hidden, true);
-    const otherButtons = paragraph.children[3].children.filter(child => child.tagName === 'button');
-    otherButtons[1].click();
+    buttons[2].click();
     assert.equal(visible()[0].dataset.evidenceKind, '2-B');
+    assert.equal(commentsIn(visible()[0]), 3);
+    assert.match(visible()[0].children[0].textContent, /Supporting: Keep it — 2 people, 3 verified comments/);
+    buttons[3].click();
+    assert.equal(visible()[0].dataset.evidenceKind, '2-A');
     assert.match(visible()[0].children[0].textContent, /0 people, 0 verified comments/);
     assert.equal(visible().length, 1);
     const tags = node => [node.tagName, ...node.children.flatMap(tags)];
@@ -1089,7 +1110,7 @@ test('invalid JSON from the final provider call is charged and not silently retr
 function validFormatResponse(stage) {
     return stage === 'consolidate'
         ? { axes: TOY_AXES.map(({ statementA, statementB }) => ({ statementA, statementB })) }
-        : { sections: [{ text: 'Portion value divides the discussion[[axis:1]].', axisIds: [1] }], caveats: [] };
+        : { sections: [{ text: 'Portion value divides the discussion[[axis:1:A]].', axisIds: [1] }], caveats: [] };
 }
 
 function formatFake(log, stage, original, repair, options = {}) {
@@ -1116,12 +1137,14 @@ function formatFake(log, stage, original, repair, options = {}) {
 }
 
 test('missing, malformed and unknown citation markers use bounded repair for fresh output and cached replay', async () => {
-    for (const text of ['Unmarked claim.', 'Claim[[axis:1].', 'Claim[[axis:999]].']) {
+    for (const text of ['Unmarked claim.', 'Claim[[axis:1:A].', 'Claim[[axis:1]].', 'Claim[[axis:999:A]].']) {
         const original = { sections: [{ text, axisIds: [1] }], caveats: [] };
         const repaired = { sections: [{
-            text: 'The portion trade-off divides opinion[[axis:1]], while noise is a separate concern[[axis:2]]. Context matters.',
+            text: 'The portion trade-off divides opinion[[axis:1:A]], while noise is a separate concern[[axis:2:B]]. Context matters.',
             axisIds: [1, 2],
         }], caveats: [] };
+        // A thread summary comes back with each section's row group; every toy row has too few people.
+        const grouped = { ...repaired, sections: repaired.sections.map(section => ({ ...section, group: 'tooFew' })) };
         const { api } = mapStore();
         const log = [];
         const thread = core.flattenThread(TOY_THREAD);
@@ -1134,7 +1157,7 @@ test('missing, malformed and unknown citation markers use bounded repair for fre
         assert.deepEqual(failed.synthesisFailure, { response: original, repairResponse: original });
         const retries = [];
         const recovered = await run(core.makeCachedCallChat(formatFake(retries, 'synthesize', original, repaired), api));
-        assert.deepEqual(recovered.synthesis, repaired);
+        assert.deepEqual(recovered.synthesis, grouped);
         assert.equal(retries.length, 1, 'only the bounded repair is retried; analysis and original synthesis are cached');
         assert.equal(retries[0].meta.formatRepair, true);
         assert.match(retries[0].messages.at(-1).content, /citation marker/);
@@ -1142,7 +1165,7 @@ test('missing, malformed and unknown citation markers use bounded repair for fre
         assert.equal(probe.complete, true);
         const replay = await run(core.makeCachedCallChat(() => { throw new Error('No network'); }, api));
         assert.equal(replay.cost, 0);
-        assert.deepEqual(replay.synthesis, repaired);
+        assert.deepEqual(replay.synthesis, grouped);
     }
 });
 
@@ -1585,7 +1608,7 @@ test('short synthesis refreshes only its model cache and ignores prior saved-res
     const previousCall = {
         ...synthesisCall,
         messages: synthesisCall.messages.map(message => ({
-            ...message, content: message.content.replace(/^Short synthesis format v4\. /, 'Short synthesis format v3. '),
+            ...message, content: message.content.replace(/^Short synthesis format v7\. /, 'Short synthesis format v6. '),
         })),
     };
     const previousKey = core.requestCacheKey(previousCall);
@@ -1603,7 +1626,7 @@ test('short synthesis refreshes only its model cache and ignores prior saved-res
     assert.deepEqual(refreshed.map(call => call.stage), ['synthesize']);
     assert.ok(store.has(previousKey), 'old data is not deleted');
     const source = require('node:fs').readFileSync(require.resolve('../hn_polarization.html'), 'utf8');
-    assert.match(source, /const RESULT_CACHE_VERSION = 6;/);
+    assert.match(source, /const RESULT_CACHE_VERSION = 8;/);
     assert.match(source, /saved\.version === RESULT_CACHE_VERSION/);
     assert.match(source, /cachedRecord\.version === RESULT_CACHE_VERSION/);
     assert.doesNotMatch(source, /Read saved narrative|synthesisNeedsDisclosure|predates narrative synthesis/);
@@ -1874,8 +1897,10 @@ test('runPipeline passes per-stage sampling and reasoning settings to the model 
 // ---------------------------------------------------------------------------
 
 test('model choices exist per role with labels, config fragments, and per-character rates', () => {
-    assert.equal(core.DEFAULT_VOLUME_KEY, 'lunaLow');
+    assert.equal(core.DEFAULT_EXTRACTION_KEY, 'lunaLow');
+    assert.equal(core.DEFAULT_SCORING_KEY, 'lunaLow');
     assert.equal(core.DEFAULT_CONSOLIDATION_KEY, 'solLow');
+    assert.equal(core.DEFAULT_SUMMARY_KEY, 'sol6Low');
     for (const [key, choice] of Object.entries(core.VOLUME_MODELS)) {
         assert.ok(choice.label.length > 0, key + ' has a label');
         assert.ok(choice.config.modelExtract && choice.config.modelScore, key + ' names the extraction and scoring model');
@@ -1891,22 +1916,36 @@ test('model choices exist per role with labels, config fragments, and per-charac
     assert.equal(core.CONSOLIDATION_MODELS.glm53.config.maxTokensConsolidate, 128000);
 });
 
-test('buildStageConfig merges one volume choice with one consolidation choice', () => {
-    const config = core.buildStageConfig('glmFlash', 'sonnet5');
+test('buildRunConfig merges one choice per role: extraction, consolidation, scoring and summary', () => {
+    const keys = { extraction: 'glmFlash', consolidation: 'sonnet5', scoring: 'glmFlash', summary: 'sonnet5' };
+    const config = core.buildRunConfig(keys);
     assert.equal(config.modelExtract, 'z-ai/glm-5.3-flash');
     assert.equal(config.modelScore, 'z-ai/glm-5.3-flash');
     assert.equal(config.modelConsolidate, 'anthropic/claude-sonnet-5');
     assert.equal(config.samplingConsolidate, null);
     assert.deepEqual(config.samplingScore, { temperature: 0, seed: 12345 });
-    assert.throws(() => core.buildStageConfig('nope', 'sonnet5'), /volume/);
-    assert.throws(() => core.buildStageConfig('haiku', 'nope'), /consolidation/);
-    assert.deepEqual(core.buildStageConfig(core.DEFAULT_VOLUME_KEY, core.DEFAULT_CONSOLIDATION_KEY).modelConsolidate, core.DEFAULT_CONFIG.modelConsolidate);
+    assert.equal(core.buildRunConfig({ ...keys, scoring: 'haiku' }).modelScore, 'anthropic/claude-haiku-4.5');
+    assert.equal(core.buildRunConfig({ ...keys, scoring: 'haiku' }).modelExtract, 'z-ai/glm-5.3-flash');
+    assert.throws(() => core.buildRunConfig({ ...keys, extraction: 'nope' }), /extraction/);
+    assert.throws(() => core.buildRunConfig({ ...keys, consolidation: 'nope' }), /consolidation/);
+    assert.throws(() => core.buildRunConfig({ ...keys, scoring: 'nope' }), /scoring/);
+    assert.throws(() => core.buildRunConfig({ ...keys, summary: 'nope' }), /summary/);
+    // Jev Router is a consolidation and summary choice only.
+    assert.throws(() => core.buildRunConfig({ ...keys, extraction: 'jevRouter' }), /extraction/);
+    assert.throws(() => core.buildRunConfig({ ...keys, scoring: 'jevRouter' }), /scoring/);
+    const routed = core.buildRunConfig({ ...keys, consolidation: 'jevRouter', summary: 'jevRouter' });
+    assert.equal(routed.modelConsolidate, 'typesafe/jev-router');
+    assert.equal(routed.modelSynthesize, 'typesafe/jev-router');
+    const defaults = core.buildRunConfig({ extraction: core.DEFAULT_EXTRACTION_KEY, consolidation: core.DEFAULT_CONSOLIDATION_KEY,
+        scoring: core.DEFAULT_SCORING_KEY, summary: core.DEFAULT_SUMMARY_KEY });
+    for (const [field, value] of Object.entries(defaults)) assert.deepEqual(core.DEFAULT_CONFIG[field], value, field);
 });
 
 test('option labels are built from the entry constants and quality record', () => {
     const haiku = core.VOLUME_MODELS.haiku;
     const usd = (haiku.usdPerMillionChars * core.CHARS_PER_COMMENT / 1000).toFixed(2);
-    assert.equal(haiku.label, `Claude Haiku 4.5 (none): $${usd} and ${core.formatDuration(haiku.secondsPerMillionChars * core.CHARS_PER_COMMENT / 1000)} per 1000 comments. 0.5 stances per comment; 3.5 two-sided rows per 100 comments; 59% of stances held under blind review, 12% wrong; clean output.`);
+    assert.equal(haiku.label, `Claude Haiku 4.5 (none): $${usd} and ${core.formatDuration(haiku.secondsPerMillionChars * core.CHARS_PER_COMMENT / 1000)} per 1000 comments. 0.5 stances per comment; 3.5 two-sided rows per 100 comments; 59% of stances held under blind review, 12% wrong; measured with this model running both extraction and scoring; clean output.`);
+    assert.equal(core.CONSOLIDATION_MODELS.jevRouter.label, `Jev Router: cost and time not measured. ${core.CONSOLIDATION_MODELS.jevRouter.note}.`);
     const sonnet = { ...core.CONSOLIDATION_MODELS.sonnet5, usdPerMillionChars: 1.733, secondsPerMillionChars: 600,
         quality: { twoSidedPercent: [81.82], runs: '5 threads', note: 'Example review evidence' } };
     assert.equal(core.consolidationLabel(sonnet), 'Claude Sonnet 5 (adaptive): $0.55 and 3 minutes per 1000 comments. 81.82% of axes two-sided across 5 threads; Example review evidence.');
@@ -1959,7 +1998,12 @@ test('consolidation model metrics use role-specific columns', () => {
 test('combinedRate scales the consolidation rate by the volume model\'s candidate factor', () => {
     const opus = core.VOLUME_MODELS.opus5;
     const sonnet = core.CONSOLIDATION_MODELS.sonnet5;
-    assertClose(core.combinedRate('opus5', 'sonnet5', 'usdPerMillionChars'), opus.usdPerMillionChars + sonnet.usdPerMillionChars * opus.candidateFactor + core.SUMMARY_MODELS.sonnet5.usdPerMillionChars, 'opus factor plus measured synthesis rate applied');
+    const share = core.EXTRACTION_RATE_SHARE;
+    const keys = { extraction: 'opus5', consolidation: 'sonnet5', scoring: 'opus5', summary: 'sonnet5' };
+    assertClose(core.combinedRate(keys, 'usdPerMillionChars'), opus.usdPerMillionChars * share + opus.usdPerMillionChars * (1 - share) + sonnet.usdPerMillionChars * opus.candidateFactor + core.SUMMARY_MODELS.sonnet5.usdPerMillionChars, 'opus factor plus measured synthesis rate applied');
+    // The candidate factor follows the extraction model, not the scoring model.
+    const haiku = core.VOLUME_MODELS.haiku;
+    assertClose(core.combinedRate({ ...keys, scoring: 'haiku' }, 'usdPerMillionChars'), opus.usdPerMillionChars * share + haiku.usdPerMillionChars * (1 - share) + sonnet.usdPerMillionChars * opus.candidateFactor + core.SUMMARY_MODELS.sonnet5.usdPerMillionChars, 'scoring model rate with the extraction model factor');
     assert.equal(core.VOLUME_MODELS.haiku.candidateFactor, 1, 'Haiku is the reference');
     for (const choice of Object.values(core.VOLUME_MODELS)) {
         assert.ok(choice.candidateFactor > 0);
@@ -1967,13 +2011,18 @@ test('combinedRate scales the consolidation rate by the volume model\'s candidat
 });
 
 test('combinedRate sums the per-character rates and estimateRunSeconds never goes below the stage latency floor', () => {
-    const expected = core.VOLUME_MODELS.haiku.usdPerMillionChars + core.CONSOLIDATION_MODELS.sonnet5.usdPerMillionChars + core.SUMMARY_MODELS.sonnet5.usdPerMillionChars;
-    assertClose(core.combinedRate('haiku', 'sonnet5', 'usdPerMillionChars'), expected, 'combined rate');
-    const seconds = core.estimateRunSeconds(416000, 'haiku', 'sonnet5');
+    const keys = { extraction: 'haiku', consolidation: 'sonnet5', scoring: 'haiku', summary: 'sonnet5' };
+    const share = core.EXTRACTION_RATE_SHARE;
+    const expected = core.VOLUME_MODELS.haiku.usdPerMillionChars * share + core.VOLUME_MODELS.haiku.usdPerMillionChars * (1 - share) + core.CONSOLIDATION_MODELS.sonnet5.usdPerMillionChars + core.SUMMARY_MODELS.sonnet5.usdPerMillionChars;
+    assertClose(core.combinedRate(keys, 'usdPerMillionChars'), expected, 'combined rate');
+    const seconds = core.estimateRunSeconds(416000, keys, core.ALL_UNCACHED);
     assertClose(seconds, (core.VOLUME_MODELS.haiku.secondsPerMillionChars + core.CONSOLIDATION_MODELS.sonnet5.secondsPerMillionChars + core.SUMMARY_MODELS.sonnet5.secondsPerMillionChars) * 0.416, 'seconds for a large thread');
-    const floor = 2 * core.VOLUME_MODELS.haiku.minimumSeconds + core.CONSOLIDATION_MODELS.sonnet5.minimumSeconds + core.SUMMARY_MODELS.sonnet5.minimumSeconds;
-    assert.equal(core.estimateRunSeconds(0, 'haiku', 'sonnet5'), floor);
-    assert.equal(core.estimateRunSeconds(8000, 'haiku', 'sonnet5'), floor, 'a small thread is bounded by latency');
+    const haikuFloor = core.VOLUME_MODELS.haiku.minimumSeconds;
+    const floor = haikuFloor + core.CONSOLIDATION_MODELS.sonnet5.minimumSeconds + haikuFloor + core.SUMMARY_MODELS.sonnet5.minimumSeconds;
+    assert.equal(core.estimateRunSeconds(0, keys, core.ALL_UNCACHED), floor);
+    assert.equal(core.estimateRunSeconds(8000, keys, core.ALL_UNCACHED), floor, 'a small thread is bounded by latency');
+    // A stage with nothing left to call adds no latency floor.
+    assert.equal(core.estimateRunSeconds(0, keys, { ...core.ALL_UNCACHED, extract: 0, consolidate: 0 }), haikuFloor + core.SUMMARY_MODELS.sonnet5.minimumSeconds);
     for (const choice of Object.values(core.VOLUME_MODELS).concat(Object.values(core.CONSOLIDATION_MODELS))) {
         assert.ok(choice.minimumSeconds > 0);
     }
@@ -2089,8 +2138,10 @@ test('run page URLs carry every setting and use the snapshot time as the cache n
         article: '49537553',
         snapshot: '2026-09-04T12:34:56.789Z',
         share: 50,
-        volume: 'lunaLow',
+        extraction: 'lunaLow',
         consolidation: 'sonnet5',
+        scoring: 'haiku',
+        summary: 'astraLow',
         budget: 1.5,
     };
     const value = core.makeRunPageUrl('https://example.test/hn.html?code=discarded#old', selection);
@@ -2101,21 +2152,29 @@ test('run page URLs carry every setting and use the snapshot time as the cache n
         article: '49537553',
         snapshot: '2026-09-04T12:34:56.789Z',
         share: '50',
-        volume: 'lunaLow',
+        extraction: 'lunaLow',
         consolidation: 'sonnet5',
+        scoring: 'haiku',
+        summary: 'astraLow',
         budget: '1.5',
-        summary: 'sonnet5',
     });
-    assert.deepEqual(core.parseRunPageUrl(value), { ...selection, summary: 'sonnet5' });
-    url.searchParams.delete('summary');
+    assert.deepEqual([...url.searchParams.keys()], ['article', 'snapshot', 'share', 'extraction', 'consolidation', 'scoring', 'summary', 'budget']);
+    assert.deepEqual(core.parseRunPageUrl(value), selection);
     assert.equal(core.runResultCacheKey(selection), url.search.slice(1));
 });
 
 test('parseRunPageUrl rejects incomplete or invalid run URLs', () => {
     assert.equal(core.parseRunPageUrl('https://example.test/hn.html?article=1'), null);
-    assert.equal(core.parseRunPageUrl('https://example.test/hn.html?article=1&snapshot=no&share=50&volume=lunaLow&consolidation=sonnet5&budget=1'), null);
-    assert.equal(core.parseRunPageUrl('https://example.test/hn.html?article=1&snapshot=2026-09-04T12%3A34%3A56Z&share=0&volume=lunaLow&consolidation=sonnet5&budget=1'), null);
-    assert.equal(core.parseRunPageUrl('https://example.test/hn.html?article=1&snapshot=2026-09-04T12%3A34%3A56Z&share=50&volume=unknown&consolidation=sonnet5&budget=1'), null);
+    const valid = 'https://example.test/hn.html?article=1&snapshot=2026-09-04T12%3A34%3A56Z&share=50&extraction=lunaLow&consolidation=sonnet5&scoring=lunaLow&summary=sonnet5&budget=1';
+    assert.notEqual(core.parseRunPageUrl(valid), null);
+    assert.equal(core.parseRunPageUrl(valid.replace('snapshot=2026-09-04T12%3A34%3A56Z', 'snapshot=no')), null);
+    assert.equal(core.parseRunPageUrl(valid.replace('share=50', 'share=0')), null);
+    for (const role of ['extraction', 'consolidation', 'scoring', 'summary']) {
+        assert.equal(core.parseRunPageUrl(valid.replace(`${role}=`, `${role}=unknown&ignored=`)), null, role);
+    }
+    assert.equal(core.parseRunPageUrl(valid.replace('extraction=lunaLow', 'extraction=jevRouter')), null);
+    assert.equal(core.parseRunPageUrl(valid.replace('scoring=lunaLow', 'scoring=jevRouter')), null);
+    assert.equal(core.parseRunPageUrl(valid.replace('extraction=lunaLow&', '').replace('scoring=lunaLow&', 'volume=lunaLow&')), null);
 });
 
 test('exchangeOpenRouterCode posts the code and verifier and returns the key', async () => {
@@ -2252,7 +2311,7 @@ test('formatNextRun gives the forecast, the cached-call sentence when some calls
     const all = { stages: [{ stage: 'extract', hits: 2, total: 2 }, { stage: 'consolidate', hits: 1, total: 1 }, { stage: 'score', hits: 4, total: 4 }], complete: true };
     assert.equal(core.formatNextRun({ usd: 0.0449, seconds: 31, probe: null }), 'about $0.04 and about 31 seconds.');
     assert.equal(core.formatNextRun({ usd: 0.0449, seconds: 31, probe: none }), 'about $0.04 and about 31 seconds.');
-    assert.equal(core.formatNextRun({ usd: 0.0449, seconds: 31, probe: some }), 'about $0.04 and about 31 seconds. Cached: 2 of 2 extraction, 0 of 1 consolidation calls, so it will cost and take less.');
+    assert.equal(core.formatNextRun({ usd: 0.0449, seconds: 31, probe: some }), 'about $0.04 and about 31 seconds for the uncached calls. Cached: 2 of 2 extraction, 0 of 1 consolidation calls.');
     assert.equal(core.formatNextRun({ usd: 0.0449, seconds: 31, probe: all }), '$0 and 0 seconds, all 7 model calls are cached.');
 });
 
@@ -2368,8 +2427,8 @@ test('formatCacheProbe gives a clause for a full cache, a sentence for a partial
     assert.equal(core.formatCacheProbe({ stages: [{ stage: 'extract', hits: 2, total: 2 }, { stage: 'consolidate', hits: 1, total: 1 }, { stage: 'score', hits: 4, total: 4 }], complete: true }),
         'all 7 model calls are cached');
     assert.equal(core.formatCacheProbe({ stages: [{ stage: 'extract', hits: 2, total: 2 }, { stage: 'consolidate', hits: 1, total: 1 }, { stage: 'score', hits: 3, total: 4 }], complete: false }),
-        'Cached: 2 of 2 extraction, 1 of 1 consolidation, 3 of 4 scoring calls, so it will cost and take less.');
+        'Cached: 2 of 2 extraction, 1 of 1 consolidation, 3 of 4 scoring calls.');
     assert.equal(core.formatCacheProbe({ stages: [{ stage: 'extract', hits: 1, total: 2 }], complete: false }),
-        'Cached: 1 of 2 extraction calls, so it will cost and take less.');
+        'Cached: 1 of 2 extraction calls.');
     assert.equal(core.formatCacheProbe({ stages: [{ stage: 'extract', hits: 0, total: 2 }], complete: false }), '');
 });

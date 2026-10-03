@@ -1,8 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { readPage, blockText, CORE_SCRIPT_PATTERN } = require('../scripts/load_core');
-const { loadSummaryCore } = require('../scripts/eval_summary_matched');
-const core = loadSummaryCore(blockText(readPage(), CORE_SCRIPT_PATTERN));
+const { loadCore } = require('../scripts/load_core');
+const core = loadCore();
 const comments = [{ id: 101, parentId: 1, text: 'Evidence.' }];
 
 async function sentSynthesisPattern(model) {

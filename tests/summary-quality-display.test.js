@@ -39,9 +39,21 @@ test('every summary row exposes the same matched quality and cost/time measureme
     assert.deepEqual(Object.keys(matched).filter(key => key in added2), []);
     assert.deepEqual(Object.keys(added).filter(key => key in added2), []);
     const report = { models: { ...matched, ...added, ...added2 } };
-    assert.deepEqual(Object.keys(report.models).sort(), Object.keys(core.SUMMARY_MODELS).sort());
+    // Jev Router is the one unmeasured summary choice: it has no retained evidence, its cells read "Not measured",
+    // and its forecast rates are the highest measured ones.
+    const measuredEntries = Object.entries(core.SUMMARY_MODELS).filter(([key]) => key !== 'jevRouter');
+    assert.deepEqual(Object.keys(report.models).sort(), measuredEntries.map(([key]) => key).sort());
+    const router = core.SUMMARY_MODELS.jevRouter;
+    assert.equal(router.unmeasured, true);
+    assert.equal(router.summaryQuality, undefined);
+    assert.equal(router.config.modelSynthesize, 'typesafe/jev-router');
+    assert.deepEqual(core.summaryMetrics(router), { model: core.modelDisplayName(router),
+        summaryQuality: 'Not measured', summaryErrors: 'Not measured', cost: 'Not measured', time: 'Not measured' });
+    for (const field of ['usdPerMillionChars', 'secondsPerMillionChars', 'minimumSeconds']) {
+        assert.equal(router[field], Math.max(...measuredEntries.map(([, choice]) => choice[field])));
+    }
     assert.deepEqual(core.SUMMARY_METRIC_COLUMNS.map(([key]) => key), ['model', 'cost', 'time', 'summaryQuality', 'summaryErrors']);
-    for (const [key, choice] of Object.entries(core.SUMMARY_MODELS)) {
+    for (const [key, choice] of measuredEntries) {
         const retained = report.models[key], q = choice.summaryQuality;
         assert.equal(q.weighted, retained.weighted);
         assert.equal(q.errorPercent, retained.errorPercent);
@@ -68,6 +80,10 @@ test('summary cell colors follow quality upward and errors, cost and time downwa
     const sandbox = { perThousandCommentsRates: core.perThousandCommentsRates };
     vm.runInNewContext(page.slice(start, end), sandbox);
     for (const choice of Object.values(core.SUMMARY_MODELS)) {
+        if (choice.unmeasured) {
+            for (const key of ['summaryQuality', 'summaryErrors', 'cost', 'time']) assert.equal(sandbox.modelMetricScore(choice, key), null);
+            continue;
+        }
         assert.equal(sandbox.modelMetricScore(choice, 'summaryQuality'), choice.summaryQuality.weighted);
         assert.equal(sandbox.modelMetricScore(choice, 'summaryErrors'), -choice.summaryQuality.errorPercent);
         assert.equal(sandbox.modelMetricScore(choice, 'cost'), -choice.summaryQuality.benchmark.costPer1k);

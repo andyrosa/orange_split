@@ -101,7 +101,7 @@ test('import compares entry dates for every cache type and retains older, tied, 
         { item: { title: 'import' }, fetchedAt: older, savedAt: newer },
         { item: { title: 'local' }, fetchedAt: newer, savedAt: older }), 'keptNewer');
     assert.equal(core.cacheImportDecision(core.CONSTANTS.RESULT_KEY_PREFIX + '1',
-        { version: 5, savedAt: newer }, { version: 6, savedAt: older }), 'keptUncertain');
+        { version: 5, savedAt: newer }, { version: 6, savedAt: older }), 'updated');
     const exported = core.parseCacheExport(JSON.stringify({ exportedAt: newer, entries: {
         [core.CONSTANTS.CACHE_KEY_PREFIX + '1']: { value: 'undated import' },
     } }));

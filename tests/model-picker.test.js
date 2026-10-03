@@ -25,20 +25,26 @@ test('compact model pickers retain metrics, selection events and keyboard contro
     }
     const makeElement = (_, { className, text } = {}) => Object.assign(new Element(), { className, textContent: text });
     const pickers = [
-        [core.VOLUME_MODELS, core.VOLUME_METRIC_COLUMNS, core.volumeMetrics, 'volume'],
-        [core.CONSOLIDATION_MODELS, core.CONSOLIDATION_METRIC_COLUMNS, core.consolidationMetrics, 'consolidation'],
-        [core.SUMMARY_MODELS, core.SUMMARY_METRIC_COLUMNS, core.summaryMetrics, 'summary'],
-    ].map(([choices, columns, metrics, role]) => ({
-        choices, columns, metrics, gridClass: `${role}-grid`, metricKeys: new Set(),
+        [core.VOLUME_MODELS, core.VOLUME_METRIC_COLUMNS, core.volumeMetrics, 'volume', 'Extraction'],
+        [core.CONSOLIDATION_MODELS, core.CONSOLIDATION_METRIC_COLUMNS, core.consolidationMetrics, 'consolidation', 'Consolidation'],
+        [core.VOLUME_MODELS, core.VOLUME_METRIC_COLUMNS, core.volumeMetrics, 'volume', 'Scoring'],
+        [core.SUMMARY_MODELS, core.SUMMARY_METRIC_COLUMNS, core.summaryMetrics, 'summary', 'Summary'],
+    ].map(([choices, columns, metrics, grid, roleName]) => ({
+        choices, columns, metrics, gridClass: `${grid}-grid`, metricKeys: new Set(), roleName,
         select: Object.assign(new Element(), { value: Object.keys(choices)[0] }),
         header: new Element(), button: new Element(), options: new Element(),
     }));
-    pickers[2].metrics = choice => core.summaryMetrics(choice, pickers[1].select.value, pickers[0].select.value);
-    const selectedQuality = () => core.summaryQualityText(pickers[2].choices[pickers[2].select.value], pickers[1].select.value, pickers[0].select.value);
+    const summaryPicker = pickers[3];
+    const selectedModelKeys = () => ({ extraction: pickers[0].select.value, consolidation: pickers[1].select.value,
+        scoring: pickers[2].select.value, summary: summaryPicker.select.value });
+    const selectedQuality = () => core.summaryQualityText(summaryPicker.choices[summaryPicker.select.value], selectedModelKeys());
+    // The button tooltip names the role and the selected label; the summary picker adds the benchmark label.
+    const expectedTitle = picker => `${picker.roleName}: ${picker.choices[picker.select.value].label}`
+        + (picker === summaryPicker ? ` ${selectedQuality().label}.` : '');
     const sandbox = { document, makeElement, Event, modelPickers: pickers, summaryQualityText: core.summaryQualityText,
-        perThousandCommentsRates: core.perThousandCommentsRates, modelDisplayName: core.modelDisplayName,
-        elements: { volumeModel: pickers[0].select, consolidationModel: pickers[1].select, summaryModel: pickers[2].select,
-            summaryQualityLabel: new Element(), summaryQualityScores: new Element(), summaryQualityMethod: new Element() } };
+        perThousandCommentsRates: core.perThousandCommentsRates, modelDisplayName: core.modelDisplayName, selectedModelKeys,
+        elements: { extractionModel: pickers[0].select, consolidationModel: pickers[1].select, scoringModel: pickers[2].select,
+            summaryModel: summaryPicker.select } };
     const start = source.indexOf('function renderModelGrid(');
     const end = source.indexOf('// The thread box holds', start);
     assert.ok(start > 0 && end > start);
@@ -56,7 +62,7 @@ test('compact model pickers retain metrics, selection events and keyboard contro
             sandbox.syncModelPicker(picker);
         });
         sandbox.initializeModelPicker(picker);
-        if (picker === pickers[2]) assert.equal(sandbox.elements.summaryQualityLabel.textContent, selectedQuality().label);
+        assert.equal(picker.button.title, expectedTitle(picker));
         assert.equal(picker.button.textContent, core.modelDisplayName(picker.choices[picker.select.value]));
         assert.equal(picker.options.hidden, true);
         assert.equal(picker.options.children[0], picker.header);
@@ -75,12 +81,7 @@ test('compact model pickers retain metrics, selection events and keyboard contro
         options[1].dispatchEvent(new Event('click'));
         assert.equal(changes, 1);
         assert.equal(picker.select.value, options[1].dataset.key);
-        if (picker === pickers[2]) {
-            const quality = selectedQuality();
-            assert.equal(sandbox.elements.summaryQualityLabel.textContent, quality.label);
-            assert.equal(sandbox.elements.summaryQualityScores.textContent, quality.scores);
-            assert.equal(sandbox.elements.summaryQualityMethod.textContent, quality.method);
-        }
+        assert.equal(picker.button.title, expectedTitle(picker));
         assert.equal(picker.button.textContent, core.modelDisplayName(picker.choices[picker.select.value]));
         assert.equal(options[1].getAttribute('aria-selected'), 'true');
         assert.equal(picker.options.hidden, true);

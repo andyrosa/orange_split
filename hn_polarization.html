@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-LQM2T3gNudB1u5r4yhg+j4fn7exNDITEFKzVl9iPO5g=' 'sha256-S5hg9v1NDrI16/Jz0yYE27tXpbsl+dp+h9k8EzKH070='; style-src 'sha256-b1uLJHHbbHvHdSMP5PBNa/byB9csk2a8INRTzfqESco='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-fbsw3Myk7zn6hjyYwbwY11kF7EiY0hiJmsuqsn7SUeg=' 'sha256-9SBoHOtywltwmuj1Ua7XNE3WGjGwTu3EnmYHMCuKIuE='; style-src 'sha256-b1uLJHHbbHvHdSMP5PBNa/byB9csk2a8INRTzfqESco='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
 <title>Orange Split - For and Against on Hacker News</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EOS%3C/text%3E%3C/svg%3E">
 <style>
@@ -265,6 +265,7 @@ const CONSTANTS = Object.freeze({
     HN_STORIES_BY_ID_URL: 'https://hn.algolia.com/api/v1/search?hitsPerPage=60&tags=',
     HN_STORY_SEARCH_URL: 'https://hn.algolia.com/api/v1/search?tags=story&hitsPerPage=30&query=',
     OPENROUTER_URL: 'https://openrouter.ai/api/v1/chat/completions',
+    OPENROUTER_MODELS_URL: 'https://openrouter.ai/api/v1/models',
     OPENROUTER_AUTH_URL: 'https://openrouter.ai/auth',
     OPENROUTER_KEY_EXCHANGE_URL: 'https://openrouter.ai/api/v1/auth/keys',
     PKCE_VERIFIER_STORAGE_KEY: 'openrouter_pkce_verifier',
@@ -805,18 +806,43 @@ const EXTRACTION_RATE_SHARE = 0.29;
 // grow with the number of candidates, which the extraction model sets, so its rate is scaled by that model's
 // candidateFactor, its candidate count relative to Haiku 4.5's on the same thread.
 function combinedRate(keys, field) {
-    const extraction = roleChoice('extraction', keys.extraction);
-    const scoring = roleChoice('scoring', keys.scoring);
-    const consolidation = roleChoice('consolidation', keys.consolidation);
-    return extraction[field] * EXTRACTION_RATE_SHARE + scoring[field] * (1 - EXTRACTION_RATE_SHARE)
-        + consolidation[field] * extraction.candidateFactor + roleChoice('summary', keys.summary)[field];
+    return remainingRate(keys, field, ALL_UNCACHED);
 }
 
-// Four model stages run sequentially, each with its role's selected model.
-function estimateRunSeconds(chars, keys) {
-    const choices = Object.fromEntries(['extraction', 'consolidation', 'scoring', 'summary'].map(role => [role, roleChoice(role, keys[role])]));
-    const scaled = (combinedRate(keys, 'secondsPerMillionChars') * chars) / RATE_UNIT_CHARS;
-    const floor = STAGES.reduce((sum, stage) => sum + choices[stage.role].minimumSeconds, 0);
+// Each stage's part of combinedRate, keyed by stage, in the order combinedRate adds them.
+function stageRates(keys, field) {
+    const extraction = roleChoice('extraction', keys.extraction);
+    return {
+        extract: extraction[field] * EXTRACTION_RATE_SHARE,
+        score: roleChoice('scoring', keys.scoring)[field] * (1 - EXTRACTION_RATE_SHARE),
+        consolidate: roleChoice('consolidation', keys.consolidation)[field] * extraction.candidateFactor,
+        synthesize: roleChoice('summary', keys.summary)[field],
+    };
+}
+
+// The fraction of each stage's calls a run must still make. ALL_UNCACHED is the forecast without a cache probe.
+const ALL_UNCACHED = Object.freeze({ prepare: 1, extract: 1, consolidate: 1, reviewAxes: 1, score: 1, synthesize: 1, reviewSynthesis: 1 });
+
+// From a cache probe: a stage's uncached share of its calls. A stage absent from the probe follows a stage with
+// a miss, so its requests change and every one of its calls misses. A stage with no calls has nothing left.
+function uncachedFractions(probe) {
+    return Object.fromEntries(Object.keys(ALL_UNCACHED).map(stage => {
+        const count = probe.stages.find(item => item.stage === stage);
+        if (count === undefined) return [stage, 1];
+        return [stage, count.total === 0 ? 0 : (count.total - count.hits) / count.total];
+    }));
+}
+
+function remainingRate(keys, field, remaining) {
+    return Object.entries(stageRates(keys, field)).reduce((sum, [stage, rate]) => sum + rate * remaining[stage], 0);
+}
+
+// Four model stages run sequentially, each with its role's selected model. A stage with nothing left to call
+// adds no latency floor.
+function estimateRunSeconds(chars, keys, remaining) {
+    const scaled = (remainingRate(keys, 'secondsPerMillionChars', remaining) * chars) / RATE_UNIT_CHARS;
+    const floor = STAGES.filter(stage => remaining[stage.key] > 0)
+        .reduce((sum, stage) => sum + roleChoice(stage.role, keys[stage.role]).minimumSeconds, 0);
     return Math.max(scaled, floor);
 }
 
@@ -1049,12 +1075,14 @@ function buildSynthesisReviewMessages(source, rows, commentsById, synthesis) {
         { role: 'user', content: JSON.stringify({ evidence: JSON.parse(evidence), synthesis }) },
     ];
 }
-function estimateSourceRun(source, keys) {
+// The forecast for the calls a run must still make; remaining is ALL_UNCACHED or uncachedFractions(probe).
+function estimateSourceRun(source, keys, remaining) {
     const comments = isArticle(source) ? [{ text: source.text }] : source.comments;
     const chars = comments.reduce((sum, c) => sum + c.text.length + CONSTANTS.COMMENT_FRAME_CHARS, 0);
-    let usd = estimateRunCost(comments, combinedRate(keys, 'usdPerMillionChars')).usd;
-    let seconds = estimateRunSeconds(chars, keys);
-    if (isArticle(source)) {
+    let usd = estimateRunCost(comments, remainingRate(keys, 'usdPerMillionChars', remaining)).usd;
+    let seconds = estimateRunSeconds(chars, keys, remaining);
+    const articleCallsLeft = ['prepare', 'reviewAxes', 'reviewSynthesis'].some(stage => remaining[stage] > 0);
+    if (isArticle(source) && articleCallsLeft) {
         // Extra full-text preparation (on the extraction model) and two review allowances. Heuristic, not a cap.
         const extraction = VOLUME_MODELS[keys.extraction], consolidation = CONSOLIDATION_MODELS[keys.consolidation], summary = SUMMARY_MODELS[keys.summary];
         usd += chars / RATE_UNIT_CHARS * (extraction.usdPerMillionChars * 2 + consolidation.usdPerMillionChars + summary.usdPerMillionChars);
@@ -2527,6 +2555,123 @@ function makeOpenRouterCallChat({ apiKey }) {
 }
 
 // ---------------------------------------------------------------------------
+// Spending cap. The pipeline counts a call's cost only when the call returns, and up to its concurrency of
+// calls are in flight at once, so a cap checked on return can be passed by everything already sent. This
+// layer sits under the cache, so it sees only calls that reach OpenRouter. A call of a batched stage
+// (RESERVED_STAGES) reserves its worst-case cost before it is sent, and is sent only while what was spent
+// plus what is reserved stays within the cap. Every other stage makes one call at a time after the batched
+// stage before it has finished, and its worst case is far above its usual cost (a consolidation call's
+// output ceiling alone can be ten times its actual cost), so it is sent while what was spent is under the
+// cap, and the cap can be passed by at most that one call's cost.
+// ---------------------------------------------------------------------------
+
+// The request's UTF-8 bytes bound its prompt tokens, since a token is at least one byte; this adds room for
+// the provider's message framing.
+const REQUEST_OVERHEAD_TOKENS = 4096;
+const PRICE_FIELDS = Object.freeze(['prompt', 'completion', 'inputCacheWrite', 'request']);
+const RESERVED_STAGES = Object.freeze(['extract', 'score']);
+
+// Every model id the pickers can choose, across all roles.
+function listedModelIds() {
+    const ids = new Set();
+    for (const [role, choices] of Object.entries(ROLE_CHOICES)) {
+        for (const key of Object.keys(choices)) {
+            for (const [field, value] of Object.entries(roleConfig(role, key))) {
+                if (field.startsWith('model')) ids.add(value);
+            }
+        }
+    }
+    return [...ids];
+}
+
+// Dollars per token (per request for request) by OpenRouter model id, from its model list. A model listed
+// with a negative or missing price has a variable price, as a router does; it gets the highest price of
+// each kind among the listed fixed-price models, the same assumption the forecasts make for it.
+function modelPriceTable(models, listedIds) {
+    const table = new Map(models.map(model => {
+        const pricing = model.pricing || {};
+        return [model.id, { prompt: Number(pricing.prompt), completion: Number(pricing.completion),
+            inputCacheWrite: Number(pricing.input_cache_write ?? 0), request: Number(pricing.request ?? 0) }];
+    }));
+    const isFixed = price => PRICE_FIELDS.every(field => Number.isFinite(price[field]) && price[field] >= 0);
+    const fixed = listedIds.map(id => table.get(id)).filter(price => price !== undefined && isFixed(price));
+    if (fixed.length === 0) throw new Error('OpenRouter model list has no fixed price for any listed model');
+    const highest = Object.fromEntries(PRICE_FIELDS.map(field => [field, Math.max(...fixed.map(price => price[field]))]));
+    for (const [id, price] of table) {
+        if (!isFixed(price)) table.set(id, { ...highest, variable: true });
+    }
+    return table;
+}
+
+async function fetchModelPriceTable(fetchFunction) {
+    const response = await fetchFunction(CONSTANTS.OPENROUTER_MODELS_URL);
+    if (!response.ok) throw new Error(`OpenRouter model list HTTP ${response.status}: ${await readErrorMessage(response)}`);
+    const data = await response.json();
+    if (!Array.isArray(data.data)) throw new Error('OpenRouter model list has no data array');
+    return modelPriceTable(data.data, listedModelIds());
+}
+
+// The most one call can cost: its prompt bound at the higher of the input and cache-write prices, its
+// output ceiling at the output price, and any per-request price.
+function requestAllowance(call, prices) {
+    const price = prices.get(call.model);
+    if (price === undefined) throw new Error(`No OpenRouter price for ${call.model}; the spending cap cannot bound this call`);
+    if (!Number.isFinite(call.maxTokens) || call.maxTokens <= 0) {
+        throw new Error(`${call.stage} call to ${call.model} has no output ceiling; the spending cap cannot bound it`);
+    }
+    const promptBound = new TextEncoder().encode(JSON.stringify([call.messages, call.schema])).length + REQUEST_OVERHEAD_TOKENS;
+    return promptBound * Math.max(price.prompt, price.inputCacheWrite) + call.maxTokens * price.completion + price.request;
+}
+
+class BudgetReservationError extends Error {
+    constructor(limitUsd, spent, reserved, allowance, call) {
+        const callPart = allowance > 0 ? `, and this ${call.stage} call to ${call.model} can cost up to $${allowance.toFixed(COST_DIGITS)}` : `, before this ${call.stage} call to ${call.model}`;
+        super(`Budget of $${limitUsd.toFixed(SUMMARY_COST_DIGITS)} would be exceeded: $${spent.toFixed(COST_DIGITS)} spent and $${reserved.toFixed(COST_DIGITS)} reserved for calls in flight${callPart}. Finished calls are cached, so a rerun with a higher Max cost does not pay for them again.`);
+        this.name = 'BudgetReservationError';
+    }
+}
+
+// Wraps the OpenRouter callChat. loadPrices runs once, at the first batched call that reaches OpenRouter, so a
+// run that sends no batched call reads no prices. A call's reported cost replaces its reservation when it
+// returns, including a billed failure's; a failure without a response (refused request, network error,
+// cancellation) counts nothing, as the pipeline's accounting does. After a call whose cost is not reported,
+// every later call is refused, since the amount spent is no longer known.
+function makeBudgetedCallChat(callChat, loadPrices, limitUsd) {
+    if (!Number.isFinite(limitUsd) || limitUsd < 0) throw new Error(`Spending cap must be a dollar amount, not ${limitUsd}`);
+    let prices = null;
+    let spent = 0;
+    let reserved = 0;
+    let unknownCost = null;
+    return async function budgetedCallChat(call) {
+        if (unknownCost !== null) throw new Error(`Spending cap stopped this ${call.stage} call: the cost of an earlier ${unknownCost} call was not reported, so the amount spent is unknown`);
+        let allowance = 0;
+        if (RESERVED_STAGES.includes(call.stage)) {
+            prices = prices || loadPrices();
+            allowance = requestAllowance(call, await prices);
+            if (spent + reserved + allowance > limitUsd) throw new BudgetReservationError(limitUsd, spent, reserved, allowance, call);
+        } else if (spent + reserved >= limitUsd) {
+            throw new BudgetReservationError(limitUsd, spent, reserved, allowance, call);
+        }
+        reserved += allowance;
+        try {
+            const response = await callChat(call);
+            if (validCost(response.usage?.cost)) spent += response.usage.cost;
+            else unknownCost = call.stage;
+            return response;
+        } catch (error) {
+            if (error instanceof CostUnavailableError) unknownCost = call.stage;
+            else if (error.usage !== undefined) {
+                if (validCost(error.usage.cost)) spent += error.usage.cost;
+                else unknownCost = call.stage;
+            }
+            throw error;
+        } finally {
+            reserved -= allowance;
+        }
+    };
+}
+
+// ---------------------------------------------------------------------------
 // Result cache: reuse finished model calls across runs of the same request.
 // ---------------------------------------------------------------------------
 
@@ -2800,18 +2945,19 @@ function formatCacheProbe(probe) {
         return '';
     }
     const parts = probe.stages.map(stage => `${stage.hits} of ${stage.total} ${STAGE_BY_KEY[stage.stage].callName}`).join(', ');
-    return `Cached: ${parts} calls, so it will cost and take less.`;
+    return `Cached: ${parts} calls.`;
 }
 
-// The text after "Next run:" on the estimate line: the forecast, with the cached-call sentence when
-// some calls are cached, or the zero-cost statement when all are. probe is null until the probe finishes.
+// The text after "Next run:" on the estimate line: the forecast, which covers only the uncached calls once
+// the probe finds some cached, with the cached-call sentence, or the zero-cost statement when all are
+// cached. probe is null until the probe finishes.
 function formatNextRun({ usd, seconds, probe }) {
     const cacheText = probe === null ? '' : formatCacheProbe(probe);
     if (probe !== null && probe.complete) {
         return `$0 and 0 seconds, ${cacheText}.`;
     }
     const forecast = `about $${usd.toFixed(SUMMARY_COST_DIGITS)} and about ${formatDuration(seconds)}.`;
-    return cacheText === '' ? forecast : `${forecast} ${cacheText}`;
+    return cacheText === '' ? forecast : `${forecast.slice(0, -1)} for the uncached calls. ${cacheText}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -3158,17 +3304,17 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         CONSTANTS, DEFAULT_CONFIG, VOLUME_MODELS, CONSOLIDATION_MODELS, SUMMARY_MODELS, DEFAULT_EXTRACTION_KEY, DEFAULT_SCORING_KEY, DEFAULT_CONSOLIDATION_KEY, DEFAULT_SUMMARY_KEY, buildRunConfig, roleConfig, EXTRACTION_RATE_SHARE, modelDisplayName, volumeLabel, VOLUME_METRIC_COLUMNS, volumeMetrics, CONSOLIDATION_METRIC_COLUMNS, consolidationMetrics, consolidationLabel, summaryQualityText, SUMMARY_METRIC_COLUMNS, summaryMetrics, CHARS_PER_COMMENT,
-        roleChoice, combinedRate, estimateRunSeconds, applyToAllStages, stepMinComments, perThousandCommentsRates,
+        roleChoice, combinedRate, stageRates, ALL_UNCACHED, uncachedFractions, estimateRunSeconds, applyToAllStages, stepMinComments, perThousandCommentsRates,
         isArticle, isArticleId, createArticleSource, sourceFromSnapshot, parseArticlePreparation, buildArticlePrepareMessages, parseAxisReview, parseSynthesisReview, estimateSourceRun, ARTICLE_MAX_CHARS,
         stripHtml, flattenThread, makeExtractBatches, makeScoreBatches, seededShuffle,
         selectCommentShare, threadShare, indexCommentsById, estimateRunCost, largestShareWithinBudget, parseFrontPage, parseCurrentCommentCount, formatLocalDateTime, storyDate, storyDetails, storyLabel, sortStoriesNewestFirst, storySearchUrl, isThreadId, fetchThreadItem, fetchCurrentCommentCount, fetchStories, fetchFrontPageStories,
         buildExtractMessages, buildConsolidateMessages, buildScoreMessages,
-        buildSynthesisMessages, parseSynthesisResponse, synthesisTextParts,
+        SYNTHESIS_SCHEMA, buildSynthesisMessages, parseSynthesisResponse, synthesisTextParts,
         parseExtractResponse, parseConsolidateResponse, parseScoreResponse,
         parseStanceKey, flipStance,
         mergePasses, comparePasses, collectUnverifiedComments, aggregateByAuthor, computeRows, withAuthorCounts, orientRows, rankRows, wilsonInterval, wilsonLowerBound, minorityLowerBound, rowGroup, ROW_GROUPS, CONSENSUS_SHARE, SPLIT_SHARE, groupSynthesisSections, proportionShares,
         axisMetaText, formatDuration, formatElapsed, formatClockDuration, formatProgress, formatRunCost, formatRunSummary,
-        runPool, callOpenRouter, makeOpenRouterCallChat, runPipeline, TruncationError, InvalidResponseError, CostUnavailableError,
+        runPool, callOpenRouter, makeOpenRouterCallChat, listedModelIds, modelPriceTable, fetchModelPriceTable, requestAllowance, BudgetReservationError, makeBudgetedCallChat, runPipeline, TruncationError, InvalidResponseError, CostUnavailableError,
         requestCacheKey, parseCacheExport, cacheImportDecision, newerCacheDates, formatCacheImport, makeCachedCallChat, probeCache, formatCacheProbe, formatNextRun,
         makePkceVerifier, pkceChallenge, openRouterKeyLabel, openRouterAuthUrl, exchangeOpenRouterCode,
         runResultCacheKey, makeRunPageUrl, parseRunPageUrl,
@@ -3655,8 +3801,8 @@ function selectionKeyOf(selection) {
     return selection === null || selection === undefined ? null : runResultCacheKey(selection);
 }
 
-function renderEstimate(comments, estimate, seconds, probe) {
-    elements.estimate.textContent = `${shareText(comments)}, ${Math.round(estimate.chars / 1000)}k characters. Next run: ${formatNextRun({ usd: estimate.usd, seconds, probe })}`;
+function renderEstimate(comments, estimate, probe) {
+    elements.estimate.textContent = `${shareText(comments)}, ${Math.round(estimate.chars / 1000)}k characters. Next run: ${formatNextRun({ usd: estimate.usd, seconds: estimate.seconds, probe })}`;
 }
 
 // Dragging the slider fires many input events; the text forecast follows each one, the probe waits for a pause.
@@ -3676,15 +3822,14 @@ async function updateEstimate() {
     }
     const thread = selectedThread();
     const comments = thread.comments;
-    const estimate = estimateSourceRun(thread, selectedModelKeys());
-    const seconds = estimate.seconds;
+    const estimate = estimateSourceRun(thread, selectedModelKeys(), ALL_UNCACHED);
     elements.shareRow.hidden = false;
     refreshRunButton();
     if (!isArticle(thread) && comments.length === 0) {
         elements.estimate.textContent = `${shareText(comments)}.`;
         return null;
     }
-    renderEstimate(comments, estimate, seconds, null);
+    renderEstimate(comments, estimate, null);
     try {
         await defaultSleep(PROBE_DEBOUNCE_MS);
         if (!isCurrent()) {
@@ -3695,7 +3840,7 @@ async function updateEstimate() {
             return null;
         }
         latestProbe = probe;
-        renderEstimate(comments, estimate, seconds, probe);
+        renderEstimate(comments, estimateSourceRun(thread, selectedModelKeys(), uncachedFractions(probe)), probe);
         refreshRunButton();
         return probe;
     } catch (error) {
@@ -4985,7 +5130,8 @@ async function runFromPage({ urlWrite = RUN_URL_WRITE.none, runSelection } = {})
     if (writesUrl) {
         showRunUrl(selection, urlWrite);
     }
-    const estimate = estimateSourceRun(thread, selectedModelKeys());
+    // The latest probe describes this selection: any change to it starts a new probe and clears latestProbe.
+    const estimate = estimateSourceRun(thread, selectedModelKeys(), latestProbe === null ? ALL_UNCACHED : uncachedFractions(latestProbe));
     const expectedSeconds = estimate.seconds;
     let calledModel = true;
     activeController = new AbortController();
@@ -5000,7 +5146,7 @@ async function runFromPage({ urlWrite = RUN_URL_WRITE.none, runSelection } = {})
             signal,
             config: selectedRunConfig(),
             onProgress: update => counter.setProgress(formatProgress(update)),
-            callChat: makeCachedCallChat(makeOpenRouterCallChat({ apiKey }), cacheStore),
+            callChat: makeCachedCallChat(makeBudgetedCallChat(makeOpenRouterCallChat({ apiKey }), () => fetchModelPriceTable(globalThis.fetch), maxCostInBox()), cacheStore),
         });
         if (!articleStored) result.warnings.push('The original article could not be saved in this browser; export or reopening may be unavailable.');
         counter.stop();
