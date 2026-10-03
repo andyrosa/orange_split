@@ -1,6 +1,6 @@
 // Headless runner: executes the same core pipeline as hn_polarization.html from Node.
 // Usage: node scripts/run_node.js --thread=49525378 [--key=sk-or-...] [--out=result.json] [--thread-file=path] [--cache-dir=path]
-//        [--config-file=path] [--volume=<key>] [--consolidation=<key>] [--summary=<key>] [--model=id] [--temperature=0] [--seed=12345] [--concurrency=30]
+//        [--config-file=path] [--extraction=<key>] [--consolidation=<key>] [--scoring=<key>] [--summary=<key>] [--model=id] [--temperature=0] [--seed=12345] [--concurrency=30]
 //        [--share=<percent>] [--budget=<usd>]
 // --share analyzes only the top N percent of comments, the same selection as the page's slider; default 100.
 // --budget stops the run once the spend passes this many dollars; default DEFAULT_CONFIG.budgetUsd.
@@ -35,17 +35,11 @@ function buildConfig() {
     if (configFile !== null) {
         Object.assign(config, JSON.parse(fs.readFileSync(configFile, 'utf8')));
     }
-    const volume = readArgument('volume');
-    if (volume !== null) {
-        Object.assign(config, core.roleChoice('volume', volume).config);
-    }
-    const consolidation = readArgument('consolidation');
-    if (consolidation !== null) {
-        Object.assign(config, core.roleChoice('consolidation', consolidation).config);
-    }
-    const summary = readArgument('summary');
-    if (summary !== null) {
-        Object.assign(config, core.roleChoice('summary', summary).config);
+    for (const role of ['extraction', 'consolidation', 'scoring', 'summary']) {
+        const key = readArgument(role);
+        if (key !== null) {
+            Object.assign(config, core.roleConfig(role, key));
+        }
     }
     const model = readArgument('model');
     if (model !== null) {
@@ -112,7 +106,7 @@ function formatRow(row) {
     return [
         `#${String(row.rank).padStart(RANK_DIGITS)} ${row.statementA}`,
         `${STATEMENT_INDENT}${row.statementB}`,
-        `${STATEMENT_INDENT}${row.countA} on statement 1, ${row.countB} on statement 2; ${core.axisMetaText(row)}`,
+        `${STATEMENT_INDENT}${row.countA} on statement 1, ${row.countB} on statement 2; group ${row.group}; ${core.axisMetaText(row)}`,
     ].join('\n');
 }
 
