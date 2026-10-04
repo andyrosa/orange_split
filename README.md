@@ -110,7 +110,7 @@ A final model synthesis covers where the discussion agrees, then where it splits
 - `scripts/load_core.js`: evaluates the core block as a Node module for the runner, so there is no build step and no second copy of the pipeline.
 - `scripts/run_node.js`: headless runner with options for models, caching, thread files, comment share, and budget.
 - `scripts/csp.js`: recomputes the Content-Security-Policy hashes of the page's two script blocks and its style block; `node scripts/csp.js` reports whether the policy is current, `--write` rewrites it. A browser refuses an inline block whose hash the policy does not name. Run `node scripts/csp.js --write` after editing an inline block.
-- `.gitattributes`: makes every text file CRLF in the working tree on every platform and LF in the index, regardless of `core.autocrlf`. The policy hashes do not depend on line endings: the browser converts CRLF to LF while parsing, and `scripts/csp.js` hashes the same LF text.
+- `.gitattributes`: makes every text file LF in the working tree and in the index on every platform, regardless of `core.autocrlf`. The policy hashes do not depend on line endings: the browser converts CRLF to LF while parsing, and `scripts/csp.js` hashes the same LF text.
 
 ## User interface
 
