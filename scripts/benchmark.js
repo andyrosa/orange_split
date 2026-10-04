@@ -1,0 +1,218 @@
+// Grades the page's model choices against the silver reference (data/silver.json, built by scripts/silver.js).
+// One choice is one model setting in one role. Only the role under test calls the choice's model; every other
+// stage of the pipeline gets the silver reference as a fixed response, so no choice is measured in combination
+// with another, and adding a model takes one run of this script.
+// Usage: node scripts/benchmark.js --role=<extraction|consolidation|scoring|summary> --choice=<key>   one choice
+//        node scripts/benchmark.js --choice=<key>     that key in every role that lists it
+//        node scripts/benchmark.js --all              every listed choice without a result yet
+//        node scripts/benchmark.js --embed            only copy data/silver-benchmark.json into the page
+//        [--force] measure again a choice that has a result  [--budget=<usd>] [--concurrency=<calls>] [--key=sk-or-...]
+// Agreement is the harmonic mean of precision and recall against the reference:
+//   extraction     precision: of the candidates both silver models place, the share they match to one silver
+//                  axis. recall: the share of the people on silver axes whose axis got a matched candidate.
+//   consolidation  B-cubed precision and recall of the choice's grouping of the silver candidate pool against
+//                  the pairs of candidates both silver models group together or both keep apart.
+//   scoring        precision: of the stances given on cells the silver models agree on, the share equal to the
+//                  silver stance. recall: the share of the silver stances given.
+//   summary        precision: of the cited sides both silver models judge alike, the share judged faithful
+//                  to the evidence. recall: the share of the featured axes (cited by both silver summaries)
+//                  the summary cites.
+// Each result also holds what the role's calls cost and how long they took. Results go to
+// data/silver-benchmark.json and into the SILVER_BENCHMARK constant of the page.
+const fs = require('node:fs');
+const { execFileSync } = require('node:child_process');
+const path = require('node:path');
+const lib = require('./silver_lib');
+const { HTML_PATH, loadCore } = require('./load_core');
+
+const { core, MODEL } = lib;
+const DEFAULT_BUDGET_USD = 5;
+const ROLES = Object.freeze(['extraction', 'consolidation', 'scoring', 'summary']);
+const ROLE_STAGE = Object.freeze({ extraction: 'extract', consolidation: 'consolidate', scoring: 'score', summary: 'synthesize' });
+const EMBED_PATTERN = /^const SILVER_BENCHMARK = .*$/m;
+const README_PATH = path.join(__dirname, '..', 'README.md');
+const README_START = '<!-- silver-benchmark:start -->';
+const README_END = '<!-- silver-benchmark:end -->';
+const README_TABLES_PATTERN = new RegExp(`${README_START}[\\s\\S]*${README_END}`);
+const PRECISION_DIGITS = 4;
+const FAILURE_MESSAGE_CHARS = 300;
+
+function roleChoices(role) {
+    return { extraction: core.VOLUME_MODELS, consolidation: core.CONSOLIDATION_MODELS, scoring: core.VOLUME_MODELS, summary: core.SUMMARY_MODELS }[role];
+}
+
+function rounded(value) {
+    return Number(value.toFixed(PRECISION_DIGITS));
+}
+
+function graded({ precision, recall }) {
+    return { agreement: rounded(lib.agreementOf(precision, recall)), precision: rounded(precision), recall: rounded(recall) };
+}
+
+// The measured cost and time of the role's own calls.
+function measured(meter, role) {
+    const stage = meter.stage(ROLE_STAGE[role]);
+    return { usd: stage.usd, calls: stage.calls, failedCalls: stage.failedCalls, meanCallSeconds: rounded(stage.meanCallSeconds),
+        maxCallSeconds: rounded(stage.maxCallSeconds), promptTokens: stage.promptTokens, completionTokens: stage.completionTokens };
+}
+
+const GRADERS = {
+    async extraction({ result, silver, thread, judgeCallChat }) {
+        const candidates = result.candidates;
+        const matches = await lib.matchCandidates({ modelCallChat: judgeCallChat, title: thread.title, axes: silver.axes, candidates });
+        const matched = matches.filter(axisId => axisId !== null && axisId !== 0);
+        const unmatched = matches.filter(axisId => axisId === 0).length;
+        const found = new Set(matched);
+        const people = silver.rows.reduce((sum, row) => sum + row.people, 0);
+        const foundPeople = silver.rows.filter(row => found.has(row.axisId)).reduce((sum, row) => sum + row.people, 0);
+        return { ...graded({ precision: matched.length + unmatched === 0 ? 0 : matched.length / (matched.length + unmatched), recall: people === 0 ? 0 : foundPeople / people }),
+            candidates: candidates.length, matched: matched.length, unmatched, disputed: matches.filter(axisId => axisId === null).length, axesFound: found.size };
+    },
+    async consolidation({ result, silver }) {
+        const partitions = Object.values(silver.partitions).map(partition => partition.map(candidates => ({ candidates })));
+        return { ...graded(lib.consolidationAgreement(result.axes, partitions, silver.candidates.length)),
+            candidates: silver.candidates.length, axes: result.axes.length, axesBelowFloor: result.stats.axesBelowFloor };
+    },
+    async scoring({ result, silver }) {
+        const { agreed } = lib.stancesOfResult(result);
+        const { precision, recall, given, correct } = lib.scoringAgreement(agreed, lib.silverStanceTable(silver));
+        return { ...graded({ precision, recall }), given, correct, silverStances: silver.stances.length, axes: silver.axes.length };
+    },
+    async summary({ result, silver, thread, judgeCallChat }) {
+        // The pipeline keeps the comparisons when the summary fails. A summary whose output stayed invalid is a
+        // result; a call that got no output (refused request, network error) is not.
+        if (!result.synthesis && !result.synthesisFailure) throw new Error(`summary call failed: ${result.synthesisError}`);
+        if (!result.synthesis) return { agreement: 0, precision: 0, recall: 0, failed: result.synthesisError.slice(0, FAILURE_MESSAGE_CHARS) };
+        const commentsById = core.indexCommentsById(thread.comments);
+        const evidenceContent = core.buildSynthesisMessages(thread.title, result.rows, commentsById)[1].content;
+        const verdicts = [...(await lib.checkSummary({ modelCallChat: judgeCallChat, title: thread.title, evidenceContent, synthesis: result.synthesis })).values()];
+        const faithful = verdicts.filter(verdict => verdict === true).length;
+        const unfaithful = verdicts.filter(verdict => verdict === false).length;
+        const cited = new Set(lib.summaryMarkers(result.synthesis).map(marker => marker.axisId));
+        const featuredCited = silver.featuredAxes.filter(axisId => cited.has(axisId)).length;
+        return { ...graded({ precision: faithful + unfaithful === 0 ? 0 : faithful / (faithful + unfaithful), recall: silver.featuredAxes.length === 0 ? 0 : featuredCited / silver.featuredAxes.length }),
+            markers: verdicts.length, faithful, unfaithful, disputed: verdicts.filter(verdict => verdict === null).length, featuredCited, featured: silver.featuredAxes.length };
+    },
+};
+
+// The stage handlers of one role's run: the role's stage calls the model, the stages before it replay the
+// silver reference, and the stages after it get the least that lets the pipeline finish.
+function handlersFor(role, silver) {
+    const table = lib.silverStanceTable(silver).stances;
+    return {
+        extraction: { extract: MODEL, consolidate: lib.oneAxisOfAllCandidates, score: lib.noStances, synthesize: lib.noSummary },
+        consolidation: { extract: lib.fixedCandidates(silver.candidates), consolidate: MODEL, score: lib.noStances, synthesize: lib.noSummary },
+        scoring: { extract: lib.fixedCandidates(silver.candidates), consolidate: lib.fixedAxes(silver.axes), score: MODEL, synthesize: lib.noSummary },
+        summary: { extract: lib.fixedCandidates(silver.candidates), consolidate: lib.fixedAxes(silver.axes), score: lib.fixedStances(table), synthesize: MODEL },
+    }[role];
+}
+
+async function benchmarkChoice({ role, choiceKey, silver, thread, modelCallChat, concurrency }) {
+    const label = `${role} ${choiceKey}`;
+    const meter = lib.makeMeter();
+    const judgeMeter = lib.makeMeter();
+    let grade;
+    try {
+        const result = await lib.runStages({ thread, config: { ...core.roleConfig(role, choiceKey), concurrency }, handlers: handlersFor(role, silver),
+            modelCallChat: meter.wrap(modelCallChat), label });
+        grade = await GRADERS[role]({ result, silver, thread, judgeCallChat: judgeMeter.wrap(modelCallChat) });
+    } catch (error) {
+        // A choice whose output stays invalid or truncated after the pipeline's own splitting and repair has
+        // no usable output, which is a result. Any other error (network, spending cap) stops the benchmark.
+        if (!(error instanceof core.InvalidResponseError || error instanceof core.TruncationError)) throw error;
+        grade = { agreement: 0, precision: 0, recall: 0, failed: error.message.slice(0, FAILURE_MESSAGE_CHARS) };
+    }
+    const judgeUsd = judgeMeter.calls.reduce((sum, call) => sum + call.usd, 0);
+    const outcome = { ...grade, ...measured(meter, role), judgeUsd, measuredAt: new Date().toISOString() };
+    console.log(`${label}: agreement ${(outcome.agreement * 100).toFixed(1)}% (precision ${(outcome.precision * 100).toFixed(1)}%, recall ${(outcome.recall * 100).toFixed(1)}%), $${outcome.usd.toFixed(4)}, ${outcome.calls} calls, mean ${outcome.meanCallSeconds} s${outcome.failed ? `, FAILED: ${outcome.failed}` : ''}`);
+    return outcome;
+}
+
+function readBenchmark(silver) {
+    const header = { threadId: silver.threadId, title: silver.title, comments: silver.comments, chars: silver.chars, authors: silver.authors,
+        silverModels: silver.models.map(model => `${model.name} (${model.effort})`), silverBuiltAt: silver.builtAt,
+        axes: silver.axes.length, candidates: silver.candidates.length, stances: silver.stances.length, featuredAxes: silver.featuredAxes.length };
+    const stored = fs.existsSync(lib.BENCHMARK_FILE) ? JSON.parse(fs.readFileSync(lib.BENCHMARK_FILE, 'utf8')) : null;
+    // Results measured against another build of the reference do not compare with new ones.
+    const results = stored && stored.silverBuiltAt === silver.builtAt ? stored.results : Object.fromEntries(ROLES.map(role => [role, {}]));
+    return { ...header, results };
+}
+
+function writeBenchmark(benchmark) {
+    fs.writeFileSync(lib.BENCHMARK_FILE, JSON.stringify(benchmark, null, 1) + '\n', 'utf8');
+}
+
+// Copies the results into the page's SILVER_BENCHMARK constant and regenerates the Content-Security-Policy
+// hashes, which cover the inline script.
+function embed(benchmark) {
+    const html = fs.readFileSync(HTML_PATH, 'utf8');
+    if (!EMBED_PATTERN.test(html)) throw new Error(`${HTML_PATH} has no SILVER_BENCHMARK constant to replace`);
+    fs.writeFileSync(HTML_PATH, html.replace(EMBED_PATTERN, () => `const SILVER_BENCHMARK = Object.freeze(${JSON.stringify(benchmark)});`), 'utf8');
+    execFileSync(process.execPath, [path.join(__dirname, 'csp.js'), '--write'], { stdio: 'inherit' });
+    console.log(`embedded ${Object.values(benchmark.results).reduce((sum, choices) => sum + Object.keys(choices).length, 0)} results in ${HTML_PATH}`);
+    writeReadmeTables();
+}
+
+// Rewrites the benchmark tables of the README, between its two marker comments, from the page that now
+// holds the results, so the README shows what the pickers show.
+function writeReadmeTables() {
+    const page = loadCore();
+    const percent = share => `${Math.round(share * 100)}%`;
+    const tables = ROLES.map(role => {
+        const rows = Object.keys(page.ROLE_CHOICES[role])
+            .sort((left, right) => page.modelDisplayName(page.roleChoice(role, left)).localeCompare(page.modelDisplayName(page.roleChoice(role, right)), 'en', { numeric: true, sensitivity: 'base' }))
+            .map(key => {
+                const cells = page.pickerCells(role, key);
+                const result = page.benchmarkResult(role, key);
+                const graded = result !== undefined && !result.failed;
+                return `| ${cells.model} | ${cells.effort} | ${cells.cost} | ${cells.time} | ${cells.agreement} | ${graded ? percent(result.precision) : ''} | ${graded ? percent(result.recall) : ''} |`;
+            });
+        return [`### ${role[0].toUpperCase()}${role.slice(1)}`, '', `| Model | Reasoning effort | Cost / ${page.PICKER_COMMENTS} comments | Time / ${page.PICKER_COMMENTS} comments | Agreement with silver | Precision | Recall |`,
+            '| --- | --- | ---: | ---: | ---: | ---: | ---: |', ...rows].join('\n');
+    });
+    const readme = fs.readFileSync(README_PATH, 'utf8');
+    if (!README_TABLES_PATTERN.test(readme)) throw new Error(`${README_PATH} has no ${README_START} and ${README_END} markers`);
+    fs.writeFileSync(README_PATH, readme.replace(README_TABLES_PATTERN, () => `${README_START}\n${tables.join('\n\n')}\n${README_END}`), 'utf8');
+    console.log(`rewrote the benchmark tables in ${README_PATH}`);
+}
+
+async function main() {
+    const silver = lib.readSilver();
+    const benchmark = readBenchmark(silver);
+    if (process.argv.includes('--embed')) {
+        embed(benchmark);
+        return;
+    }
+    const role = lib.readArgument('role');
+    const choiceKey = lib.readArgument('choice');
+    const force = process.argv.includes('--force');
+    if (role !== null && !ROLES.includes(role)) throw new Error(`--role must be one of ${ROLES.join(', ')}`);
+    if (!process.argv.includes('--all') && choiceKey === null) throw new Error('pass --choice=<key>, optionally with --role=<role>, or --all, or --embed');
+    const tasks = (role === null ? ROLES : [role]).flatMap(taskRole => Object.entries(roleChoices(taskRole))
+        // A router has no fixed model, so it has nothing to measure.
+        .filter(([key, choice]) => !choice.unmeasured && (choiceKey === null || key === choiceKey))
+        .filter(([key]) => force || choiceKey !== null || benchmark.results[taskRole][key] === undefined)
+        .map(([key]) => ({ role: taskRole, choiceKey: key })));
+    if (tasks.length === 0) throw new Error(choiceKey === null ? 'every listed choice already has a result; pass --force to measure again' : `no role lists the choice ${choiceKey}`);
+    const ledger = { spentUsd: 0, capUsd: Number(lib.readArgument('budget') ?? DEFAULT_BUDGET_USD) };
+    const modelCallChat = lib.makeModelCallChat({ apiKey: lib.requireApiKey(), ledger });
+    const thread = await lib.loadThread(silver.threadId);
+    if (thread.comments.length !== silver.comments || lib.threadChars(thread) !== silver.chars) {
+        throw new Error(`the thread snapshot (${thread.comments.length} comments) is not the one the reference was built on (${silver.comments} comments)`);
+    }
+    const concurrency = Number(lib.readArgument('concurrency') ?? core.DEFAULT_CONFIG.concurrency);
+    // Choices run one after another per role and the roles run side by side; each result is saved as it arrives.
+    await Promise.all(ROLES.map(async taskRole => {
+        for (const task of tasks.filter(item => item.role === taskRole)) {
+            benchmark.results[task.role][task.choiceKey] = await benchmarkChoice({ ...task, silver, thread, modelCallChat, concurrency });
+            writeBenchmark(benchmark);
+        }
+    }));
+    console.log(`wrote ${lib.BENCHMARK_FILE}; $${ledger.spentUsd.toFixed(2)} spent in this run`);
+    embed(benchmark);
+}
+
+main().catch(error => {
+    process.stderr.write(`ERROR: ${error.message}\n`);
+    process.exitCode = 1;
+});

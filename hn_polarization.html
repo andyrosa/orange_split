@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-qvYx8nfdBp7xXkeRChbGktcdUqE9UE797iLV0iOHmMI=' 'sha256-pZxm2uvWI8KPWQHXJGrnnh3COZfdg7Ulle/Q+Hl0Xh4='; style-src 'sha256-b1uLJHHbbHvHdSMP5PBNa/byB9csk2a8INRTzfqESco='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-TgODcNS+8ncV7MG7cLWhi9bO29q+Edw0aV7SGZkD01g=' 'sha256-qD3DacFGefPtN8tqU+Nt9Z55NK7u0a6segjw9SS+M2s='; style-src 'sha256-ykxbkCuA8bV8aejMJYghrqSVuGRLEwY4aEyyXRWCIxs='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
 <title>Orange Split - For and Against on Hacker News</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EOS%3C/text%3E%3C/svg%3E">
 <style>
@@ -68,13 +68,7 @@ input[type="range"] { width: 8rem; vertical-align: middle; }
 .model-choice { display: flex; align-items: center; gap: 0.4rem; min-width: 0; max-width: 100%; }
 .model-choice > label { margin: 0; font-size: 0.85rem; font-weight: 600; white-space: nowrap; }
 .model-grid { display: grid; align-items: stretch; }
-.volume-grid { grid-template-columns: minmax(11rem, 2fr) minmax(7rem, 0.9fr) minmax(7rem, 0.9fr) minmax(6rem, 0.75fr) minmax(6rem, 0.8fr) minmax(8rem, 1fr) minmax(8rem, 1fr) minmax(7rem, 0.9fr); }
-.consolidation-grid { grid-template-columns: minmax(15rem, 1.8fr) minmax(7rem, 0.8fr) minmax(7rem, 0.8fr) minmax(9rem, 1fr) minmax(9rem, 1fr) minmax(10rem, 1.1fr); }
-#consolidation-model-options { max-width: 76rem; }
-#consolidation-model-options .model-grid { min-width: 60rem; }
-.summary-grid { grid-template-columns: minmax(15rem, 1.8fr) minmax(9rem, 1fr) minmax(9rem, 1fr) minmax(7rem, .8fr) minmax(10rem, 1.1fr); }
-#summary-model-options { max-width: 64rem; }
-#summary-model-options .model-grid { min-width: 54rem; }
+.picker-grid { grid-template-columns: minmax(11rem, 2fr) minmax(7rem, 0.9fr) minmax(8rem, 1fr) minmax(8rem, 1fr) minmax(8rem, 1fr); }
 .model-grid-header { position: sticky; top: 0; padding: 0.55rem 2.2rem 0.55rem 0.75rem; background: #eee; color: #555; font-size: 11px; line-height: 1.15; }
 .model-comparison-method { margin: 0; padding: 0.6rem 0.75rem; color: #555; font-size: 12px; line-height: 1.4; }
 .model-cell { display: flex; align-items: center; min-width: 0; padding: 0 0.55rem; }
@@ -86,8 +80,8 @@ input[type="range"] { width: 8rem; vertical-align: middle; }
 .model-trigger:hover, .model-trigger[aria-expanded="true"] { background: #eaf3fc; border-color: #477cac; }
 .model-trigger::after { content: "v"; position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); }
 .model-trigger:focus { outline: 2px solid #2b6cb0; outline-offset: 1px; }
-.model-options { position: absolute; z-index: 3; top: calc(100% + 0.3rem); left: 0; width: 100%; max-width: 86rem; box-sizing: border-box; max-height: min(48rem, 75vh); overflow: auto; border: 1px solid #777; background: #fff; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); }
-.model-options .model-grid { min-width: 68rem; box-sizing: border-box; }
+.model-options { position: absolute; z-index: 3; top: calc(100% + 0.3rem); left: 0; width: 100%; max-width: 56rem; box-sizing: border-box; max-height: min(48rem, 75vh); overflow: auto; border: 1px solid #777; background: #fff; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); }
+.model-options .model-grid { min-width: 42rem; box-sizing: border-box; }
 .model-option { width: 100%; margin: 0; padding: 0 2.2rem 0 0.75rem; border: 0; border-top: 1px solid #eee; border-radius: 0; background: #fff; color: #111; text-align: left; }
 .model-option .model-cell { padding-top: 0.55rem; padding-bottom: 0.55rem; }
 .model-option:hover, .model-option:focus { background: #e8f2fb; outline: none; }
@@ -191,7 +185,7 @@ button { margin-right: 0.5rem; }
 <div id="extraction-model-picker" class="model-picker">
 <button id="extraction-model-button" class="model-trigger" type="button" aria-labelledby="extraction-model-label extraction-model-button" aria-haspopup="listbox" aria-expanded="false" aria-controls="extraction-model-options"></button>
 <div id="extraction-model-options" class="model-options" role="listbox" aria-labelledby="extraction-model-label" hidden>
-<div id="extraction-model-header" class="model-grid volume-grid model-grid-header" aria-hidden="true"></div>
+<div id="extraction-model-header" class="model-grid picker-grid model-grid-header" aria-hidden="true"></div>
 </div>
 <select id="extraction-model" hidden aria-hidden="true" tabindex="-1"></select>
 </div>
@@ -201,7 +195,7 @@ button { margin-right: 0.5rem; }
 <div id="consolidation-model-picker" class="model-picker">
 <button id="consolidation-model-button" class="model-trigger" type="button" aria-labelledby="consolidation-model-label consolidation-model-button" aria-haspopup="listbox" aria-expanded="false" aria-controls="consolidation-model-options"></button>
 <div id="consolidation-model-options" class="model-options" role="listbox" aria-labelledby="consolidation-model-label" hidden>
-<div id="consolidation-model-header" class="model-grid consolidation-grid model-grid-header" aria-hidden="true"></div>
+<div id="consolidation-model-header" class="model-grid picker-grid model-grid-header" aria-hidden="true"></div>
 </div>
 <select id="consolidation-model" hidden aria-hidden="true" tabindex="-1"></select>
 </div>
@@ -211,7 +205,7 @@ button { margin-right: 0.5rem; }
 <div id="scoring-model-picker" class="model-picker">
 <button id="scoring-model-button" class="model-trigger" type="button" aria-labelledby="scoring-model-label scoring-model-button" aria-haspopup="listbox" aria-expanded="false" aria-controls="scoring-model-options"></button>
 <div id="scoring-model-options" class="model-options" role="listbox" aria-labelledby="scoring-model-label" hidden>
-<div id="scoring-model-header" class="model-grid volume-grid model-grid-header" aria-hidden="true"></div>
+<div id="scoring-model-header" class="model-grid picker-grid model-grid-header" aria-hidden="true"></div>
 </div>
 <select id="scoring-model" hidden aria-hidden="true" tabindex="-1"></select>
 </div>
@@ -221,7 +215,7 @@ button { margin-right: 0.5rem; }
 <div id="summary-model-picker" class="model-picker">
 <button id="summary-model-button" class="model-trigger" type="button" aria-labelledby="summary-model-label summary-model-button" aria-haspopup="listbox" aria-expanded="false" aria-controls="summary-model-options"></button>
 <div id="summary-model-options" class="model-options" role="listbox" aria-labelledby="summary-model-label" hidden>
-<div id="summary-model-header" class="model-grid summary-grid model-grid-header" aria-hidden="true"></div>
+<div id="summary-model-header" class="model-grid picker-grid model-grid-header" aria-hidden="true"></div>
 </div>
 <select id="summary-model" hidden aria-hidden="true" tabindex="-1"></select>
 </div>
@@ -279,37 +273,39 @@ const CONSTANTS = Object.freeze({
     RETRY_BASE_MS: 2000,
 });
 
-// Models are chosen per role: extraction, consolidation, scoring and summary. Extraction and scoring
-// choose from the same list, whose measurements were taken with one model running both stages. Sampling and reasoning are per stage because providers differ: Haiku 4.5 accepts
-// temperature but not seed; Sonnet 5 and Opus 5 accept neither and think adaptively; GLM 5.3 Flash
-// cannot run without reasoning and needs large output ceilings; Gemini accepts temperature and seed;
-// the GPT-5.6 models (Luna, Sol) accept seed and a reasoning effort but not temperature; Claude Fable 5.1
-// accepts a reasoning effort but neither temperature nor seed.
+// Models are chosen per role: extraction, consolidation, scoring and summary. Extraction and scoring choose
+// from one list; consolidation and summary choose from another. Sampling and reasoning are per choice because
+// providers differ: Haiku 4.5 accepts temperature but not seed; the Sonnet and Opus models accept neither and
+// think adaptively; GLM 5.3 Flash cannot run without reasoning and needs large output ceilings; Gemini accepts
+// temperature and seed; the GPT models (Luna, Sol, Astra) accept seed and a reasoning effort but not
+// temperature; Claude Fable 5.1 accepts a reasoning effort but neither temperature nor seed.
 // null omits the field from the request.
 //
-// The cost and time rates are per million characters of comment text, framing included, from measured
-// runs on thread 49525378 at a 1300-comment snapshot (about 412k characters), thread 49537553 at a
-// 484-comment snapshot (about 132k; later refrozen at 592 comments as the volume-addition fixture), and
-// a 38-comment timing probe whose thread id was not recorded; both cost and wall time scaled with the
-// characters in those runs, consolidation
-// included, since its thinking grows with the number of candidates. minimumSeconds is the latency of one
-// call of the model in its role, the floor for a stage no matter how small the thread.
+// Every figure a picker shows and every forecast comes from one benchmark. scripts/silver.js builds the silver
+// reference for one thread: what the two strongest models, one from OpenAI and one from Anthropic, agree on
+// at each stage, with no human annotation. scripts/benchmark.js then runs each choice in each of its roles on
+// that thread, with every other stage fixed to the reference, and records the choice's agreement with the
+// reference, what its calls cost, and how long they took. Adding a model is one entry below and one run of
+// scripts/benchmark.js --choice=<key>.
 const SAMPLING_SEED = 12345;
-const DEFAULT_EXTRACTION_KEY = 'lunaLow';
+// The default of each role is the choice with the highest agreement with silver among the choices whose stage
+// costs at most a quarter of the default Max cost for a thread of PICKER_COMMENTS comments; equal agreement
+// goes to the faster choice. The picks are fixed here, from the benchmark of 2026-10-04, so that a later
+// benchmark run does not change a default without an edit.
+const DEFAULT_EXTRACTION_KEY = 'luna6Low';
 const DEFAULT_SCORING_KEY = 'lunaLow';
-const DEFAULT_CONSOLIDATION_KEY = 'solLow';
+const DEFAULT_CONSOLIDATION_KEY = 'sonnet55';
 const DEFAULT_SUMMARY_KEY = 'sol6Low';
-
-// The rates in the tables are per this many characters of comment text.
-const RATE_UNIT_CHARS = 1000000;
 
 // The sampling profiles the providers accept.
 const SAMPLING_TEMPERATURE = Object.freeze({ temperature: CONSTANTS.TEMPERATURE });
 const SAMPLING_TEMPERATURE_AND_SEED = Object.freeze({ temperature: CONSTANTS.TEMPERATURE, seed: SAMPLING_SEED });
 const SAMPLING_SEED_ONLY = Object.freeze({ seed: SAMPLING_SEED });
 
-// The output ceiling of the consolidation call for every consolidator whose provider allows it.
+// The output ceiling of the consolidation call for every consolidator whose provider allows it, and of the
+// summary call for every model.
 const CONSOLIDATION_MAX_TOKENS = 128000;
+const SUMMARY_MAX_TOKENS = 16000;
 
 // The model stages in run order, each served by one role's model. Config fields carry the suffix
 // (modelExtract, samplingExtract, ...); the estimate line uses the call name.
@@ -321,14 +317,17 @@ const STAGES = Object.freeze([
 ]);
 const STAGE_ORDER = Object.freeze(STAGES.map(stage => stage.key));
 const STAGE_BY_KEY = Object.freeze(Object.fromEntries([...STAGES, { key: 'prepare', callName: 'article preparation' }, { key: 'reviewAxes', callName: 'comparison review' }, { key: 'reviewSynthesis', callName: 'summary review' }].map(stage => [stage.key, stage])));
+const STAGE_OF_ROLE = Object.freeze(Object.fromEntries(STAGES.map(stage => [stage.role, stage.key])));
+
+// Embedded from data/silver-benchmark.json by scripts/benchmark.js --embed: the benchmark thread, and each
+// choice's result by role and choice key.
+const SILVER_BENCHMARK = Object.freeze({"threadId":22866284,"title":"The Wolfram Physics Project","comments":323,"chars":165268,"authors":184,"silverModels":["GPT-6.1 Sol (xhigh)","Claude Opus 5.5 (high)"],"silverBuiltAt":"2026-10-04T20:30:05.702Z","axes":32,"candidates":321,"stances":220,"featuredAxes":4,"results":{"extraction":{"haiku":{"agreement":0.8366,"precision":1,"recall":0.7191,"candidates":55,"matched":50,"unmatched":0,"disputed":5,"axesFound":21,"usd":0.08182400000000001,"calls":17,"failedCalls":0,"meanCallSeconds":5.8158,"maxCallSeconds":8.552,"promptTokens":55064,"completionTokens":5352,"judgeUsd":0.163095,"measuredAt":"2026-10-04T20:34:20.389Z"},"glmFlash":{"agreement":0.8443,"precision":0.9434,"recall":0.764,"candidates":57,"matched":50,"unmatched":3,"disputed":4,"axesFound":24,"usd":0.04170159252,"calls":17,"failedCalls":0,"meanCallSeconds":117.7779,"maxCallSeconds":735.815,"promptTokens":46464,"completionTokens":77159,"judgeUsd":0.138302,"measuredAt":"2026-10-04T20:49:26.821Z"},"geminiFlash":{"agreement":0.9005,"precision":0.9744,"recall":0.8371,"candidates":42,"matched":38,"unmatched":1,"disputed":3,"axesFound":23,"usd":0.18145800000000004,"calls":17,"failedCalls":0,"meanCallSeconds":9.6028,"maxCallSeconds":14.054,"promptTokens":50594,"completionTokens":38270,"judgeUsd":0.1259092,"measuredAt":"2026-10-04T20:52:42.372Z"},"opus5":{"agreement":0.8808,"precision":0.8132,"recall":0.9607,"candidates":102,"matched":74,"unmatched":17,"disputed":11,"axesFound":30,"usd":1.23237,"calls":17,"failedCalls":0,"meanCallSeconds":25.3289,"maxCallSeconds":40.7,"promptTokens":73040,"completionTokens":34506,"judgeUsd":0.2741002,"measuredAt":"2026-10-04T21:00:12.153Z"},"lunaLow":{"agreement":0.845,"precision":0.8983,"recall":0.7978,"candidates":64,"matched":53,"unmatched":6,"disputed":5,"axesFound":25,"usd":0.030266500000000005,"calls":17,"failedCalls":0,"meanCallSeconds":12.7005,"maxCallSeconds":20.239,"promptTokens":46225,"completionTokens":15594,"judgeUsd":0.1879315,"measuredAt":"2026-10-04T21:04:54.743Z"},"luna6Low":{"agreement":0.9223,"precision":0.9348,"recall":0.9101,"candidates":49,"matched":43,"unmatched":3,"disputed":3,"axesFound":27,"usd":0.011141850000000002,"calls":17,"failedCalls":0,"meanCallSeconds":7.4636,"maxCallSeconds":9.971,"promptTokens":46225,"completionTokens":10730,"judgeUsd":0.1270427,"measuredAt":"2026-10-04T21:07:50.750Z"}},"consolidation":{"sonnet5":{"agreement":0.4278,"precision":0.284,"recall":0.867,"candidates":321,"axes":23,"axesBelowFloor":1,"usd":0.47618,"calls":1,"failedCalls":0,"meanCallSeconds":373.551,"maxCallSeconds":373.551,"promptTokens":28235,"completionTokens":41971,"judgeUsd":0,"measuredAt":"2026-10-04T20:36:52.037Z"},"astraLow":{"agreement":0.762,"precision":0.6757,"recall":0.8736,"candidates":321,"axes":43,"axesBelowFloor":1,"usd":0.34393,"calls":1,"failedCalls":0,"meanCallSeconds":30.742,"maxCallSeconds":30.742,"promptTokens":17947,"completionTokens":2392,"judgeUsd":0,"measuredAt":"2026-10-04T20:37:22.796Z"},"glm53":{"agreement":0.5886,"precision":0.4254,"recall":0.955,"candidates":321,"axes":27,"axesBelowFloor":1,"usd":0.39377481,"calls":1,"failedCalls":0,"meanCallSeconds":440.613,"maxCallSeconds":440.613,"promptTokens":18015,"completionTokens":99097,"judgeUsd":0,"measuredAt":"2026-10-04T20:44:43.445Z"},"geminiFlash":{"agreement":0.3843,"precision":0.2576,"recall":0.7563,"candidates":321,"axes":14,"axesBelowFloor":0,"usd":0.04921275,"calls":1,"failedCalls":0,"meanCallSeconds":27.771,"maxCallSeconds":27.771,"promptTokens":18202,"completionTokens":9483,"judgeUsd":0,"measuredAt":"2026-10-04T20:45:11.242Z"},"opus5":{"agreement":0.6312,"precision":0.495,"recall":0.8705,"candidates":321,"axes":32,"axesBelowFloor":0,"usd":0.7115475,"calls":1,"failedCalls":0,"meanCallSeconds":254.254,"maxCallSeconds":254.254,"promptTokens":28235,"completionTokens":22766,"judgeUsd":0,"measuredAt":"2026-10-04T20:49:25.540Z"},"solLow":{"agreement":0.5905,"precision":0.5396,"recall":0.6518,"candidates":321,"axes":38,"axesBelowFloor":3,"usd":0.072356,"calls":1,"failedCalls":0,"meanCallSeconds":29.361,"maxCallSeconds":29.361,"promptTokens":17947,"completionTokens":2749,"judgeUsd":0,"measuredAt":"2026-10-04T20:49:54.920Z"},"lunaMax":{"agreement":0.6343,"precision":0.5508,"recall":0.7477,"candidates":321,"axes":46,"axesBelowFloor":2,"usd":0.0923914,"calls":1,"failedCalls":0,"meanCallSeconds":777.288,"maxCallSeconds":777.288,"promptTokens":17947,"completionTokens":73254,"judgeUsd":0,"measuredAt":"2026-10-04T21:02:52.225Z"},"fableLow":{"agreement":0.6118,"precision":0.4786,"recall":0.8478,"candidates":321,"axes":28,"axesBelowFloor":0,"usd":0.685865,"calls":1,"failedCalls":0,"meanCallSeconds":98.41,"maxCallSeconds":98.41,"promptTokens":28237,"completionTokens":8021,"judgeUsd":0,"measuredAt":"2026-10-04T21:04:30.655Z"},"sol6Low":{"agreement":0.7352,"precision":0.7398,"recall":0.7307,"candidates":321,"axes":42,"axesBelowFloor":1,"usd":0.068436,"calls":1,"failedCalls":0,"meanCallSeconds":22.023,"maxCallSeconds":22.023,"promptTokens":17947,"completionTokens":2357,"judgeUsd":0,"measuredAt":"2026-10-04T21:04:52.710Z"},"opus55":{"agreement":0.6671,"precision":0.5502,"recall":0.8471,"candidates":321,"axes":29,"axesBelowFloor":0,"usd":0.196506,"calls":1,"failedCalls":0,"meanCallSeconds":38.231,"maxCallSeconds":38.231,"promptTokens":28237,"completionTokens":4129,"judgeUsd":0,"measuredAt":"2026-10-04T21:05:30.971Z"},"sol61Low":{"agreement":0.7739,"precision":0.6983,"recall":0.8679,"candidates":321,"axes":46,"axesBelowFloor":2,"usd":0.078236,"calls":1,"failedCalls":0,"meanCallSeconds":64.849,"maxCallSeconds":64.849,"promptTokens":17947,"completionTokens":3337,"judgeUsd":0,"measuredAt":"2026-10-04T21:06:35.854Z"},"sonnet55":{"agreement":0.8232,"precision":0.9,"recall":0.7585,"candidates":321,"axes":44,"axesBelowFloor":1,"usd":0.126453,"calls":1,"failedCalls":0,"meanCallSeconds":48.824,"maxCallSeconds":48.824,"promptTokens":28237,"completionTokens":6949,"judgeUsd":0,"measuredAt":"2026-10-04T21:07:24.706Z"}},"scoring":{"haiku":{"agreement":0.6417,"precision":0.7792,"recall":0.5455,"given":154,"correct":120,"silverStances":220,"axes":32,"usd":0.24529299999999998,"calls":34,"failedCalls":0,"meanCallSeconds":3.21,"maxCallSeconds":4.591,"promptTokens":183558,"completionTokens":12347,"judgeUsd":0,"measuredAt":"2026-10-04T20:30:43.839Z"},"glmFlash":{"agreement":0.798,"precision":0.8977,"recall":0.7182,"given":176,"correct":158,"silverStances":220,"axes":32,"usd":0.062291318000000005,"calls":36,"failedCalls":1,"meanCallSeconds":49.921,"maxCallSeconds":660.985,"promptTokens":167913,"completionTokens":85499,"judgeUsd":0,"measuredAt":"2026-10-04T20:42:17.743Z"},"geminiFlash":{"agreement":0.8235,"precision":1,"recall":0.7,"given":154,"correct":154,"silverStances":220,"axes":32,"usd":0.6467259083333334,"calls":34,"failedCalls":0,"meanCallSeconds":15.2421,"maxCallSeconds":38.889,"promptTokens":169866,"completionTokens":149397,"judgeUsd":0,"measuredAt":"2026-10-04T20:42:56.691Z"},"opus5":{"agreement":0.9404,"precision":0.9491,"recall":0.9318,"given":216,"correct":205,"silverStances":220,"axes":32,"usd":3.1182900000000005,"calls":34,"failedCalls":0,"meanCallSeconds":24.0462,"maxCallSeconds":50.647,"promptTokens":255058,"completionTokens":71927,"judgeUsd":0,"measuredAt":"2026-10-04T20:43:47.399Z"},"lunaLow":{"agreement":0.8058,"precision":0.8646,"recall":0.7545,"given":192,"correct":166,"silverStances":220,"axes":32,"usd":0.07383709000000002,"calls":34,"failedCalls":0,"meanCallSeconds":13.1526,"maxCallSeconds":20.442,"promptTokens":159072,"completionTokens":39310,"judgeUsd":0,"measuredAt":"2026-10-04T20:44:07.893Z"},"luna6Low":{"agreement":0.7647,"precision":0.9286,"recall":0.65,"given":154,"correct":143,"silverStances":220,"axes":32,"usd":0.028394545,"calls":34,"failedCalls":0,"meanCallSeconds":9.7821,"maxCallSeconds":15.294,"promptTokens":159072,"completionTokens":30124,"judgeUsd":0,"measuredAt":"2026-10-04T20:44:23.222Z"}},"summary":{"sonnet5":{"agreement":1,"precision":1,"recall":1,"markers":10,"faithful":8,"unfaithful":0,"disputed":2,"featuredCited":4,"featured":4,"usd":0.0671115,"calls":1,"failedCalls":0,"meanCallSeconds":20.909,"maxCallSeconds":20.909,"promptTokens":23174,"completionTokens":1952,"judgeUsd":0.1735455,"measuredAt":"2026-10-04T21:09:49.056Z"},"astraLow":{"agreement":1,"precision":1,"recall":1,"markers":6,"faithful":6,"unfaithful":0,"disputed":0,"featuredCited":4,"featured":4,"usd":0.2028925,"calls":1,"failedCalls":0,"meanCallSeconds":11.596,"maxCallSeconds":11.596,"promptTokens":14420,"completionTokens":453,"judgeUsd":0.134338,"measuredAt":"2026-10-04T20:31:03.528Z"},"glm53":{"agreement":1,"precision":1,"recall":1,"markers":10,"faithful":10,"unfaithful":0,"disputed":0,"featuredCited":4,"featured":4,"usd":0.02137665,"calls":1,"failedCalls":0,"meanCallSeconds":8.516,"maxCallSeconds":8.516,"promptTokens":14519,"completionTokens":1096,"judgeUsd":0.1490478,"measuredAt":"2026-10-04T20:31:42.290Z"},"geminiFlash":{"agreement":0.9091,"precision":0.8333,"recall":1,"markers":6,"faithful":5,"unfaithful":1,"disputed":0,"featuredCited":4,"featured":4,"usd":0.0368227,"calls":1,"failedCalls":0,"meanCallSeconds":25.722,"maxCallSeconds":25.722,"promptTokens":15256,"completionTokens":6982,"judgeUsd":0.1358113,"measuredAt":"2026-10-04T20:32:22.225Z"},"opus5":{"agreement":1,"precision":1,"recall":1,"markers":6,"faithful":6,"unfaithful":0,"disputed":0,"featuredCited":4,"featured":4,"usd":0.16095375,"calls":1,"failedCalls":0,"meanCallSeconds":21.197,"maxCallSeconds":21.197,"promptTokens":23174,"completionTokens":1679,"judgeUsd":0.1375808,"measuredAt":"2026-10-04T21:10:25.683Z"},"solLow":{"agreement":1,"precision":1,"recall":1,"markers":6,"faithful":6,"unfaithful":0,"disputed":0,"featuredCited":4,"featured":4,"usd":0.0405085,"calls":1,"failedCalls":0,"meanCallSeconds":6.916,"maxCallSeconds":6.916,"promptTokens":14420,"completionTokens":446,"judgeUsd":0.1304653,"measuredAt":"2026-10-04T20:32:41.238Z"},"lunaMax":{"agreement":1,"precision":1,"recall":1,"markers":6,"faithful":6,"unfaithful":0,"disputed":0,"featuredCited":4,"featured":4,"usd":0.01125965,"calls":1,"failedCalls":0,"meanCallSeconds":56.405,"maxCallSeconds":56.405,"promptTokens":14420,"completionTokens":6379,"judgeUsd":0.1307718,"measuredAt":"2026-10-04T20:33:47.295Z"},"fableLow":{"agreement":1,"precision":1,"recall":1,"markers":6,"faithful":6,"unfaithful":0,"disputed":0,"featuredCited":4,"featured":4,"usd":0.68924925,"calls":2,"failedCalls":0,"meanCallSeconds":33.9595,"maxCallSeconds":41.787,"promptTokens":47583,"completionTokens":4629,"judgeUsd":0.1325438,"measuredAt":"2026-10-04T21:11:44.951Z"},"sol6Low":{"agreement":1,"precision":1,"recall":1,"markers":6,"faithful":6,"unfaithful":0,"disputed":0,"featuredCited":4,"featured":4,"usd":0.0395585,"calls":1,"failedCalls":0,"meanCallSeconds":5.478,"maxCallSeconds":5.478,"promptTokens":14420,"completionTokens":351,"judgeUsd":0.1329873,"measuredAt":"2026-10-04T20:34:06.052Z"},"opus55":{"agreement":1,"precision":1,"recall":1,"markers":6,"faithful":5,"unfaithful":0,"disputed":1,"featuredCited":4,"featured":4,"usd":0.1016334,"calls":1,"failedCalls":0,"meanCallSeconds":11.827,"maxCallSeconds":11.827,"promptTokens":23176,"completionTokens":919,"judgeUsd":0.1478283,"measuredAt":"2026-10-04T20:34:58.933Z"},"sol61Low":{"agreement":1,"precision":1,"recall":1,"markers":6,"faithful":6,"unfaithful":0,"disputed":0,"featuredCited":4,"featured":4,"usd":0.0398285,"calls":1,"failedCalls":0,"meanCallSeconds":10.516,"maxCallSeconds":10.516,"promptTokens":14420,"completionTokens":378,"judgeUsd":0.1309243,"measuredAt":"2026-10-04T20:35:22.371Z"},"sonnet55":{"agreement":1,"precision":1,"recall":1,"markers":6,"faithful":6,"unfaithful":0,"disputed":0,"featuredCited":4,"featured":4,"usd":0.0590655,"calls":1,"failedCalls":0,"meanCallSeconds":22.708,"maxCallSeconds":22.708,"promptTokens":23176,"completionTokens":1147,"judgeUsd":0.12887379999999998,"measuredAt":"2026-10-04T20:35:54.744Z"}}}});
 
 // An option entry of one or more roles: the model, sampling, and reasoning shared by every stage those roles
-// serve, and the output ceiling per stage key, expanded into the config fields of those stages. The label
-// is built from the entry when read.
-function optionEntry(roles, labelFor, { model, sampling, reasoning, maxTokens, ...rest }) {
+// serve, and the output ceiling per stage key, expanded into the config fields of those stages.
+function optionEntry(roles, { model, sampling, reasoning, maxTokens, ...rest }) {
     const config = {};
     for (const stage of STAGES.filter(stage => roles.includes(stage.role))) {
-        if (stage.key === 'synthesize') maxTokens = { ...maxTokens, synthesize: 16000 };
         if (typeof maxTokens[stage.key] !== 'number') {
             throw new Error(`${rest.name}: no output ceiling for the ${stage.key} stage`);
         }
@@ -337,277 +336,70 @@ function optionEntry(roles, labelFor, { model, sampling, reasoning, maxTokens, .
         config[`reasoning${stage.suffix}`] = reasoning;
         config[`maxTokens${stage.suffix}`] = maxTokens[stage.key];
     }
-    return Object.freeze({ ...rest, config, get label() { return labelFor(this); } });
+    return Object.freeze({ ...rest, config });
 }
 // Extraction and scoring share one list; an entry carries the config fields of both stages.
-const volumeEntry = entry => optionEntry(['extraction', 'scoring'], volumeLabel, entry);
-// Jev Router chooses the model and reasoning effort for each request, and OpenRouter lists no price for it.
-// It has no measurements: each forecast constant is the highest value among the measured entries of the same
-// role, so a forecast assumes the router picks the costliest and slowest listed model. Picker cells read
-// "not measured" and stay neutral.
+const volumeEntry = entry => optionEntry(['extraction', 'scoring'], entry);
+const consolidationEntry = entry => optionEntry(['consolidation'], { ...entry, maxTokens: { consolidate: entry.maxTokens } });
+// A summary choice is a consolidation choice's model writing the summary.
+const summaryEntry = choice => optionEntry(['summary'], {
+    name: choice.name, effort: choice.effort, model: choice.config.modelConsolidate, sampling: choice.config.samplingConsolidate,
+    reasoning: choice.config.reasoningConsolidate, maxTokens: { synthesize: SUMMARY_MAX_TOKENS },
+    ...(choice.unmeasured ? { unmeasured: true, note: choice.note } : {}),
+});
+// Jev Router chooses the model and reasoning effort for each request, and OpenRouter lists no price for it,
+// so it cannot be benchmarked. Its picker cells read "Not measured", and a forecast assumes the costliest and
+// slowest measured choice of the role (forecastFigures).
 const ROUTER_PROFILE = Object.freeze({ name: 'Jev Router', effort: 'default', model: 'typesafe/jev-router', sampling: null, reasoning: null,
-    unmeasured: true, note: 'routes each request to a model and reasoning effort of its own choosing; not measured; forecasts assume the highest listed rates' });
-function highestValues(choices, fields) {
-    return Object.fromEntries(fields.map(field => {
-        const highest = Math.max(...Object.values(choices).map(choice => choice[field]));
-        if (!Number.isFinite(highest)) throw new Error(`No finite ${field} among the measured choices`);
-        return [field, highest];
-    }));
-}
-// Embedded from data/consolidation-matched.json after all eight matched runs and reviews complete.
-const MATCHED_CONSOLIDATION = Object.freeze({"openai/gpt-6-astra":{"benchmark":{"comments":1234,"axes":150,"twoSided":107,"review":{"candidates":233,"fullyPreserved":159,"partial":42,"missing":20,"excluded":12,"flaggedAxes":7},"costPer1k":0.48953808752025935,"secondsPer1k":122.00891410048622},"usdPerMillionChars":1.3272823548281492,"secondsPerMillionChars":330.8022050697269,"minimumSeconds":14.593},"google/gemini-3.8-flash":{"benchmark":{"comments":1234,"axes":64,"twoSided":59,"review":{"candidates":233,"fullyPreserved":71,"partial":42,"missing":108,"excluded":12,"flaggedAxes":5},"costPer1k":0.15687277147487846,"secondsPer1k":109.50891410048622},"usdPerMillionChars":0.4253284204836828,"secondsPerMillionChars":296.91101282482265,"minimumSeconds":18.591},"anthropic/claude-opus-5":{"benchmark":{"comments":1234,"axes":120,"twoSided":103,"review":{"candidates":233,"fullyPreserved":126,"partial":55,"missing":40,"excluded":12,"flaggedAxes":9},"costPer1k":0.8714789303079418,"secondsPer1k":364.9149108589951},"usdPerMillionChars":2.3628367971559965,"secondsPerMillionChars":989.3921117563436,"minimumSeconds":45.144},"openai/gpt-5.6-sol":{"benchmark":{"comments":1234,"axes":164,"twoSided":125,"review":{"candidates":233,"fullyPreserved":180,"partial":26,"missing":15,"excluded":12,"flaggedAxes":1},"costPer1k":0.11313452188006483,"secondsPer1k":115.41004862236629},"usdPerMillionChars":0.30674110644580815,"secondsPerMillionChars":312.9107315883489,"minimumSeconds":24.651},"anthropic/claude-sonnet-5":{"benchmark":{"comments":1234,"axes":102,"twoSided":87,"review":{"candidates":233,"fullyPreserved":116,"partial":65,"missing":40,"excluded":12,"flaggedAxes":16},"costPer1k":0.705325769854133,"secondsPer1k":598.8606158833063},"usdPerMillionChars":1.91234650091292,"secondsPerMillionChars":1623.6880208642308,"minimumSeconds":58.384},"z-ai/glm-5.3":{"benchmark":{"comments":1234,"axes":146,"twoSided":117,"review":{"candidates":233,"fullyPreserved":168,"partial":29,"missing":24,"excluded":12,"flaggedAxes":7},"costPer1k":0.490468677471637,"secondsPer1k":1117.2884927066452},"usdPerMillionChars":1.3298054590636146,"secondsPerMillionChars":3029.2991279472158,"minimumSeconds":32.731},"openai/gpt-5.6-luna":{"benchmark":{"comments":1234,"axes":139,"twoSided":111,"review":{"candidates":233,"fullyPreserved":155,"partial":36,"missing":30,"excluded":12,"flaggedAxes":6},"costPer1k":0.26121377633711507,"secondsPer1k":1893.1507293354944},"usdPerMillionChars":0.7082277048686867,"secondsPerMillionChars":5132.890825319192,"minimumSeconds":346.032},"anthropic/claude-fable-5.1":{"benchmark":{"comments":1234,"axes":92,"twoSided":79,"review":{"candidates":233,"fullyPreserved":98,"partial":66,"missing":57,"excluded":12,"flaggedAxes":12},"costPer1k":0.8779578606158834,"secondsPer1k":182.38573743922205},"usdPerMillionChars":2.3804030909646197,"secondsPerMillionChars":494.5016072225042,"minimumSeconds":18.403}});
-// Embedded from data/consolidation-additions.json: models added after the matched eight, on the same inputs
-// and exclusion lists, graded in a separate review of the added models only.
-const ADDED_CONSOLIDATION = Object.freeze({"openai/gpt-6-sol":{"benchmark":{"comments":1234,"axes":162,"twoSided":124,"review":{"candidates":233,"fullyPreserved":176,"partial":21,"missing":24,"excluded":12,"flaggedAxes":5},"costPer1k":0.09267260940032415,"secondsPer1k":70.80875202593194},"usdPerMillionChars":0.2512628176818644,"secondsPerMillionChars":191.98344220260893,"minimumSeconds":9.795},"anthropic/claude-opus-5.5":{"benchmark":{"comments":1234,"axes":149,"twoSided":121,"review":{"candidates":233,"fullyPreserved":182,"partial":12,"missing":27,"excluded":12,"flaggedAxes":14},"costPer1k":0.39428200972447336,"secondsPer1k":133.15153970826583},"usdPerMillionChars":1.0690149912223463,"secondsPerMillionChars":361.013154396627,"minimumSeconds":16.224},
-// Embedded from data/consolidation-additions-2.json: the second additions pair, same protocol.
-"openai/gpt-6.1-sol":{"benchmark":{"comments":1234,"axes":144,"twoSided":105,"review":{"candidates":233,"fullyPreserved":158,"partial":26,"missing":37,"excluded":12,"flaggedAxes":10},"costPer1k":0.09969854132901135,"secondsPer1k":170.35008103727714},"usdPerMillionChars":0.27031219445744437,"secondsPerMillionChars":461.86938762955003,"minimumSeconds":21.513},"anthropic/claude-sonnet-5.5":{"benchmark":{"comments":1234,"axes":139,"twoSided":110,"review":{"candidates":233,"fullyPreserved":162,"partial":39,"missing":20,"excluded":12,"flaggedAxes":17},"costPer1k":0.22863209076175042,"secondsPer1k":127.46272285251216},"usdPerMillionChars":0.6198891313088701,"secondsPerMillionChars":345.58909154027504,"minimumSeconds":8.041}});
-const consolidationEntry = entry => {
-    const measured = MATCHED_CONSOLIDATION[entry.model];
-    if (measured) entry = { ...entry,
-        usdPerMillionChars: measured.usdPerMillionChars,
-        secondsPerMillionChars: measured.secondsPerMillionChars,
-        minimumSeconds: measured.minimumSeconds,
-        quality: { benchmark: measured.benchmark, runs: '5 threads', matched: true,
-            note: 'Same 1,234 HN comments and 233 Luna-low candidates; one accepted output per thread. Same two-pass Luna-low scoring and anonymous Sonnet 5 medium-effort review. Common candidate eligibility for all eight models. Consolidation cost/time only; costs use uncached token prices. Review flags are model judgments; Sonnet reviews its own model and shares a model family with Opus and Fable' },
-    };
-    const added = ADDED_CONSOLIDATION[entry.model];
-    if (added) entry = { ...entry,
-        usdPerMillionChars: added.usdPerMillionChars,
-        secondsPerMillionChars: added.secondsPerMillionChars,
-        minimumSeconds: added.minimumSeconds,
-        quality: { benchmark: added.benchmark, runs: '5 threads', matched: true, added: true,
-            note: 'Same 1,234 HN comments, 233 Luna-low candidates, scoring and candidate eligibility as the matched eight, but graded in a separate anonymous Sonnet 5 review of the added models only, which can shift grades. Consolidation cost/time only; costs use uncached token prices. Sonnet shares a model family with Opus' },
-    };
-    if (!entry.quality) throw new Error(`${entry.name}: no quality record and no measured consolidation data`);
-    const benchmark = entry.quality.benchmark;
-    if (benchmark) {
-        const review = benchmark.review;
-        entry = { ...entry, quality: { ...entry.quality,
-            twoSidedPercent: [100 * benchmark.twoSided / benchmark.axes],
-            twoSidedPer1k: 1000 * benchmark.twoSided / benchmark.comments,
-            flaggedPercent: review ? 100 * review.flaggedAxes / benchmark.axes : undefined,
-            preservedPercent: review ? 100 * review.fullyPreserved / (review.candidates - review.excluded) : undefined,
-        } };
-    }
-    return optionEntry(['consolidation'], consolidationLabel, entry);
-};
+    unmeasured: true, note: 'routes each request to a model and reasoning effort of its own choosing; not measured; forecasts assume the highest measured figures' });
 
 const VOLUME_MODELS = Object.freeze({
-    haiku: volumeEntry({
-        name: 'Claude Haiku 4.5',
-        effort: 'none',
-        quality: { stancesPerComment: [0.5], twoSidedPer100Comments: [3, 4], reviewHeldPercent: 59, reviewWrongPercent: 12, note: 'clean output' },
-        model: 'anthropic/claude-haiku-4.5', sampling: SAMPLING_TEMPERATURE, reasoning: null,
-        maxTokens: { extract: 16000, score: 8000 },
-        usdPerMillionChars: 2.975,
-        secondsPerMillionChars: 217.5,
-        minimumSeconds: 8,
-        candidateFactor: 1, // the reference: 64 candidates on thread 49537553
-    }),
-    glmFlash: volumeEntry({
-        name: 'GLM 5.3 Flash',
-        effort: 'low',
-        quality: { reviewHeldPercent: 64, reviewWrongPercent: 33, stancesPerComment: [0.5, 0.6], twoSidedPer100Comments: [3.5, 4], note: 'the most coverage; some nonstandard output shapes, which the page accepts' },
-        model: 'z-ai/glm-5.3-flash', sampling: SAMPLING_TEMPERATURE_AND_SEED, reasoning: { effort: 'low' },
-        maxTokens: { extract: 64000, score: 32000 },
-        usdPerMillionChars: 0.6,
-        secondsPerMillionChars: 7750,
-        minimumSeconds: 100,
-        candidateFactor: 1.3, // 247 candidates against Haiku 4.5's 195 on the test thread
-    }),
-    geminiFlash: volumeEntry({
-        name: 'Gemini 3.8 Flash',
-        effort: 'none',
-        quality: { reviewHeldPercent: 97, reviewWrongPercent: 2, stancesPerComment: [0.3], twoSidedPer100Comments: [3], note: 'the least coverage; the most stable ranking between runs' },
-        model: 'google/gemini-3.8-flash', sampling: SAMPLING_TEMPERATURE_AND_SEED, reasoning: null,
-        maxTokens: { extract: 16000, score: 16000 },
-        usdPerMillionChars: 6.1,
-        secondsPerMillionChars: 525,
-        minimumSeconds: 8,
-        candidateFactor: 1, // not measured; assumed equal to Haiku 4.5
-    }),
-    opus5: volumeEntry({
-        name: 'Claude Opus 5',
-        effort: 'adaptive',
-        quality: { stancesPerComment: [0.7], twoSidedPer100Comments: [13], reviewHeldPercent: 74, reviewWrongPercent: 0 },
-        model: 'anthropic/claude-opus-5', sampling: null, reasoning: null,
-        maxTokens: { extract: 16000, score: 8000 },
-        usdPerMillionChars: 32.925,
-        secondsPerMillionChars: 795,
-        minimumSeconds: 50,
-        candidateFactor: 2.1, // 134 candidates against 64
-    }),
-    lunaLow: volumeEntry({
-        name: 'GPT-5.6 Luna',
-        effort: 'low',
-        quality: { stancesPerComment: [0.5], twoSidedPer100Comments: [6], reviewHeldPercent: 80, reviewWrongPercent: 6 },
-        model: 'openai/gpt-5.6-luna', sampling: SAMPLING_SEED_ONLY, reasoning: { effort: 'low' },
-        maxTokens: { extract: 32000, score: 16000 },
-        usdPerMillionChars: 0.825,
-        secondsPerMillionChars: 290,
-        minimumSeconds: 20,
-        candidateFactor: 1, // 62 candidates against 64
-    }),
-    // data/volume-addition.json: measured beside a GPT-5.6 Luna low reference run on the same 592-comment
-    // thread; cost, time and call latency are the GPT-5.6 Luna constants scaled by the measured ratios
-    // (0.379, 0.804, 0.536), so the row compares with the others.
-    luna6Low: volumeEntry({
-        name: 'GPT-6 Luna',
-        effort: 'low',
-        quality: { stancesPerComment: [0.41], twoSidedPer100Comments: [5.9], reviewHeldPercent: 86, reviewWrongPercent: 8 },
-        model: 'openai/gpt-6-luna', sampling: SAMPLING_SEED_ONLY, reasoning: { effort: 'low' },
-        maxTokens: { extract: 32000, score: 16000 },
-        usdPerMillionChars: 0.313,
-        secondsPerMillionChars: 233,
-        minimumSeconds: 10.7,
-        candidateFactor: 0.89, // 81 candidates against GPT-5.6 Luna's 91 on the same thread
-    }),
+    haiku: volumeEntry({ name: 'Claude Haiku 4.5', effort: 'none',
+        model: 'anthropic/claude-haiku-4.5', sampling: SAMPLING_TEMPERATURE, reasoning: null, maxTokens: { extract: 16000, score: 8000 } }),
+    glmFlash: volumeEntry({ name: 'GLM 5.3 Flash', effort: 'low',
+        model: 'z-ai/glm-5.3-flash', sampling: SAMPLING_TEMPERATURE_AND_SEED, reasoning: { effort: 'low' }, maxTokens: { extract: 64000, score: 32000 } }),
+    geminiFlash: volumeEntry({ name: 'Gemini 3.8 Flash', effort: 'none',
+        model: 'google/gemini-3.8-flash', sampling: SAMPLING_TEMPERATURE_AND_SEED, reasoning: null, maxTokens: { extract: 16000, score: 16000 } }),
+    opus5: volumeEntry({ name: 'Claude Opus 5', effort: 'adaptive',
+        model: 'anthropic/claude-opus-5', sampling: null, reasoning: null, maxTokens: { extract: 16000, score: 8000 } }),
+    lunaLow: volumeEntry({ name: 'GPT-5.6 Luna', effort: 'low',
+        model: 'openai/gpt-5.6-luna', sampling: SAMPLING_SEED_ONLY, reasoning: { effort: 'low' }, maxTokens: { extract: 32000, score: 16000 } }),
+    luna6Low: volumeEntry({ name: 'GPT-6 Luna', effort: 'low',
+        model: 'openai/gpt-6-luna', sampling: SAMPLING_SEED_ONLY, reasoning: { effort: 'low' }, maxTokens: { extract: 32000, score: 16000 } }),
 });
 
-// Generated by scripts/eval_summary_quality.js; only the two evaluated settings participate.
-const SUMMARY_QUALITY = Object.freeze({"astra":{"scores":{"faithfulness":96.3,"coverage":77.3,"clarity":91.2},"weighted":90.09,"majorIssues":0,"majorReviewCount":0,"threads":5,"reviews":10,"rank":1,"tied":false},"sonnet":{"scores":{"faithfulness":77.8,"coverage":69.3,"clarity":87},"weighted":76.17,"majorIssues":6,"majorReviewCount":5,"threads":5,"reviews":10,"rank":null,"tied":false}});
-const MEASURED_CONSOLIDATION_MODELS = Object.freeze(Object.fromEntries(Object.entries({
-    sonnet5: consolidationEntry({
-        name: 'Claude Sonnet 5',
-        summaryQuality: SUMMARY_QUALITY.sonnet,
-        effort: 'adaptive',
-        quality: { benchmark: { comments: 1234, axes: 110, twoSided: 90,
-            review: { candidates: 233, fullyPreserved: 173, partial: 47, missing: 10, excluded: 3, flaggedAxes: 24 } },
-            runs: '5 threads', note: 'Same 1,234 HN comments; Luna low extraction/scoring. Opus 5 reviewed consolidation. Coverage excludes legitimately dropped candidates; flags are model judgments, not an accuracy grade' },
-        model: 'anthropic/claude-sonnet-5', sampling: null, reasoning: null, maxTokens: { consolidate: CONSOLIDATION_MAX_TOKENS },
-        usdPerMillionChars: 1.733,
-        synthesisRates: { usdPerMillionChars: 0.711 },
-        secondsPerMillionChars: 600,
-        minimumSeconds: 15,
-    }),
-    astraLow: consolidationEntry({
-        name: 'GPT-6 Astra',
-        summaryQuality: SUMMARY_QUALITY.astra,
-        effort: 'low',
-        quality: { benchmark: { comments: 1234, axes: 151, twoSided: 110,
-            review: { candidates: 233, fullyPreserved: 208, partial: 16, missing: 2, excluded: 7, flaggedAxes: 13 } },
-            runs: '5 threads', note: 'Same 1,234 HN comments; Luna low extraction/scoring. Opus 5 reviewed consolidation. Coverage excludes legitimately dropped candidates; flags are model judgments, not an accuracy grade' },
-        model: 'openai/gpt-6-astra', sampling: null, reasoning: { effort: 'low' }, maxTokens: { consolidate: CONSOLIDATION_MAX_TOKENS },
-        // Five frozen HN threads, 1,234 comments / 455,133 framed characters. New-input
-        // estimates replace cache reads with first writes at recorded provider prices.
-        usdPerMillionChars: 1.394,
-        secondsPerMillionChars: 327,
-        synthesisRates: { usdPerMillionChars: 1.606, secondsPerMillionChars: 111 },
-        minimumSeconds: 19,
-        synthesisMinimumSeconds: 9,
-    }),
-    glm53: consolidationEntry({
-        name: 'GLM 5.3',
-        effort: 'high',
-        quality: { twoSidedPercent: [79, 88], runs: '2 runs' },
-        model: 'z-ai/glm-5.3', sampling: SAMPLING_TEMPERATURE_AND_SEED, reasoning: { effort: 'high' }, maxTokens: { consolidate: CONSOLIDATION_MAX_TOKENS },
-        usdPerMillionChars: 0.45,
-        secondsPerMillionChars: 1150,
-        minimumSeconds: 120,
-    }),
-    geminiFlash: consolidationEntry({
-        name: 'Gemini 3.8 Flash',
-        effort: 'default',
-        quality: { benchmark: { comments: 1234, axes: 60, twoSided: 55 }, runs: '5 threads',
-            note: 'Same 1,234 HN comments; Luna low extraction/scoring. Consolidation accuracy/coverage not reviewed. Cost/time use earlier estimates' },
-        model: 'google/gemini-3.8-flash', sampling: SAMPLING_TEMPERATURE_AND_SEED, reasoning: null, maxTokens: { consolidate: 65536 },
-        usdPerMillionChars: 0.075,
-        secondsPerMillionChars: 50,
-        minimumSeconds: 8,
-    }),
-    opus5: consolidationEntry({
-        name: 'Claude Opus 5',
-        effort: 'adaptive',
-        quality: { twoSidedPercent: [58], note: 'fine-grained axes' },
-        model: 'anthropic/claude-opus-5', sampling: null, reasoning: null, maxTokens: { consolidate: CONSOLIDATION_MAX_TOKENS },
-        usdPerMillionChars: 0.825,
-        secondsPerMillionChars: 150,
-        minimumSeconds: 10,
-    }),
-    solLow: consolidationEntry({
-        name: 'GPT-5.6 Sol',
-        effort: 'low',
-        quality: { twoSidedPercent: [38], note: '55% one-arm' },
-        model: 'openai/gpt-5.6-sol', sampling: SAMPLING_SEED_ONLY, reasoning: { effort: 'low' }, maxTokens: { consolidate: CONSOLIDATION_MAX_TOKENS },
-        usdPerMillionChars: 0.25,
-        secondsPerMillionChars: 290,
-        minimumSeconds: 8,
-    }),
-    lunaMax: consolidationEntry({
-        name: 'GPT-5.6 Luna',
-        effort: 'max',
-        quality: { twoSidedPercent: [56] },
-        model: 'openai/gpt-5.6-luna', sampling: SAMPLING_SEED_ONLY, reasoning: { effort: 'max' }, maxTokens: { consolidate: CONSOLIDATION_MAX_TOKENS },
-        usdPerMillionChars: 0.625,
-        secondsPerMillionChars: 5400,
-        minimumSeconds: 190,
-    }),
-    fableLow: consolidationEntry({
-        name: 'Claude Fable 5.1',
-        effort: 'low',
-        quality: { twoSidedPercent: [59] },
-        model: 'anthropic/claude-fable-5.1', sampling: null, reasoning: { effort: 'low' }, maxTokens: { consolidate: CONSOLIDATION_MAX_TOKENS },
-        usdPerMillionChars: 2.4,
-        secondsPerMillionChars: 427.5,
-        minimumSeconds: 15,
-    }),
-    // Rates and quality come from ADDED_CONSOLIDATION.
-    sol6Low: consolidationEntry({
-        name: 'GPT-6 Sol',
-        effort: 'low',
-        model: 'openai/gpt-6-sol', sampling: SAMPLING_SEED_ONLY, reasoning: { effort: 'low' }, maxTokens: { consolidate: CONSOLIDATION_MAX_TOKENS },
-    }),
-    opus55: consolidationEntry({
-        name: 'Claude Opus 5.5',
-        effort: 'adaptive',
-        model: 'anthropic/claude-opus-5.5', sampling: null, reasoning: null, maxTokens: { consolidate: CONSOLIDATION_MAX_TOKENS },
-    }),
-    sol61Low: consolidationEntry({
-        name: 'GPT-6.1 Sol',
-        effort: 'low',
-        model: 'openai/gpt-6.1-sol', sampling: SAMPLING_SEED_ONLY, reasoning: { effort: 'low' }, maxTokens: { consolidate: CONSOLIDATION_MAX_TOKENS },
-    }),
-    sonnet55: consolidationEntry({
-        name: 'Claude Sonnet 5.5',
-        effort: 'adaptive',
-        model: 'anthropic/claude-sonnet-5.5', sampling: null, reasoning: null, maxTokens: { consolidate: CONSOLIDATION_MAX_TOKENS },
-    }),
-}).sort(([, a], [, b]) => Number(!!b.quality.matched) - Number(!!a.quality.matched))));
+const MEASURED_CONSOLIDATION_MODELS = Object.freeze({
+    sonnet5: consolidationEntry({ name: 'Claude Sonnet 5', effort: 'adaptive',
+        model: 'anthropic/claude-sonnet-5', sampling: null, reasoning: null, maxTokens: CONSOLIDATION_MAX_TOKENS }),
+    astraLow: consolidationEntry({ name: 'GPT-6 Astra', effort: 'low',
+        model: 'openai/gpt-6-astra', sampling: null, reasoning: { effort: 'low' }, maxTokens: CONSOLIDATION_MAX_TOKENS }),
+    glm53: consolidationEntry({ name: 'GLM 5.3', effort: 'high',
+        model: 'z-ai/glm-5.3', sampling: SAMPLING_TEMPERATURE_AND_SEED, reasoning: { effort: 'high' }, maxTokens: CONSOLIDATION_MAX_TOKENS }),
+    // Gemini 3.8 Flash allows at most 65,536 output tokens.
+    geminiFlash: consolidationEntry({ name: 'Gemini 3.8 Flash', effort: 'default',
+        model: 'google/gemini-3.8-flash', sampling: SAMPLING_TEMPERATURE_AND_SEED, reasoning: null, maxTokens: 65536 }),
+    opus5: consolidationEntry({ name: 'Claude Opus 5', effort: 'adaptive',
+        model: 'anthropic/claude-opus-5', sampling: null, reasoning: null, maxTokens: CONSOLIDATION_MAX_TOKENS }),
+    solLow: consolidationEntry({ name: 'GPT-5.6 Sol', effort: 'low',
+        model: 'openai/gpt-5.6-sol', sampling: SAMPLING_SEED_ONLY, reasoning: { effort: 'low' }, maxTokens: CONSOLIDATION_MAX_TOKENS }),
+    lunaMax: consolidationEntry({ name: 'GPT-5.6 Luna', effort: 'max',
+        model: 'openai/gpt-5.6-luna', sampling: SAMPLING_SEED_ONLY, reasoning: { effort: 'max' }, maxTokens: CONSOLIDATION_MAX_TOKENS }),
+    fableLow: consolidationEntry({ name: 'Claude Fable 5.1', effort: 'low',
+        model: 'anthropic/claude-fable-5.1', sampling: null, reasoning: { effort: 'low' }, maxTokens: CONSOLIDATION_MAX_TOKENS }),
+    sol6Low: consolidationEntry({ name: 'GPT-6 Sol', effort: 'low',
+        model: 'openai/gpt-6-sol', sampling: SAMPLING_SEED_ONLY, reasoning: { effort: 'low' }, maxTokens: CONSOLIDATION_MAX_TOKENS }),
+    opus55: consolidationEntry({ name: 'Claude Opus 5.5', effort: 'adaptive',
+        model: 'anthropic/claude-opus-5.5', sampling: null, reasoning: null, maxTokens: CONSOLIDATION_MAX_TOKENS }),
+    sol61Low: consolidationEntry({ name: 'GPT-6.1 Sol', effort: 'low',
+        model: 'openai/gpt-6.1-sol', sampling: SAMPLING_SEED_ONLY, reasoning: { effort: 'low' }, maxTokens: CONSOLIDATION_MAX_TOKENS }),
+    sonnet55: consolidationEntry({ name: 'Claude Sonnet 5.5', effort: 'adaptive',
+        model: 'anthropic/claude-sonnet-5.5', sampling: null, reasoning: null, maxTokens: CONSOLIDATION_MAX_TOKENS }),
+});
 const CONSOLIDATION_MODELS = Object.freeze({ ...MEASURED_CONSOLIDATION_MODELS,
     // 64000 is at or below the output ceiling of every model in these pickers, whichever one the router picks.
-    jevRouter: consolidationEntry({ ...ROUTER_PROFILE, quality: { note: ROUTER_PROFILE.note },
-        maxTokens: { consolidate: 64000 },
-        ...highestValues(MEASURED_CONSOLIDATION_MODELS, ['usdPerMillionChars', 'secondsPerMillionChars', 'minimumSeconds']),
-    }),
+    jevRouter: consolidationEntry({ ...ROUTER_PROFILE, maxTokens: 64000 }),
 });
-
-// Share supported model profiles, but expose independent per-role config fragments and rates.
-const GEMINI_SUMMARY_QUALITY = Object.freeze({"threads":5,"reviews":10,"scores":{"faithfulness":74.5,"coverage":68.5,"clarity":89.7},"weighted":74.22,"majorReviewCount":8,"standalone":true});
-// Embedded from the completed five-thread experiment in data/summary-matched.json.
-const MATCHED_SUMMARY = Object.freeze({"astraLow":{"matched":true,"threads":5,"reviews":5,"scores":{"faithfulness":97.2,"coverage":79.4,"clarity":93},"weighted":91.44,"majorReviewCount":0,"majorErrorPercent":0,"failedCount":0,"errorPercent":0,"benchmark":{"comments":1234,"costPer1k":0.5573905996758509,"secondsPer1k":41.929497568881686},"rates":{"usdPerMillionChars":1.5112505575293378,"secondsPerMillionChars":113.68325302713713,"minimumSeconds":9.067}},"geminiFlash":{"matched":true,"threads":5,"reviews":5,"scores":{"faithfulness":78.8,"coverage":73.6,"clarity":90.6},"weighted":78.41999999999999,"majorReviewCount":3,"majorErrorPercent":60,"failedCount":0,"errorPercent":60,"benchmark":{"comments":1234,"costPer1k":0.09653910048622368,"secondsPer1k":53.86871961102107},"rates":{"usdPerMillionChars":0.26174601709829876,"secondsPerMillionChars":146.05401058591667,"minimumSeconds":11.457}},"opus5":{"matched":true,"threads":5,"reviews":5,"scores":{"faithfulness":84,"coverage":80.8,"clarity":86.8},"weighted":83.32,"majorReviewCount":2,"majorErrorPercent":40,"failedCount":0,"errorPercent":40,"benchmark":{"comments":1234,"costPer1k":0.5795421393841167,"secondsPer1k":112.22609400324149},"rates":{"usdPerMillionChars":1.5713099247912148,"secondsPerMillionChars":304.2780901406841,"minimumSeconds":21.942}},"solLow":{"matched":true,"threads":5,"reviews":5,"scores":{"faithfulness":87.6,"coverage":78.4,"clarity":92.2},"weighted":85.3,"majorReviewCount":2,"majorErrorPercent":40,"failedCount":0,"errorPercent":40,"benchmark":{"comments":1234,"costPer1k":0.11897406807131279,"secondsPer1k":54.50648298217181},"rates":{"usdPerMillionChars":0.3225738410530548,"secondsPerMillionChars":147.7831754673909,"minimumSeconds":11.486}},"sonnet5":{"matched":true,"threads":5,"reviews":5,"scores":{"faithfulness":67.4,"coverage":72.8,"clarity":85.8},"weighted":70.86,"majorReviewCount":5,"majorErrorPercent":100,"failedCount":0,"errorPercent":100,"benchmark":{"comments":1234,"costPer1k":0.19401296596434361,"secondsPer1k":63.4132901134522},"rates":{"usdPerMillionChars":0.5260264582001305,"secondsPerMillionChars":171.9321604893515,"minimumSeconds":13.88}},"glm53":{"matched":true,"threads":5,"reviews":5,"scores":{"faithfulness":28.2,"coverage":29.8,"clarity":32.6},"weighted":29.12,"majorReviewCount":2,"majorErrorPercent":40,"failedCount":3,"errorPercent":100,"benchmark":{"comments":1234,"costPer1k":0.11375067423014587,"secondsPer1k":43.896272285251214},"rates":{"usdPerMillionChars":0.30841167746570786,"secondsPerMillionChars":119.01576022832886,"minimumSeconds":7.956}},"lunaMax":{"matched":true,"threads":5,"reviews":5,"scores":{"faithfulness":76.2,"coverage":70.8,"clarity":88.2},"weighted":75.78,"majorReviewCount":4,"majorErrorPercent":80,"failedCount":0,"errorPercent":80,"benchmark":{"comments":1234,"costPer1k":0.046927714748784446,"secondsPer1k":210.27633711507292},"rates":{"usdPerMillionChars":0.12723489617320652,"secondsPerMillionChars":570.1212612576983,"minimumSeconds":33.945}},"fableLow":{"matched":true,"threads":5,"reviews":5,"scores":{"faithfulness":91.4,"coverage":80.2,"clarity":87.8},"weighted":87.68,"majorReviewCount":0,"majorErrorPercent":0,"failedCount":0,"errorPercent":0,"benchmark":{"comments":1234,"costPer1k":1.2716855753646676,"secondsPer1k":126.11588330632091},"rates":{"usdPerMillionChars":3.447915224780449,"secondsPerMillionChars":341.93741170163446,"minimumSeconds":25.962}}});
-// Embedded from data/summary-additions.json: models added after the matched eight, on the same inputs,
-// graded in a separate Astra-high review of the added summaries only.
-const ADDED_SUMMARY = Object.freeze(Object.fromEntries(Object.entries({"sol6Low":{"matched":true,"threads":5,"reviews":5,"scores":{"faithfulness":95.6,"coverage":78.8,"clarity":93.2},"weighted":90.32,"majorReviewCount":0,"majorErrorPercent":0,"failedCount":0,"errorPercent":0,"benchmark":{"comments":1234,"costPer1k":0.11283954619124795,"secondsPer1k":29.57293354943274},"rates":{"usdPerMillionChars":0.3059413402236269,"secondsPerMillionChars":80.18095809356825,"minimumSeconds":6.478}},"opus55":{"matched":true,"threads":5,"reviews":5,"scores":{"faithfulness":89.6,"coverage":78.4,"clarity":91.2},"weighted":86.4,"majorReviewCount":1,"majorErrorPercent":20,"failedCount":0,"errorPercent":20,"benchmark":{"comments":1234,"costPer1k":0.3589335494327391,"secondsPer1k":78.04781199351702},"rates":{"usdPerMillionChars":0.9731748741576639,"secondsPerMillionChars":211.61067204531423,"minimumSeconds":18.335}},
-// Embedded from data/summary-additions-2.json: the second additions pair, same protocol.
-"sol61Low":{"matched":true,"threads":5,"reviews":5,"scores":{"faithfulness":96.4,"coverage":79,"clarity":90.8},"weighted":90.62,"majorReviewCount":0,"majorErrorPercent":0,"failedCount":0,"errorPercent":0,"benchmark":{"comments":1234,"costPer1k":0.11268557536466772,"secondsPer1k":54.733387358184764},"rates":{"usdPerMillionChars":0.3055238798329279,"secondsPerMillionChars":148.39838025368408,"minimumSeconds":11.547}},"sonnet55":{"matched":true,"threads":5,"reviews":5,"scores":{"faithfulness":86,"coverage":77,"clarity":90},"weighted":83.7,"majorReviewCount":1,"majorErrorPercent":20,"failedCount":0,"errorPercent":20,"benchmark":{"comments":1234,"costPer1k":0.17736790923824958,"secondsPer1k":77.34927066450567},"rates":{"usdPerMillionChars":0.48089679280561937,"secondsPerMillionChars":209.71672016751148,"minimumSeconds":18.895}}})
-    .map(([key, quality]) => [key, { ...quality, added: true }])));
-function summaryEntry(choice, summaryQuality, rates) {
-    return optionEntry(['summary'], summaryLabel, {
-        name: choice.name, effort: choice.effort, testedConsolidationKey: 'solLow', summaryQuality,
-        model: choice.config.modelConsolidate, sampling: choice.config.samplingConsolidate,
-        reasoning: choice.config.reasoningConsolidate, maxTokens: { synthesize: 16000 },
-        ...rates,
-        measuredRate: summaryQuality !== undefined,
-        ...(choice.unmeasured ? { unmeasured: true, note: choice.note } : {}),
-    });
-}
-const MEASURED_SUMMARY_MODELS = Object.freeze(Object.fromEntries(Object.entries(MEASURED_CONSOLIDATION_MODELS).map(([key, choice]) => [key,
-    summaryEntry(choice, MATCHED_SUMMARY[key] ?? ADDED_SUMMARY[key], (MATCHED_SUMMARY[key] ?? ADDED_SUMMARY[key]).rates),
-])));
-const SUMMARY_MODELS = Object.freeze({ ...MEASURED_SUMMARY_MODELS,
-    jevRouter: summaryEntry(CONSOLIDATION_MODELS.jevRouter, undefined,
-        highestValues(MEASURED_SUMMARY_MODELS, ['usdPerMillionChars', 'secondsPerMillionChars', 'minimumSeconds'])),
-});
+const SUMMARY_MODELS = Object.freeze(Object.fromEntries(Object.entries(CONSOLIDATION_MODELS).map(([key, choice]) => [key, summaryEntry(choice)])));
 const ROLE_CHOICES = Object.freeze({ extraction: VOLUME_MODELS, consolidation: CONSOLIDATION_MODELS, scoring: VOLUME_MODELS, summary: SUMMARY_MODELS });
 
 // One role's option entry by key.
@@ -637,187 +429,44 @@ function buildRunConfig(keys) {
         ...roleConfig('scoring', keys.scoring), ...roleConfig('summary', keys.summary) };
 }
 
-
-// Option labels are built from each entry's constants and measured quality record, so a label can never
-// disagree with the forecast that uses the same constants. Characters per comment, framing included, come
-// from the test thread: 411,900 characters over 1297 comments.
-const CHARS_PER_COMMENT = 317.6;
-const COMMENTS_PER_LABEL = 1000;
-const COMMENTS_PER_ROW_RATE = 100;
-
-// Display one central value for each metric, using the same range midpoint as the color scale.
-function centralValueText(values, suffix) {
-    const midpoint = values.reduce((sum, value) => sum + value, 0) / values.length;
-    return `${Number(midpoint.toFixed(2))}${suffix}`;
-}
-
-function perThousandCommentsRates(choice) {
-    const chars = CHARS_PER_COMMENT * COMMENTS_PER_LABEL;
-    const benchmark = choice.summaryQuality?.benchmark ?? choice.quality?.benchmark;
-    return {
-        usd: benchmark?.costPer1k ?? (choice.usdPerMillionChars * chars) / RATE_UNIT_CHARS,
-        seconds: benchmark?.secondsPer1k ?? (choice.secondsPerMillionChars * chars) / RATE_UNIT_CHARS,
-    };
-}
-
-function perThousandCommentsText(choice) {
-    const { usd, seconds } = perThousandCommentsRates(choice);
-    return `$${usd.toFixed(2)} and ${formatDuration(seconds)} per ${COMMENTS_PER_LABEL} comments`;
-}
-
-// The name, the rates, then the quality parts and the note when the entry has one.
-// The model name a person sees anywhere outside the picker grids, which have their own reasoning column:
-// the effort distinguishes entries that share a model, such as GPT-5.6 Luna low and max consolidation.
+// The model name a person sees anywhere outside the picker grids, which have their own effort column:
+// the effort distinguishes entries that share a model, such as GPT-5.6 Luna low and max.
 function modelDisplayName(choice) {
     return choice.effort === 'default' ? choice.name : `${choice.name} (${choice.effort})`;
 }
 
-function optionLabel(choice, qualityParts) {
-    const parts = choice.quality.note ? [...qualityParts, choice.quality.note] : qualityParts;
-    const ratesText = choice.unmeasured ? 'cost and time not measured' : perThousandCommentsText(choice);
-    return `${modelDisplayName(choice)}: ${ratesText}. ${parts.join('; ')}.`;
+// ---------------------------------------------------------------------------
+// Benchmark figures and forecasts
+// ---------------------------------------------------------------------------
+
+// A choice's benchmark result in a role: undefined when the choice has not been measured; with failed set
+// when its output stayed invalid, which leaves the cost and time of the attempt but no usable figures.
+function benchmarkResult(role, key) {
+    return SILVER_BENCHMARK.results[role][key];
 }
 
-// Extraction and scoring: stances per comment, two-sided rows per 100 comments, the blind-review shares
-// when measured, then a note.
-function volumeLabel(choice) {
-    const quality = choice.quality;
-    const parts = [
-        `${centralValueText(quality.stancesPerComment, '')} stances per comment`,
-        `${centralValueText(quality.twoSidedPer100Comments, '')} two-sided rows per ${COMMENTS_PER_ROW_RATE} comments`,
-    ];
-    if (quality.reviewHeldPercent !== undefined) {
-        parts.push(`${quality.reviewHeldPercent}% of stances held under blind review, ${quality.reviewWrongPercent}% wrong`);
-    }
-    // The extraction and scoring pickers share this list, and every figure came from this model running both stages.
-    parts.push('measured with this model running both extraction and scoring');
-    return optionLabel(choice, parts);
-}
+// What a forecast needs from one benchmark result. Extraction and scoring calls grow with the characters of
+// comment text; the consolidation call grows with the number of candidates, which the extraction choice
+// sets; the summary reads at most forty axes, so it costs the same for every thread.
+const FORECAST_FIGURES = Object.freeze({
+    extraction: result => ({ usdPerChar: result.usd / SILVER_BENCHMARK.chars, callSecondsPerChar: result.meanCallSeconds * result.calls / SILVER_BENCHMARK.chars,
+        slowestCallSeconds: result.maxCallSeconds, candidatesPerChar: result.candidates / SILVER_BENCHMARK.chars }),
+    scoring: result => ({ usdPerChar: result.usd / SILVER_BENCHMARK.chars, callSecondsPerChar: result.meanCallSeconds * result.calls / SILVER_BENCHMARK.chars,
+        slowestCallSeconds: result.maxCallSeconds }),
+    consolidation: result => ({ usdPerCandidate: result.usd / result.candidates, secondsPerCandidate: result.meanCallSeconds * result.calls / result.candidates }),
+    summary: result => ({ usd: result.usd, seconds: result.meanCallSeconds * result.calls }),
+});
 
-const VOLUME_METRIC_COLUMNS = Object.freeze([
-    ['model', 'Model'],
-    ['cost', 'Estimated cost / 1k comments'],
-    ['time', 'Estimated time / 1k comments'],
-    ['reasoning', 'Reasoning effort'],
-    ['stances', 'Stances found / comment'],
-    ['rows', 'Two-sided rows / 100 comments'],
-    ['consistency', 'Stances held in blind review'],
-    ['wrong', 'Stances wrong in blind review'],
-]);
-
-function volumeMetrics(choice) {
-    const chars = CHARS_PER_COMMENT * COMMENTS_PER_LABEL;
-    const quality = choice.quality;
-    return {
-        model: choice.name,
-        reasoning: choice.effort,
-        cost: `$${((choice.usdPerMillionChars * chars) / RATE_UNIT_CHARS).toFixed(2)}`,
-        time: formatDuration((choice.secondsPerMillionChars * chars) / RATE_UNIT_CHARS),
-        stances: centralValueText(quality.stancesPerComment, ''),
-        rows: centralValueText(quality.twoSidedPer100Comments, ''),
-        consistency: quality.reviewHeldPercent === undefined ? 'not measured' : `${quality.reviewHeldPercent}%`,
-        wrong: quality.reviewWrongPercent === undefined ? 'not measured' : `${quality.reviewWrongPercent}%`,
-    };
-}
-
-const CONSOLIDATION_METRIC_COLUMNS = Object.freeze([
-    ['model', 'Model'],
-    ['cost', 'Cost / 1k comments'],
-    ['time', 'Minutes / 1k comments'],
-    ['twoSidedPer1k', 'Two-sided comparisons / 1k comments'],
-    ['flagged', 'Axes flagged in review'],
-    ['preserved', 'Candidates fully preserved in review'],
-]);
-
-function consolidationMetrics(choice) {
-    const { usd, seconds } = perThousandCommentsRates(choice);
-    const quality = choice.quality;
-    const benchmark = quality.benchmark;
-    const review = benchmark?.review;
-    return {
-        model: modelDisplayName(choice),
-        reasoning: choice.effort,
-        cost: choice.unmeasured ? 'Not measured' : `$${usd.toFixed(2)}`,
-        time: choice.unmeasured ? 'Not measured' : (seconds / 60).toFixed(1),
-        twoSidedPer1k: benchmark ? quality.twoSidedPer1k.toFixed(1) : 'Not measured',
-        twoSided: quality.twoSidedPercent === undefined ? 'Not measured' : centralValueText(quality.twoSidedPercent, '%'),
-        flagged: review ? `${quality.flaggedPercent.toFixed(1)}% (${review.flaggedAxes}/${benchmark.axes})` : 'Not measured',
-        preserved: review ? `${quality.preservedPercent.toFixed(1)}% (${review.fullyPreserved}/${review.candidates - review.excluded})` : 'Not measured',
-        measurement: choice.quality.runs || '1 run',
-    };
-}
-
-const SUMMARY_METRIC_COLUMNS = Object.freeze([
-    ['model', 'Model'], ['cost', 'Cost / 1k comments'], ['time', 'Time (min) / 1k comments'],
-    ['summaryQuality', 'Quality /100'], ['summaryErrors', 'Failed / major error'],
-]);
-
-function summaryLabel(choice) {
-    const q = choice.summaryQuality;
-    if (q === undefined) return `${choice.name}: summary quality, cost and time not measured; ${choice.note}.`;
-    return `${choice.name}: quality ${q.weighted.toFixed(1)}/100, ${q.errorPercent.toFixed(0)}% failed or major support error; ${perThousandCommentsText(choice)} for summary. Same five-thread benchmark.`;
-}
-
-function summaryMetrics(choice) {
-    const q = choice.summaryQuality, rates = perThousandCommentsRates(choice);
-    if (q === undefined) return { model: modelDisplayName(choice),
-        summaryQuality: 'Not measured', summaryErrors: 'Not measured', cost: 'Not measured', time: 'Not measured' };
-    return { model: modelDisplayName(choice),
-        summaryQuality: q.weighted.toFixed(1), summaryErrors: `${q.errorPercent.toFixed(0)}%`,
-        cost: `$${rates.usd.toFixed(2)}`, time: (rates.seconds / 60).toFixed(1),
-    };
-}
-
-function summaryQualityText(choice, keys) {
-    const q = choice.summaryQuality;
-    if (q?.matched) return {
-        rank: 'Matched benchmark', label: `Summary benchmark: ${q.weighted.toFixed(1)}/100 · ${q.threads} threads`,
-        scores: `Faithfulness ${q.scores.faithfulness.toFixed(1)}/100 · Coverage ${q.scores.coverage.toFixed(1)}/100 · Clarity ${q.scores.clarity.toFixed(1)}/100. ${q.failedCount}/${q.threads} summaries failed after repair; ${q.majorReviewCount}/${q.threads} had a major support error.`,
-        method: (q.added ? 'Added after the matched eight: same inputs and rubric, but graded in a separate anonymous Astra-high review of the added summaries only, which can shift grades. ' : '')
-            + 'All eight summary models use the same five Sol-low consolidation and Luna-low scoring inputs (1,234 HN comments). One anonymous Astra-high review per thread. Quality weights faithfulness 60%, coverage 30%, clarity 10%; unavailable summaries score zero. Error rate counts failed summaries or major support errors once per summary. Cost/time cover summary generation and repairs only, using uncached prices. This fixed benchmark compares summary choices; it does not grade every upstream combination. Five-thread model judgments, without a statistical rank; Astra evaluates its own model family.',
-    };
-    if (!q) return { rank: 'Not ranked', label: 'Summary quality: not evaluated', scores: '',
-        method: choice.unmeasured ? `${choice.name} ${choice.note}.` : 'Summary ranks currently cover only Astra low and Sonnet 5 adaptive.' };
-    const tested = CONSOLIDATION_MODELS[choice.testedConsolidationKey]
-        || Object.values(CONSOLIDATION_MODELS).find(c => c.summaryQuality === q) || choice;
-    const combination = `Measured with Luna low extraction/scoring, ${tested.name} (${tested.effort}) consolidation and ${choice.name} (${choice.effort}) summary.`;
-    if (keys !== undefined && (CONSOLIDATION_MODELS[keys.consolidation] !== tested || keys.extraction !== 'lunaLow' || keys.scoring !== 'lunaLow')) {
-        return { rank: 'Untested combination', label: 'Summary quality: this combination has not been evaluated', scores: '',
-            method: `${combination} Those scores do not apply to the selected combination.` };
-    }
-    const rank = q.standalone ? `Standalone: major support errors flagged in ${q.majorReviewCount}/${q.reviews} reviews` : q.rank === null ? `Rank withheld: major support errors flagged in ${q.majorReviewCount}/${q.reviews} reviews` : `#${q.rank}${q.tied ? ' (tied)' : ''}`;
-    return { rank: `${rank} · ${q.threads} threads`, label: `Summary quality: ${rank} · ${q.threads} HN threads`,
-        scores: `Faithfulness ${q.scores.faithfulness.toFixed(1)}/100 · Coverage ${q.scores.coverage.toFixed(1)}/100 · Clarity ${q.scores.clarity.toFixed(1)}/100. Weighted score ${q.weighted.toFixed(1)}/100. Major support errors flagged in ${q.majorReviewCount} of ${q.reviews} reviews.`,
-        method: q.standalone ? combination + ' Evaluated by Astra high: five summaries, each graded twice independently (10 reviews). Standalone evaluation, without comparison or ranking. Scores weight faithfulness 60%, coverage 30%, clarity 10%. These are model judgments on five cached HN threads, not article results or a guarantee.' : combination + ' Evaluated by Astra high: five summaries per model, each reviewed twice with anonymous output order reversed (10 reviews per model). A major support error is a claim not adequately supported by the cited evidence that materially changes the meaning. Scores weight faithfulness 60%, coverage 30%, clarity 10%; gaps under 5 points tie. Any major support error withholds a numeric rank. These are model judgments on five cached HN threads, not article results or a guarantee; Astra also evaluates its own model family.' };
-}
-
-// Consolidation: the share of axes two-sided, the run count when a range, then a note.
-function consolidationLabel(choice) {
-    const quality = choice.quality;
-    const runsPart = quality.runs ? ` across ${quality.runs}` : '';
-    return optionLabel(choice, quality.twoSidedPercent === undefined ? [] : [`${centralValueText(quality.twoSidedPercent, '%')} of axes two-sided${runsPart}`]);
-}
-
-// An extraction-and-scoring rate covers both stages. Extraction's share of it comes from the Luna-low run on
-// thread 22866284: $0.0289 of the two stages' $0.1008. The same share is assumed for time and for every model.
-const EXTRACTION_RATE_SHARE = 0.29;
-
-// One per-million-character rate field over the four chosen models. The consolidation call's cost and time
-// grow with the number of candidates, which the extraction model sets, so its rate is scaled by that model's
-// candidateFactor, its candidate count relative to Haiku 4.5's on the same thread.
-function combinedRate(keys, field) {
-    return remainingRate(keys, field, ALL_UNCACHED);
-}
-
-// Each stage's part of combinedRate, keyed by stage, in the order combinedRate adds them.
-function stageRates(keys, field) {
-    const extraction = roleChoice('extraction', keys.extraction);
-    return {
-        extract: extraction[field] * EXTRACTION_RATE_SHARE,
-        score: roleChoice('scoring', keys.scoring)[field] * (1 - EXTRACTION_RATE_SHARE),
-        consolidate: roleChoice('consolidation', keys.consolidation)[field] * extraction.candidateFactor,
-        synthesize: roleChoice('summary', keys.summary)[field],
-    };
+// The forecast figures of a choice in a role. A choice without a usable result (a router, a model added
+// before its benchmark run, a failed run) gets, for each figure, the highest value among the measured choices
+// of the role, so a forecast assumes the costliest and slowest listed model.
+function forecastFigures(role, key) {
+    const usable = result => result !== undefined && !result.failed;
+    const own = benchmarkResult(role, key);
+    if (usable(own)) return FORECAST_FIGURES[role](own);
+    const measured = Object.values(SILVER_BENCHMARK.results[role]).filter(usable).map(FORECAST_FIGURES[role]);
+    if (measured.length === 0) throw new Error(`no ${role} choice has a benchmark result`);
+    return Object.fromEntries(Object.keys(measured[0]).map(field => [field, Math.max(...measured.map(figures => figures[field]))]));
 }
 
 // The fraction of each stage's calls a run must still make. ALL_UNCACHED is the forecast without a cache probe.
@@ -833,17 +482,85 @@ function uncachedFractions(probe) {
     }));
 }
 
-function remainingRate(keys, field, remaining) {
-    return Object.entries(stageRates(keys, field)).reduce((sum, [stage, rate]) => sum + rate * remaining[stage], 0);
+// The forecast dollars and seconds of each stage for the calls it must still make, over `chars` characters of
+// comment text. A batched stage runs up to DEFAULT_CONFIG.concurrency calls at once and takes at least as
+// long as its slowest call.
+function stageForecast(chars, keys, remaining) {
+    const extraction = forecastFigures('extraction', keys.extraction);
+    const consolidation = forecastFigures('consolidation', keys.consolidation);
+    const summary = forecastFigures('summary', keys.summary);
+    const candidates = extraction.candidatesPerChar * chars;
+    const batched = (figures, left) => ({
+        usd: figures.usdPerChar * chars * left,
+        seconds: left > 0 ? Math.max(figures.slowestCallSeconds, figures.callSecondsPerChar * chars * left / DEFAULT_CONFIG.concurrency) : 0,
+    });
+    return {
+        extract: batched(extraction, remaining.extract),
+        consolidate: { usd: consolidation.usdPerCandidate * candidates * remaining.consolidate, seconds: consolidation.secondsPerCandidate * candidates * remaining.consolidate },
+        score: batched(forecastFigures('scoring', keys.scoring), remaining.score),
+        synthesize: { usd: summary.usd * remaining.synthesize, seconds: summary.seconds * remaining.synthesize },
+    };
 }
 
-// Four model stages run sequentially, each with its role's selected model. A stage with nothing left to call
-// adds no latency floor.
-function estimateRunSeconds(chars, keys, remaining) {
-    const scaled = (remainingRate(keys, 'secondsPerMillionChars', remaining) * chars) / RATE_UNIT_CHARS;
-    const floor = STAGES.filter(stage => remaining[stage.key] > 0)
-        .reduce((sum, stage) => sum + roleChoice(stage.role, keys[stage.role]).minimumSeconds, 0);
-    return Math.max(scaled, floor);
+// The forecast of a whole run over `chars` characters: the stages run one after another.
+function estimateRun(chars, keys, remaining) {
+    const stages = Object.values(stageForecast(chars, keys, remaining));
+    return { usd: stages.reduce((sum, stage) => sum + stage.usd, 0), seconds: stages.reduce((sum, stage) => sum + stage.seconds, 0) };
+}
+
+// A picker row: the choice's agreement with the silver reference in the role, and the forecast dollars and
+// seconds of the role's stage for a thread of PICKER_COMMENTS comments of the benchmark thread's average
+// length, with the default choices in the other roles. Fields are null when the choice has no usable result.
+const PICKER_COMMENTS = 1000;
+function pickerFigures(role, key) {
+    const result = benchmarkResult(role, key);
+    if (result === undefined) return { usd: null, seconds: null, agreement: null, failed: false };
+    if (result.failed) return { usd: null, seconds: null, agreement: 0, failed: true };
+    const chars = PICKER_COMMENTS * SILVER_BENCHMARK.chars / SILVER_BENCHMARK.comments;
+    const keys = { extraction: DEFAULT_EXTRACTION_KEY, consolidation: DEFAULT_CONSOLIDATION_KEY, scoring: DEFAULT_SCORING_KEY, summary: DEFAULT_SUMMARY_KEY, [role]: key };
+    const stage = stageForecast(chars, keys, ALL_UNCACHED)[STAGE_OF_ROLE[role]];
+    return { usd: stage.usd, seconds: stage.seconds, agreement: result.agreement, precision: result.precision, recall: result.recall, failed: false };
+}
+
+const PICKER_COLUMNS = Object.freeze([
+    ['model', 'Model'],
+    ['effort', 'Reasoning effort'],
+    ['cost', `Cost / ${PICKER_COMMENTS} comments`],
+    ['time', `Time / ${PICKER_COMMENTS} comments`],
+    ['agreement', 'Agreement with silver'],
+]);
+const NOT_MEASURED_TEXT = 'Not measured';
+// Dollars below this show a third decimal, so cheap choices do not all read $0.00.
+const SMALL_USD = 0.095;
+
+function percentText(share) {
+    return `${Math.round(share * 100)}%`;
+}
+
+function pickerUsdText(usd) {
+    return `$${usd.toFixed(usd < SMALL_USD ? 3 : 2)}`;
+}
+
+// The text of each picker cell for a choice in a role, keyed like PICKER_COLUMNS.
+function pickerCells(role, key) {
+    const choice = roleChoice(role, key);
+    const figures = pickerFigures(role, key);
+    return {
+        model: choice.name,
+        effort: choice.effort,
+        cost: figures.usd === null ? NOT_MEASURED_TEXT : pickerUsdText(figures.usd),
+        time: figures.seconds === null ? NOT_MEASURED_TEXT : formatDuration(figures.seconds),
+        agreement: figures.failed ? 'Failed' : figures.agreement === null ? NOT_MEASURED_TEXT : percentText(figures.agreement),
+    };
+}
+
+// One sentence describing a choice in a role, for tooltips.
+function choiceLabel(role, key) {
+    const choice = roleChoice(role, key);
+    const figures = pickerFigures(role, key);
+    if (figures.failed) return `${modelDisplayName(choice)}: its ${role} output failed validation on the benchmark thread.`;
+    if (figures.agreement === null) return `${modelDisplayName(choice)}: ${choice.note || 'not measured'}.`;
+    return `${modelDisplayName(choice)}: agreement with silver ${percentText(figures.agreement)} (precision ${percentText(figures.precision)}, recall ${percentText(figures.recall)}); about ${pickerUsdText(figures.usd)} and ${formatDuration(figures.seconds)} per ${PICKER_COMMENTS} comments.`;
 }
 
 // Applies per-stage fields (model, sampling, reasoning, maxTokens) to every stage.
@@ -1078,17 +795,15 @@ function buildSynthesisReviewMessages(source, rows, commentsById, synthesis) {
 }
 // The forecast for the calls a run must still make; remaining is ALL_UNCACHED or uncachedFractions(probe).
 function estimateSourceRun(source, keys, remaining) {
-    const comments = isArticle(source) ? [{ text: source.text }] : source.comments;
-    const chars = comments.reduce((sum, c) => sum + c.text.length + CONSTANTS.COMMENT_FRAME_CHARS, 0);
-    let usd = estimateRunCost(comments, remainingRate(keys, 'usdPerMillionChars', remaining)).usd;
-    let seconds = estimateRunSeconds(chars, keys, remaining);
+    const chars = totalCommentChars(isArticle(source) ? [{ text: source.text }] : source.comments);
+    let { usd, seconds } = estimateRun(chars, keys, remaining);
     const articleCallsLeft = ['prepare', 'reviewAxes', 'reviewSynthesis'].some(stage => remaining[stage] > 0);
     if (isArticle(source) && articleCallsLeft) {
-        // Extra full-text preparation (on the extraction model) and two review allowances. Heuristic, not a cap.
-        const extraction = VOLUME_MODELS[keys.extraction], consolidation = CONSOLIDATION_MODELS[keys.consolidation], summary = SUMMARY_MODELS[keys.summary];
-        usd += chars / RATE_UNIT_CHARS * (extraction.usdPerMillionChars * 2 + consolidation.usdPerMillionChars + summary.usdPerMillionChars);
-        seconds += chars / RATE_UNIT_CHARS * (extraction.secondsPerMillionChars + consolidation.secondsPerMillionChars + summary.secondsPerMillionChars)
-            + extraction.minimumSeconds + consolidation.minimumSeconds + summary.minimumSeconds;
+        // An article adds a full-text preparation call on the extraction model and two review calls. Heuristic,
+        // not a cap: the preparation as two extraction stages, each review as its own role's stage.
+        const full = stageForecast(chars, keys, ALL_UNCACHED);
+        usd += full.extract.usd * 2 + full.consolidate.usd + full.synthesize.usd;
+        seconds += full.extract.seconds + full.consolidate.seconds + full.synthesize.seconds;
     }
     return { chars, usd, seconds };
 }
@@ -1197,15 +912,11 @@ function threadShare(thread, percent) {
     return { ...thread, comments: selectCommentShare(thread.comments, percent) };
 }
 
-function estimateRunCost(comments, usdPerMillionChars) {
-    const chars = totalCommentChars(comments);
-    return { chars, usd: (usdPerMillionChars * chars) / RATE_UNIT_CHARS };
-}
-
-// The largest percentage of top comments whose forecast cost stays within budgetUsd; 0 when even one comment does not fit.
-function largestShareWithinBudget(comments, usdPerMillionChars, budgetUsd) {
+// The largest percentage of top comments whose forecast cost with these model choices stays within budgetUsd;
+// 0 when even one comment does not fit.
+function largestShareWithinBudget(comments, keys, budgetUsd) {
     for (let percent = 100; percent > 0; percent -= 1) {
-        if (estimateRunCost(selectCommentShare(comments, percent), usdPerMillionChars).usd <= budgetUsd) {
+        if (estimateRun(totalCommentChars(selectCommentShare(comments, percent)), keys, ALL_UNCACHED).usd <= budgetUsd) {
             return percent;
         }
     }
@@ -2394,14 +2105,15 @@ function markSystemMessageCacheable(message) {
     return { role: 'system', content: [{ type: 'text', text: message.content, cache_control: { type: 'ephemeral' } }] };
 }
 
-// Models outside OpenAI whose structured-output validator also rejects regex lookaround. Jev Router can
-// pick such a model, so it receives the lookaround-free pattern too.
-const NO_LOOKAROUND_MODELS = Object.freeze(['anthropic/claude-opus-5.5', 'anthropic/claude-sonnet-5.5', ROUTER_PROFILE.model]);
+// The structured-output validators of OpenAI and Anthropic reject regex lookaround: every Anthropic provider
+// answers HTTP 400 "Invalid regex in pattern field". Jev Router can pick such a model, so it receives the
+// lookaround-free pattern too.
+const NO_LOOKAROUND_PREFIXES = Object.freeze(['openai/', 'anthropic/']);
 
 function providerResponseSchema(request) {
-    const rejectsLookaround = request.model.startsWith('openai/') || NO_LOOKAROUND_MODELS.includes(request.model);
+    const rejectsLookaround = NO_LOOKAROUND_PREFIXES.some(prefix => request.model.startsWith(prefix)) || request.model === ROUTER_PROFILE.model;
     if (!rejectsLookaround || request.schema.name !== 'thread_synthesis') return request.schema.schema;
-    // OpenAI and NO_LOOKAROUND_MODELS reject regex lookaround. The prompt and parseSynthesisResponse retain all word limits.
+    // The prompt and parseSynthesisResponse retain all word limits.
     const schema = JSON.parse(JSON.stringify(request.schema.schema));
     schema.properties.sections.items.properties.text.pattern = '^[^\\r\\n]*\\[\\[axis:[1-9]\\d*:[AB]\\]\\][^\\r\\n]*$';
     return schema;
@@ -3371,11 +3083,11 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        CONSTANTS, DEFAULT_CONFIG, VOLUME_MODELS, CONSOLIDATION_MODELS, SUMMARY_MODELS, DEFAULT_EXTRACTION_KEY, DEFAULT_SCORING_KEY, DEFAULT_CONSOLIDATION_KEY, DEFAULT_SUMMARY_KEY, buildRunConfig, roleConfig, EXTRACTION_RATE_SHARE, modelDisplayName, volumeLabel, VOLUME_METRIC_COLUMNS, volumeMetrics, CONSOLIDATION_METRIC_COLUMNS, consolidationMetrics, consolidationLabel, summaryQualityText, SUMMARY_METRIC_COLUMNS, summaryMetrics, CHARS_PER_COMMENT,
-        roleChoice, combinedRate, stageRates, ALL_UNCACHED, uncachedFractions, estimateRunSeconds, applyToAllStages, stepMinComments, perThousandCommentsRates,
+        CONSTANTS, DEFAULT_CONFIG, VOLUME_MODELS, CONSOLIDATION_MODELS, SUMMARY_MODELS, DEFAULT_EXTRACTION_KEY, DEFAULT_SCORING_KEY, DEFAULT_CONSOLIDATION_KEY, DEFAULT_SUMMARY_KEY, buildRunConfig, roleConfig, modelDisplayName, ROLE_CHOICES, SILVER_BENCHMARK, benchmarkResult, forecastFigures, stageForecast, estimateRun, PICKER_COMMENTS, pickerFigures, PICKER_COLUMNS, pickerCells, choiceLabel,
+        roleChoice, ALL_UNCACHED, uncachedFractions, applyToAllStages, stepMinComments,
         isArticle, isArticleId, createArticleSource, sourceFromSnapshot, parseArticlePreparation, buildArticlePrepareMessages, parseAxisReview, parseSynthesisReview, estimateSourceRun, ARTICLE_MAX_CHARS,
         stripHtml, flattenThread, makeExtractBatches, makeScoreBatches, seededShuffle,
-        selectCommentShare, threadShare, indexCommentsById, estimateRunCost, largestShareWithinBudget, parseFrontPage, parseCurrentCommentCount, formatLocalDateTime, storyDate, storyDetails, storyLabel, sortStoriesNewestFirst, storySearchUrl, isThreadId, fetchThreadItem, fetchCurrentCommentCount, fetchStories, fetchFrontPageStories,
+        selectCommentShare, threadShare, indexCommentsById, largestShareWithinBudget, parseFrontPage, parseCurrentCommentCount, formatLocalDateTime, storyDate, storyDetails, storyLabel, sortStoriesNewestFirst, storySearchUrl, isThreadId, fetchThreadItem, fetchCurrentCommentCount, fetchStories, fetchFrontPageStories,
         buildExtractMessages, buildConsolidateMessages, buildScoreMessages,
         SYNTHESIS_SCHEMA, buildSynthesisMessages, parseSynthesisResponse, synthesisTextParts,
         parseExtractResponse, parseConsolidateResponse, parseScoreResponse, MIN_AXIS_PEOPLE, axisPeople, axesBelowFloorText,
@@ -3623,55 +3335,20 @@ const elements = {
 };
 
 const modelPickers = [
-    {
-        choices: VOLUME_MODELS,
-        columns: VOLUME_METRIC_COLUMNS,
-        metrics: volumeMetrics,
-        gridClass: 'volume-grid',
-        metricKeys: new Set(['cost', 'time', 'stances', 'rows', 'consistency', 'wrong']),
-        root: elements.extractionModelPicker,
-        select: elements.extractionModel,
-        header: elements.extractionModelHeader,
-        button: elements.extractionModelButton,
-        options: elements.extractionModelOptions,
-    },
-    {
-        choices: CONSOLIDATION_MODELS,
-        columns: CONSOLIDATION_METRIC_COLUMNS,
-        metrics: consolidationMetrics,
-        gridClass: 'consolidation-grid',
-        metricKeys: new Set(['cost', 'time', 'twoSidedPer1k', 'twoSided', 'flagged', 'preserved']),
-        root: elements.consolidationModelPicker,
-        select: elements.consolidationModel,
-        header: elements.consolidationModelHeader,
-        button: elements.consolidationModelButton,
-        options: elements.consolidationModelOptions,
-    },
-    {
-        choices: VOLUME_MODELS,
-        columns: VOLUME_METRIC_COLUMNS,
-        metrics: volumeMetrics,
-        gridClass: 'volume-grid',
-        metricKeys: new Set(['cost', 'time', 'stances', 'rows', 'consistency', 'wrong']),
-        root: elements.scoringModelPicker,
-        select: elements.scoringModel,
-        header: elements.scoringModelHeader,
-        button: elements.scoringModelButton,
-        options: elements.scoringModelOptions,
-    },
-    {
-        choices: SUMMARY_MODELS,
-        columns: SUMMARY_METRIC_COLUMNS,
-        metrics: summaryMetrics,
-        gridClass: 'summary-grid',
-        metricKeys: new Set(['summaryQuality', 'summaryErrors', 'cost', 'time']),
-        root: elements.summaryModelPicker,
-        select: elements.summaryModel,
-        header: elements.summaryModelHeader,
-        button: elements.summaryModelButton,
-        options: elements.summaryModelOptions,
-    },
+    { role: 'extraction', choices: VOLUME_MODELS, root: elements.extractionModelPicker, select: elements.extractionModel,
+        header: elements.extractionModelHeader, button: elements.extractionModelButton, options: elements.extractionModelOptions },
+    { role: 'consolidation', choices: CONSOLIDATION_MODELS, root: elements.consolidationModelPicker, select: elements.consolidationModel,
+        header: elements.consolidationModelHeader, button: elements.consolidationModelButton, options: elements.consolidationModelOptions },
+    { role: 'scoring', choices: VOLUME_MODELS, root: elements.scoringModelPicker, select: elements.scoringModel,
+        header: elements.scoringModelHeader, button: elements.scoringModelButton, options: elements.scoringModelOptions },
+    { role: 'summary', choices: SUMMARY_MODELS, root: elements.summaryModelPicker, select: elements.summaryModel,
+        header: elements.summaryModelHeader, button: elements.summaryModelButton, options: elements.summaryModelOptions },
 ];
+const ROLE_TITLES = Object.freeze({ extraction: 'Extraction', consolidation: 'Consolidation', scoring: 'Scoring', summary: 'Summary' });
+// The picker columns that hold numbers, and those where a lower number is better.
+const PICKER_METRIC_KEYS = new Set(['cost', 'time', 'agreement']);
+const LOWER_IS_BETTER = new Set(['cost', 'time']);
+const PICKER_METHOD_TEXT = `Agreement with silver: how closely the choice's output in this role matches what ${SILVER_BENCHMARK.silverModels.join(' and ')} agree on, measured on one Hacker News thread of ${SILVER_BENCHMARK.comments} comments with every other stage fixed to that reference. Cost and time are forecasts for this role's stage on a thread of ${PICKER_COMMENTS} comments.`;
 
 let activeController = null;
 let importActive = false;
@@ -3707,7 +3384,7 @@ function applyMaxCostToShare() {
     if (loadedThread === null) {
         return;
     }
-    elements.share.value = largestShareWithinBudget(loadedThread.comments, selectedCostRate(), maxCostInBox());
+    elements.share.value = largestShareWithinBudget(loadedThread.comments, selectedModelKeys(), maxCostInBox());
 }
 
 function sharePercent() {
@@ -3759,10 +3436,6 @@ function showRunUrl(selection, mode) {
     } else {
         throw new Error(`showRunUrl needs ${RUN_URL_WRITE.push} or ${RUN_URL_WRITE.replace}, got ${mode}`);
     }
-}
-
-function selectedCostRate() {
-    return combinedRate(selectedModelKeys(), 'usdPerMillionChars');
 }
 
 // The loaded thread restricted to the selected share.
@@ -4174,63 +3847,45 @@ function refreshKeyState() {
     elements.keyStored.title = keyScopeText();
 }
 
-function fillModelOptions(select, choices, defaultKey, labelForChoice = choice => choice.label) {
-    for (const [key, choice] of Object.entries(choices)) {
-        const option = makeElement('option', { text: labelForChoice(choice) });
+function fillModelOptions(select, role, defaultKey) {
+    for (const key of Object.keys(ROLE_CHOICES[role])) {
+        const option = makeElement('option', { text: choiceLabel(role, key) });
         option.value = key;
-        option.title = choice.label;
+        option.title = choiceLabel(role, key);
         select.appendChild(option);
     }
     select.value = defaultKey;
-    select.title = choices[defaultKey].label;
+    select.title = choiceLabel(role, defaultKey);
 }
 
-function renderModelGrid(picker, container, values, choice) {
-    container.replaceChildren(...picker.columns.map(([key]) => {
-        const metricClass = picker.metricKeys.has(key) ? ' metric' : '';
+// Fills one grid row. choiceKey is absent for the header row, which gets no colors.
+function renderModelGrid(picker, container, values, choiceKey) {
+    container.replaceChildren(...PICKER_COLUMNS.map(([key]) => {
+        const metricClass = PICKER_METRIC_KEYS.has(key) ? ' metric' : '';
         const cell = makeElement('span', { className: `model-cell${metricClass}`, text: values[key] });
-        if (choice) {
-            const score = modelMetricScore(choice, key);
-            const scores = Object.values(picker.choices).map(candidate => modelMetricScore(candidate, key)).filter(Number.isFinite);
+        if (choiceKey !== undefined) {
+            const score = modelMetricScore(picker.role, choiceKey, key);
+            const scores = Object.keys(picker.choices).map(candidateKey => modelMetricScore(picker.role, candidateKey, key)).filter(Number.isFinite);
             const worst = Math.min(...scores);
             const best = Math.max(...scores);
             if (Number.isFinite(score) && best > worst) {
                 const fraction = (score - worst) / (best - worst);
                 cell.style.backgroundColor = `hsl(${120 * fraction}, 70%, 85%)`;
-                const direction = ['cost', 'time', 'wrong', 'flagged', 'summaryErrors'].includes(key) ? 'Lower' : 'Higher';
-                cell.title = `${direction} is better. Green = best, yellow = midpoint, red = worst in this column. Ranges use their midpoint.`;
+                const direction = LOWER_IS_BETTER.has(key) ? 'Lower' : 'Higher';
+                cell.title = `${direction} is better. Green = best, yellow = midpoint, red = worst in this column.`;
             }
         }
         return cell;
     }));
 }
 
-// Compare the underlying numbers, including range midpoints, rather than formatted prices or durations.
-// Positive scores are always better. Text, unmeasured values, and summary evaluation statuses stay neutral.
-function modelMetricScore(choice, key) {
-    const quality = choice.quality || {};
-    let value;
-    switch (key) {
-        case 'cost': value = choice.unmeasured ? null : perThousandCommentsRates(choice).usd; break;
-        case 'time': value = choice.unmeasured ? null : perThousandCommentsRates(choice).seconds; break;
-        case 'stances': value = quality.stancesPerComment; break;
-        case 'rows': value = quality.twoSidedPer100Comments; break;
-        case 'consistency': value = quality.reviewHeldPercent; break;
-        case 'wrong': value = quality.reviewWrongPercent; break;
-        case 'twoSided': value = quality.twoSidedPercent; break;
-        case 'twoSidedPer1k': value = quality.twoSidedPer1k; break;
-        case 'flagged': value = quality.flaggedPercent; break;
-        case 'preserved': value = quality.preservedPercent; break;
-        case 'summaryQuality': value = choice.summaryQuality?.weighted; break;
-        case 'summaryErrors': value = choice.summaryQuality?.errorPercent; break;
-        default: return null;
-    }
-    if (Array.isArray(value)) {
-        value = value.length && value.every(Number.isFinite)
-            ? value.reduce((sum, number) => sum + number, 0) / value.length : null;
-    }
+// Compares the underlying numbers rather than formatted prices or durations. Positive scores are always
+// better. Text and unmeasured values stay neutral.
+function modelMetricScore(role, choiceKey, column) {
+    const figures = pickerFigures(role, choiceKey);
+    const value = { cost: figures.usd, time: figures.seconds, agreement: figures.agreement }[column];
     if (!Number.isFinite(value)) return null;
-    return ['cost', 'time', 'wrong', 'flagged', 'summaryErrors'].includes(key) ? -value : value;
+    return LOWER_IS_BETTER.has(column) ? -value : value;
 }
 
 function closeModelOptions(picker, { restoreFocus = false } = {}) {
@@ -4256,35 +3911,24 @@ function focusModelOption(picker, offset) {
 function syncModelPicker(picker) {
     const selected = picker.choices[picker.select.value];
     picker.button.textContent = modelDisplayName(selected);
-    const roleName = picker.select === elements.extractionModel ? 'Extraction' : picker.select === elements.consolidationModel ? 'Consolidation'
-        : picker.select === elements.scoringModel ? 'Scoring' : 'Summary';
-    picker.button.title = `${roleName}: ${selected.label}`;
-    if (picker.select === elements.summaryModel) {
-        const quality = summaryQualityText(selected, selectedModelKeys());
-        picker.button.title += ` ${quality.label}.`;
-    }
+    picker.button.title = `${ROLE_TITLES[picker.role]}: ${choiceLabel(picker.role, picker.select.value)}`;
     for (const option of modelOptionButtons(picker)) {
         option.setAttribute('aria-selected', String(option.dataset.key === picker.select.value));
-        const choice = picker.choices[option.dataset.key];
-        renderModelGrid(picker, option, picker.metrics(choice), choice);
+        renderModelGrid(picker, option, pickerCells(picker.role, option.dataset.key), option.dataset.key);
     }
 }
 
 function initializeModelPicker(picker) {
-    renderModelGrid(
-        picker,
-        picker.header,
-        Object.fromEntries(picker.columns.map(([key, label]) => [key, label])),
-    );
+    renderModelGrid(picker, picker.header, Object.fromEntries(PICKER_COLUMNS));
     const choicesByName = Object.entries(picker.choices).sort(([, a], [, b]) =>
         a.name.localeCompare(b.name, 'en', { numeric: true, sensitivity: 'base' }));
     const options = choicesByName.map(([key, choice]) => {
-        const option = makeElement('button', { className: `model-grid ${picker.gridClass} model-option` });
+        const option = makeElement('button', { className: 'model-grid picker-grid model-option' });
         option.type = 'button';
         option.setAttribute('role', 'option');
         option.dataset.key = key;
-        option.title = choice.label;
-        renderModelGrid(picker, option, picker.metrics(choice), choice);
+        option.title = choiceLabel(picker.role, key);
+        renderModelGrid(picker, option, pickerCells(picker.role, key), key);
         option.addEventListener('click', () => {
             picker.select.value = key;
             picker.select.dispatchEvent(new Event('change', { bubbles: true }));
@@ -4307,7 +3951,7 @@ function initializeModelPicker(picker) {
         });
         return option;
     });
-    picker.options.replaceChildren(picker.header, ...options);
+    picker.options.replaceChildren(picker.header, ...options, makeElement('p', { className: 'model-comparison-method', text: PICKER_METHOD_TEXT }));
     syncModelPicker(picker);
     picker.button.addEventListener('click', () => {
         const opening = picker.options.hidden;
@@ -5519,10 +5163,10 @@ elements.refreshThread.addEventListener('click', async () => {
     loadThreadFromPage(threadId);
 });
 elements.maxCost.value = DEFAULT_MAX_COST_USD;
-fillModelOptions(elements.extractionModel, VOLUME_MODELS, DEFAULT_EXTRACTION_KEY);
-fillModelOptions(elements.consolidationModel, CONSOLIDATION_MODELS, DEFAULT_CONSOLIDATION_KEY);
-fillModelOptions(elements.scoringModel, VOLUME_MODELS, DEFAULT_SCORING_KEY);
-fillModelOptions(elements.summaryModel, SUMMARY_MODELS, DEFAULT_SUMMARY_KEY);
+fillModelOptions(elements.extractionModel, 'extraction', DEFAULT_EXTRACTION_KEY);
+fillModelOptions(elements.consolidationModel, 'consolidation', DEFAULT_CONSOLIDATION_KEY);
+fillModelOptions(elements.scoringModel, 'scoring', DEFAULT_SCORING_KEY);
+fillModelOptions(elements.summaryModel, 'summary', DEFAULT_SUMMARY_KEY);
 const initialRunSelection = parseRunPageUrl(location.href);
 if (initialRunSelection !== null) {
     elements.maxCost.value = initialRunSelection.budget;
