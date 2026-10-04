@@ -4,7 +4,7 @@
 // browser refuse to run the block. This script recomputes the policy:
 //   node scripts/csp.js          reports whether the policy in the page is current; exit code 1 when not
 //   node scripts/csp.js --write  rewrites the policy in the page
-// tests/csp.test.js runs the same comparison, so a stale policy fails the test suite.
+// The GitHub Pages workflow runs this script before it deploys, so a stale policy stops the deployment.
 const fs = require('node:fs');
 const crypto = require('node:crypto');
 const { HTML_PATH, CORE_SCRIPT_PATTERN, readPage, blockText } = require('./load_core');

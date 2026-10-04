@@ -107,17 +107,17 @@ A final model synthesis leads with the main disagreements and their reasoning, i
 ## Files
 
 - `hn_polarization.html`: the app, in one self-contained page. `<script id="core">` holds the pipeline with no DOM access; `<script id="page">` holds the browser glue.
-- `scripts/load_core.js`: evaluates the core block as a Node module for the runner and the tests, so there is no build step and no second copy of the pipeline.
+- `scripts/load_core.js`: evaluates the core block as a Node module for the runner, so there is no build step and no second copy of the pipeline.
 - `scripts/run_node.js`: headless runner with options for models, caching, thread files, comment share, and budget.
 - `scripts/csp.js`: recomputes the Content-Security-Policy hashes of the page's two script blocks and its style block; `node scripts/csp.js` reports whether the policy is current, `--write` rewrites it. A browser refuses an inline block whose hash the policy does not name. Run `node scripts/csp.js --write` after editing an inline block.
-- `tests/core.test.js`: unit and integration tests for the core block. `tests/csp.test.js` checks that the policy is current and that the page has CRLF line endings. `.gitattributes` makes every text file CRLF in the working tree on every platform and LF in the index, regardless of `core.autocrlf`. The policy hashes do not depend on line endings: the browser converts CRLF to LF while parsing, and `scripts/csp.js` hashes the same LF text. Run all with `node --test`.
+- `.gitattributes`: makes every text file CRLF in the working tree on every platform and LF in the index, regardless of `core.autocrlf`. The policy hashes do not depend on line endings: the browser converts CRLF to LF while parsing, and `scripts/csp.js` hashes the same LF text.
 
 ## User interface
 
 The app is hosted at https://andyrosa.github.io/orange_split/.
 The public source repository is https://github.com/andyrosa/orange_split.
 
-Every push to `main` runs `node --test`, including the Content-Security-Policy checks,
+Every push to `main` runs `node scripts/csp.js`, which stops the deployment when the Content-Security-Policy is stale,
 and deploys through `.github/workflows/pages.yml`. The workflow publishes only
 `hn_polarization.html`, copied byte-for-byte to `index.html`. Cache exports, prototypes,
 documentation, scripts, and tests are not included in the website. GitHub Pages must

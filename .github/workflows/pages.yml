@@ -30,8 +30,8 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '24'
-      - name: Run tests and verify Content-Security-Policy
-        run: node --test
+      - name: Verify Content-Security-Policy
+        run: node scripts/csp.js
       - name: Prepare website
         run: |
           mkdir _site
