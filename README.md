@@ -110,7 +110,7 @@ A final model synthesis leads with the main disagreements and their reasoning, i
 - `scripts/load_core.js`: evaluates the core block as a Node module for the runner and the tests, so there is no build step and no second copy of the pipeline.
 - `scripts/run_node.js`: headless runner with options for models, caching, thread files, comment share, and budget.
 - `scripts/csp.js`: recomputes the Content-Security-Policy hashes of the page's two script blocks and its style block; `node scripts/csp.js` reports whether the policy is current, `--write` rewrites it. A browser refuses an inline block whose hash the policy does not name. Run `node scripts/csp.js --write` after editing an inline block.
-- `tests/core.test.js`: unit and integration tests for the core block. `tests/csp.test.js` checks that the policy is current and that the page has LF line endings, which the hashes depend on. `.gitattributes` pins every text file to LF in the index and the working tree, regardless of `core.autocrlf`. Run all with `node --test`.
+- `tests/core.test.js`: unit and integration tests for the core block. `tests/csp.test.js` checks that the policy is current and that the page has CRLF line endings. `.gitattributes` makes every text file CRLF in the working tree on every platform and LF in the index, regardless of `core.autocrlf`. The policy hashes do not depend on line endings: the browser converts CRLF to LF while parsing, and `scripts/csp.js` hashes the same LF text. Run all with `node --test`.
 
 ## User interface
 

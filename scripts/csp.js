@@ -24,8 +24,9 @@ const INLINE_BLOCKS = [
 
 const META_PATTERN = /<meta http-equiv="Content-Security-Policy" content="([^"]*)">/;
 
+// The browser converts CRLF and lone CR to LF while parsing the page, so it hashes a block's LF text.
 function sha256Base64(text) {
-    return crypto.createHash('sha256').update(text, 'utf8').digest('base64');
+    return crypto.createHash('sha256').update(text.replace(/\r\n?/g, '\n'), 'utf8').digest('base64');
 }
 
 // The policy the page should carry for its current content.
