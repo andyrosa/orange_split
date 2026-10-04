@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-A4Ho4YoULCSgcyqlClaz4djRe/Q5lVUpjLpTdj9KoOs=' 'sha256-AB1lDslP/0E0XYJrFYhkCuWTFaYD1z0izkq1XVJQteY='; style-src 'sha256-b1uLJHHbbHvHdSMP5PBNa/byB9csk2a8INRTzfqESco='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-qvYx8nfdBp7xXkeRChbGktcdUqE9UE797iLV0iOHmMI=' 'sha256-pZxm2uvWI8KPWQHXJGrnnh3COZfdg7Ulle/Q+Hl0Xh4='; style-src 'sha256-b1uLJHHbbHvHdSMP5PBNa/byB9csk2a8INRTzfqESco='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
 <title>Orange Split - For and Against on Hacker News</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EOS%3C/text%3E%3C/svg%3E">
 <style>
@@ -1005,7 +1005,8 @@ function parseArticlePreparation(json, source) {
 function articleMessages(messages) {
     return messages.map((message, index) => index ? message : {
         ...message,
-        content: message.content.replace(/Hacker News comment thread|Hacker News thread|Hacker News discussion/g, 'pasted article').replace(/Hacker News comments/g, 'article passages')
+        content: message.content.replace(EXTRACT_GRAIN_THREAD, EXTRACT_GRAIN_ARTICLE).replace(CONSOLIDATE_GRAIN_THREAD, CONSOLIDATE_GRAIN_ARTICLE)
+            .replace(/Hacker News comment thread|Hacker News thread|Hacker News discussion/g, 'pasted article').replace(/Hacker News comments/g, 'article passages')
             .replace('Include an axis when at least one comment clearly takes a side and a reasonable commenter could take the other side.', 'Include an axis when at least one passage clearly takes a side, OR explicitly weighs the incompatible alternatives with reasons or consequences even without a final choice. For deliberation, leave commentsA and commentsB empty unless a passage actually endorses that pole. A bare question or mere mention of alternatives is insufficient.')
             + '\nArticle mode: the units are directly attributed quotations or the source\'s primary speaking voice (author, narrator, or standalone poetic/dramatic speaker). Their attribution has been separated from their text. Judge only the speaker\'s own claims; embedded third-party quotations/reports and bracketed editorial insertions do not prove their stance. Preserve reasoned deliberation axes even if nA=nB=0. In scoring, M includes explicitly weighing incompatible alternatives with reasons or consequences while leaving the choice unresolved. A bare question or mere mention gets no stance. Considering alternatives is not endorsing both and does not establish self contradiction. Counts are textual voices, not a survey or evidence of the literary author\'s beliefs. Do not infer agreement between different passages or stable groups across comparisons.',
     });
@@ -1358,11 +1359,21 @@ function seededShuffle(items, seed) {
 // Prompts and schemas
 // ---------------------------------------------------------------------------
 
+// The fewest people who must hold a thread axis, counted from the comments its candidates cite, for the
+// axis to be scored. One person cannot make a count the reader can use.
+const MIN_AXIS_PEOPLE = 2;
+
+// How broad an axis is. A thread is counted by people per axis, so its axes are the questions being argued.
+// An article is one voice making distinct claims, so articleMessages swaps in the article wording.
+const EXTRACT_GRAIN_THREAD = `- State each axis as the question the comments are arguing about, not one comment's particular wording, example, or reason. Comments that give different reasons for the same side hold the same statement. Use separate axes only for questions on which one commenter could take different sides.
+- A comment header "[id X, re P]" or "[id X, replying to P: ...]" names the comment's parent P. Use the parent only to resolve what the comment refers to; the parent's position is never the comment's own.`;
+const EXTRACT_GRAIN_ARTICLE = '- Prefer specific, concrete propositions over broad ones. Split distinct claims into separate axes.';
+
 const EXTRACT_SYSTEM_PROMPT = `You analyze a Hacker News comment thread. The submission title is: "{title}".
 
 Task: from the batch of comments below, list the bipolar axes of disagreement that appear in it.
 
-An axis is a pair of incompatible statements about the same specific thing, such that one commenter could hold the first and another the second. Examples of statements that anchor an axis: "the safeguard fallback fires on ordinary coding work", "Codex subscription quota lasts longer than Claude's", "text watermarking degrades output quality". An overall verdict on the subject also counts when phrased as a statement ("the release is a worthwhile upgrade"). Examples that do not count: topics ("pricing"), mood statements without a claim about the subject ("I'm disappointed"), traits of the commenter ("uses the API rather than a subscription").
+An axis is a pair of incompatible statements that answer the same question, such that one commenter could hold the first and another the second. Examples of statements that anchor an axis: "remote work makes teams less productive", "static typing prevents more bugs than it costs in effort", "the paper's main result will replicate". An overall verdict on the subject also counts when phrased as a statement ("the product is worth its price"). Examples that do not count: topics ("pricing"), mood statements without a claim about the subject ("I'm disappointed"), traits of the commenter ("has used the product for years").
 
 For each axis output:
 - statementA: one full sentence stating one side's claim.
@@ -1372,23 +1383,35 @@ For each axis output:
 
 Rules:
 - Include an axis when at least one comment clearly takes a side and a reasonable commenter could take the other side.
-- Prefer specific, concrete propositions over broad ones. Split distinct claims into separate axes.
+${EXTRACT_GRAIN_THREAD}
 - A line inside a comment that begins with ">" quotes another comment or the article and is not the commenter's own claim.
 - Words that only agree or disagree with the parent ("this", "exactly", "+1", "same here", "no", "wrong") state no position; list a reply under a statement only for a claim the rest of its own text makes.
 - Use only comment ids that appear in the batch. A comment may appear under several axes.
 - Do not list a comment under both poles of the same axis.
 - Return JSON matching the schema and nothing else.`;
 
-const CONSOLIDATE_SYSTEM_PROMPT = `You are consolidating candidate axes of disagreement extracted from a Hacker News thread. The submission title is: "{title}". Candidates were extracted from separate batches of comments and overlap heavily. Each candidate shows how many comments held each pole (nA, nB).
+// How candidates merge. Every thread axis must gather several people, so narrow candidates merge into the
+// question they bear on, and what stays below MIN_AXIS_PEOPLE is dropped. An article keeps the earlier
+// wording, which articleMessages swaps in.
+const CONSOLIDATE_GRAIN_THREAD = `Every comment in the thread is later classified against every axis, and the reader is shown how many people take each side. An axis is useful only when several people take a side on it. Produce the questions the thread actually argues about, each broad enough to gather the commenters who address it. There is no target count, but the application drops every axis whose candidates were held by fewer than ${MIN_AXIS_PEOPLE} people.
 
-Produce one canonical axis per distinct disagreement in the thread, however many that is. There is no target count: do not split one disagreement into facets to make more axes, and do not blur different disagreements together to make fewer.
+Rules:
+- An axis is one question the thread argues about. Merge into one axis all candidates that answer the same question, including pairs listed in the opposite order and candidates that state a narrower facet, reason, example, or consequence of one of its sides. Two candidates answer the same question when a commenter holding side A of one would usually hold side A of the other.
+- Keep two questions apart only when several comments hold each of them and a commenter could plausibly take side A on one and side B on the other.
+- A candidate held by one or two comments belongs to the broader axis it bears on. Leave it out when no broader axis fits.
+- Word statementA and statementB as the two answers to the question, general enough that the side taken by every merged candidate counts as holding one of them.`;
+const CONSOLIDATE_GRAIN_ARTICLE = `Produce one canonical axis per distinct disagreement in the thread, however many that is. There is no target count: do not split one disagreement into facets to make more axes, and do not blur different disagreements together to make fewer.
 
 Rules:
 - Two candidates are the same disagreement when a commenter holding side A of one would almost certainly hold side A of the other. Merge such candidates into one axis, including pairs listed in the opposite order and candidates that state one facet, cause, or consequence of the same disagreement. Word the merged axis after the candidate with the most comments.
-- Keep candidates apart only when commenters could plausibly split differently on them.
-- Each axis: statementA and statementB, each one full sentence about the same specific thing, the two incompatible with each other so a commenter can hold at most one, and each understandable on its own.
-- Exclude topics, mood statements without a claim about the subject, and traits of commenters. Keep whole-subject verdict axes when phrased as statements ("the release is a worthwhile upgrade" versus "the release is not a meaningful upgrade").
-- Order the axes from most contested to least contested.
+- Keep candidates apart only when commenters could plausibly split differently on them.`;
+
+const CONSOLIDATE_SYSTEM_PROMPT = `You are consolidating candidate axes of disagreement extracted from a Hacker News thread. The submission title is: "{title}". Candidates were extracted from separate batches of comments and overlap heavily. Each candidate shows its number (#) and how many comments held each pole (nA, nB).
+
+${CONSOLIDATE_GRAIN_THREAD}
+- Each axis: statementA and statementB, each one full sentence about the same thing, the two incompatible with each other so a commenter can hold at most one, and each understandable on its own.
+- Exclude topics, mood statements without a claim about the subject, and traits of commenters. Keep whole-subject verdict axes when phrased as statements ("the product is worth its price" versus "the product is not worth its price").
+- candidates: the numbers of the candidates merged into the axis. List each candidate number under at most one axis. A candidate listed under no axis is dropped.
 - Return JSON matching the schema and nothing else.`;
 
 const SCORE_SYSTEM_PROMPT = `You classify Hacker News comments against a fixed list of axes. The submission title is: "{title}".
@@ -1448,8 +1471,9 @@ const CONSOLIDATE_SCHEMA = {
                     properties: {
                         statementA: { type: 'string' },
                         statementB: { type: 'string' },
+                        candidates: { type: 'array', items: { type: 'integer' } },
                     },
-                    required: ['statementA', 'statementB'],
+                    required: ['statementA', 'statementB', 'candidates'],
                     additionalProperties: false,
                 },
             },
@@ -1824,10 +1848,38 @@ function parseExtractResponse(json, validIds) {
     return { candidates: items, warnings };
 }
 
-function parseConsolidateResponse(json) {
-    const { items, warnings } = parseStatementList(json, 'axes', 'consolidate', 'axis', (raw, statements, index) => ({ id: index + 1, ...statements }));
+// Each axis lists the numbers of the candidates merged into it, as buildConsolidateMessages numbers them
+// (from 1). An axis without a list is a shape error. A number outside the candidates is dropped with a
+// warning. The prompt asks for each candidate under one axis, which keeps a model from returning overlapping
+// axes; a candidate a model lists under several axes anyway counts for each, so no axis loses its people.
+function parseConsolidateResponse(json, candidateCount) {
+    const { items, warnings } = parseStatementList(json, 'axes', 'consolidate', 'axis', (raw, statements, index, itemWarnings) => {
+        if (!Array.isArray(raw.candidates)) throw new InvalidResponseError(`consolidate: axis ${index + 1} has no candidates list`, json);
+        const candidates = new Set();
+        for (const value of raw.candidates) {
+            const number = Number(value);
+            if (!Number.isInteger(number) || number < 1 || number > candidateCount) {
+                itemWarnings.push(`consolidate: axis ${index + 1} lists unknown candidate ${JSON.stringify(value)}`);
+            } else {
+                candidates.add(number);
+            }
+        }
+        return { id: index + 1, ...statements, candidates: [...candidates] };
+    });
     if (items.length === 0) throw new InvalidResponseError('Consolidation produced no valid axes', json);
     return { axes: items, warnings };
+}
+
+// The people behind an axis before scoring: the distinct authors of the comments its merged candidates cite.
+function axisPeople(axis, candidates, commentsById) {
+    const authors = new Set();
+    for (const number of axis.candidates) {
+        const candidate = candidates[number - 1];
+        for (const commentId of [...candidate.commentsA, ...candidate.commentsB]) {
+            authors.add(commentsById.get(commentId).author);
+        }
+    }
+    return authors.size;
 }
 
 function flipStance(stance) {
@@ -1884,7 +1936,7 @@ function parseModelResponse(call, json) {
             case 'reviewAxes': return parseAxisReview(json, call.meta.axes);
             case 'reviewSynthesis': return parseSynthesisReview(json);
             case 'extract': return parseExtractResponse(json, new Set(call.meta.commentIds));
-            case 'consolidate': return parseConsolidateResponse(json);
+            case 'consolidate': return parseConsolidateResponse(json, call.meta.candidateCount);
             case 'score': return parseScoreResponse(json, new Set(call.meta.commentIds), call.meta.presentedAxes, call.meta.swapPoles);
             case 'synthesize': {
                 const synthesis = parseSynthesisResponse(json, call.meta.axisIds);
@@ -2121,7 +2173,12 @@ function formatRunSummary(result) {
     return [
         result.article ? rowSummary.replace(/comments/g, 'passages').replace(/commenters/g, 'attributed voices') : rowSummary,
         result.article ? reviewSummary.replace(/comment-axis/g, 'passage-axis') : reviewSummary,
+        ...(stats.axesBelowFloor > 0 ? [axesBelowFloorText(stats.axesBelowFloor)] : []),
     ];
+}
+
+function axesBelowFloorText(count) {
+    return `${count} narrower ${count === 1 ? 'comparison was' : 'comparisons were'} left out before scoring, each held by fewer than ${MIN_AXIS_PEOPLE} people.`;
 }
 
 // The side with more people is always statement 1.
@@ -2879,7 +2936,7 @@ function makeCachedCallChat(callChat, store) {
 const PROBE_PLACEHOLDER_STATEMENTS = { statementA: 'placeholder', statementB: 'placeholder' };
 const PROBE_PLACEHOLDER_RESPONSES = Object.freeze({
     extract: { candidates: [{ ...PROBE_PLACEHOLDER_STATEMENTS, commentsA: [], commentsB: [] }] },
-    consolidate: { axes: [PROBE_PLACEHOLDER_STATEMENTS] },
+    consolidate: { axes: [{ ...PROBE_PLACEHOLDER_STATEMENTS, candidates: [] }] },
     score: { stances: [] },
 });
 const PROBE_PLACEHOLDER_USAGE = Object.freeze({ promptTokens: 0, completionTokens: 0, cost: 0 });
@@ -2987,6 +3044,8 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
     // The billed cost of the calls replayed from cache, as originally paid.
     let cachedCost = 0;
     let cacheWriteFailures = 0;
+    // Consolidated thread axes dropped before scoring because fewer than MIN_AXIS_PEOPLE people hold them.
+    let axesBelowFloor = 0;
     let stoppedError = null;
 
     let inFlight = 0;
@@ -3108,14 +3167,14 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
         }), cfg.concurrency);
     }
 
-    function emptyArticleResult(message) {
+    function emptyResult(message) {
         warnings.push(message);
         if (cacheWriteFailures > 0) warnings.push(`${cacheWriteFailures} cache writes failed; a new run or reload may repeat those paid calls`);
         report('done', 1, 1);
         return { rows: [], axes: [], candidates: [], unverifiedAxes: [], synthesis: null, synthesisError: null,
-            cost, calls: callCount, warnings, article, comments, emptyReason: message,
+            cost, calls: callCount, warnings, ...(articleMode ? { article, comments } : {}), emptyReason: message,
             stats: { comments: comments.length, authors: new Set(comments.map(c => c.author)).size,
-                cachedCalls, cachedCost, cacheWriteFailures, agreedStances: 0, classifiedPairs: 0, reviewedPairs: 0, conflictingStances: 0, singlePassStances: 0 } };
+                cachedCalls, cachedCost, cacheWriteFailures, axesBelowFloor, agreedStances: 0, classifiedPairs: 0, reviewedPairs: 0, conflictingStances: 0, singlePassStances: 0 } };
     }
     if (articleMode) {
         report('prepare', 0, 1);
@@ -3130,7 +3189,7 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
         const excluded = article.passages.filter(p => ['paraphrase', 'unresolved'].includes(p.kind)).length;
         if (excluded) warnings.push(excluded + ' paraphrased or unresolved passages are shown separately and do not add counted voices.');
         report('prepare', 1, 1);
-        if (!comments.length) return emptyArticleResult('Comparison analysis did not run: no directly attributable passages were accepted for scoring. The attribution step may have excluded speech whose speaker it could not identify. This does not establish that the text contains no comparisons.');
+        if (!comments.length) return emptyResult('Comparison analysis did not run: no directly attributable passages were accepted for scoring. The attribution step may have excluded speech whose speaker it could not identify. This does not establish that the text contains no comparisons.');
     }
 
     // Stage 1: extract candidate axes per batch.
@@ -3152,7 +3211,7 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
         warnings.push(...result.warnings);
     }
     if (candidates.length === 0) {
-        if (articleMode) return emptyArticleResult('The complete article was analyzed; no candidate comparisons were found.');
+        if (articleMode) return emptyResult('The complete article was analyzed; no candidate comparisons were found.');
         throw new Error('extraction produced no candidate axes');
     }
 
@@ -3168,6 +3227,14 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
     warnings.push(...consolidated.warnings);
     let axes = consolidated.axes;
     report('consolidate', 1, 1);
+    // A thread axis held by fewer than MIN_AXIS_PEOPLE people cannot give the reader a count, so it is not
+    // scored. An article is one voice weighing claims, so every article axis is kept.
+    if (!articleMode) {
+        const supported = axes.filter(axis => axisPeople(axis, candidates, commentsById) >= MIN_AXIS_PEOPLE);
+        axesBelowFloor = axes.length - supported.length;
+        axes = supported;
+        if (!axes.length) return emptyResult(`No comparison was held by at least ${MIN_AXIS_PEOPLE} people in the analyzed selection.`);
+    }
     if (articleMode) {
         report('reviewAxes', 0, 1);
         const review = await runUnbatchable({
@@ -3177,7 +3244,7 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
         for (const decision of review.decisions.filter(d => !d.valid)) warnings.push('Removed comparison ' + decision.axisId + ': ' + decision.reason);
         axes = axes.filter(axis => review.decisions.find(d => d.axisId === axis.id).valid);
         report('reviewAxes', 1, 1);
-        if (!axes.length) return emptyArticleResult('No comparisons passed the check for incompatible opposing claims.');
+        if (!axes.length) return emptyResult('No comparisons passed the check for incompatible opposing claims.');
     }
 
     // Stage 3: score every comment against every axis, twice. The passes are independent, so both
@@ -3295,6 +3362,7 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
             cachedCalls,
             cachedCost,
             cacheWriteFailures,
+            axesBelowFloor,
             ...passComparison,
             agreedStances: agreed.size,
         },
@@ -3310,7 +3378,7 @@ if (typeof module !== 'undefined' && module.exports) {
         selectCommentShare, threadShare, indexCommentsById, estimateRunCost, largestShareWithinBudget, parseFrontPage, parseCurrentCommentCount, formatLocalDateTime, storyDate, storyDetails, storyLabel, sortStoriesNewestFirst, storySearchUrl, isThreadId, fetchThreadItem, fetchCurrentCommentCount, fetchStories, fetchFrontPageStories,
         buildExtractMessages, buildConsolidateMessages, buildScoreMessages,
         SYNTHESIS_SCHEMA, buildSynthesisMessages, parseSynthesisResponse, synthesisTextParts,
-        parseExtractResponse, parseConsolidateResponse, parseScoreResponse,
+        parseExtractResponse, parseConsolidateResponse, parseScoreResponse, MIN_AXIS_PEOPLE, axisPeople, axesBelowFloorText,
         parseStanceKey, flipStance,
         mergePasses, comparePasses, collectUnverifiedComments, aggregateByAuthor, computeRows, withAuthorCounts, orientRows, rankRows, wilsonInterval, wilsonLowerBound, minorityLowerBound, rowGroup, ROW_GROUPS, CONSENSUS_SHARE, SPLIT_SHARE, groupSynthesisSections, proportionShares,
         axisMetaText, formatDuration, formatElapsed, formatClockDuration, formatProgress, formatRunCost, formatRunSummary,
@@ -3611,7 +3679,7 @@ let loadedThread = null;
 let loadedSnapshotAt = null;
 
 const APP_TITLE = 'Orange Split - For and Against on Hacker News';
-const RESULT_CACHE_VERSION = 9;
+const RESULT_CACHE_VERSION = 10;
 
 function setStatus(text, isError) {
     elements.status.textContent = text;
@@ -4984,6 +5052,9 @@ function renderResults(result, comments) {
         if (members.length === 0) continue;
         comparisons.appendChild(makeElement('h3', { className: 'row-group', text: `${group.title} (${members.length})` }));
         comparisons.append(...members.map(row => renderAxis(row, commentsById)));
+    }
+    if (result.stats.axesBelowFloor > 0) {
+        comparisons.appendChild(makeElement('p', { text: axesBelowFloorText(result.stats.axesBelowFloor) }));
     }
     let synthesis = null;
     let summaryError = result.synthesisError;
