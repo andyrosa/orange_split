@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-wi30hCO0zOglgmweOqu0Cc7x/2sQFFlXNHNAk7hwJ18=' 'sha256-gEVzGqDD2gT3KzezYWo52Nui5Yb1pKUbMTsU6+KODek='; style-src 'sha256-e0ulQ5qs0KalSlvMuYBU4BFD7AVnOTjLvOkuoTX/K2g='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-wi30hCO0zOglgmweOqu0Cc7x/2sQFFlXNHNAk7hwJ18=' 'sha256-IVzTcpDaKOfkPIp4z2whZ2qwfCz9jBP90XnRagd59vM='; style-src 'sha256-e0ulQ5qs0KalSlvMuYBU4BFD7AVnOTjLvOkuoTX/K2g='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
 <title>Orange Split - For and Against on Hacker News</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EOS%3C/text%3E%3C/svg%3E">
 <style>
@@ -4946,7 +4946,6 @@ function renderArticleSummary(result) {
     section.appendChild(heading);
     const failed = result.articleSummaryError ? `unavailable: ${result.articleSummaryError}` : result.articleSummary.fetched ? null : `not fetched: ${result.articleSummary.summary}`;
     section.appendChild(makeElement('p', { text: failed === null ? result.articleSummary.summary : `Article summary ${failed}` }));
-    section.appendChild(makeElement('p', { className: 'label', text: 'A model summary of the linked page as OpenRouter fetched it; it can be incomplete.' }));
     return [section];
 }
 
@@ -5021,6 +5020,9 @@ function renderResults(result, comments) {
     caveats.appendChild(makeElement('p', { text: renderedArticle
         ? 'This is a model interpretation of the selected text, not a poll or fact check. Textual voices are counted once per comparison. One voice may weigh alternatives without endorsing either. A literary speaker does not establish the author\'s personal beliefs. Summary evidence is limited to forty ranked comparisons and their complete supporting passages.'
         : threadCaveat(result.stats.singleCall) }));
+    if (result.articleSummary || result.articleSummaryError) {
+        caveats.appendChild(makeElement('p', { text: 'The summary of the linked article is a model summary of the page as OpenRouter fetched it; it can be incomplete.' }));
+    }
     for (const text of synthesis ? synthesis.caveats : []) caveats.appendChild(makeElement('p', { text }));
     if (renderedArticle) {
         const voices = new Set(result.comments.map(c => c.author)).size;
