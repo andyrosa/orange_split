@@ -194,7 +194,8 @@ async function runStages({ thread, config, handlers, modelCallChat, label }) {
     let lastLine = '';
     return core.runPipeline({
         thread,
-        config: { ...config, budgetUsd: Number.MAX_SAFE_INTEGER },
+        // The benchmarks measure the analysis, so the linked article's summary is left out.
+        config: { ...config, budgetUsd: Number.MAX_SAFE_INTEGER, articleSummary: false },
         callChat,
         onProgress: update => {
             const line = `${label}: ${update.stage} ${update.done}/${update.total}`;

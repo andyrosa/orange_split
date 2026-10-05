@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-LgV1Y0DxZtUmL2fw4FKIeP1xIKbM4FJIlFyGFKkCRp0=' 'sha256-gSdiSQt2peQQLTzBw/xkL1Klj51Kwj2csasybYqeaHg='; style-src 'sha256-e0ulQ5qs0KalSlvMuYBU4BFD7AVnOTjLvOkuoTX/K2g='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-wi30hCO0zOglgmweOqu0Cc7x/2sQFFlXNHNAk7hwJ18=' 'sha256-gEVzGqDD2gT3KzezYWo52Nui5Yb1pKUbMTsU6+KODek='; style-src 'sha256-e0ulQ5qs0KalSlvMuYBU4BFD7AVnOTjLvOkuoTX/K2g='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
 <title>Orange Split - For and Against on Hacker News</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EOS%3C/text%3E%3C/svg%3E">
 <style>
@@ -324,7 +324,7 @@ const STAGES = Object.freeze([
 ]);
 const STAGE_ORDER = Object.freeze(['extract', 'consolidate', 'score', 'synthesize']);
 const SINGLE_CALL_STAGE_ORDER = Object.freeze(['singleCall', 'synthesize']);
-const STAGE_BY_KEY = Object.freeze(Object.fromEntries([...STAGES, { key: 'prepare', callName: 'article preparation' }, { key: 'reviewAxes', callName: 'comparison review' }, { key: 'reviewSynthesis', callName: 'summary review' }].map(stage => [stage.key, stage])));
+const STAGE_BY_KEY = Object.freeze(Object.fromEntries([...STAGES, { key: 'prepare', callName: 'article preparation' }, { key: 'reviewAxes', callName: 'comparison review' }, { key: 'reviewSynthesis', callName: 'summary review' }, { key: 'articleSummary', callName: 'article summary' }].map(stage => [stage.key, stage])));
 const STAGE_OF_ROLE = Object.freeze(Object.fromEntries(STAGES.map(stage => [stage.role, stage.key])));
 
 // Embedded from data/silver-benchmark.json by scripts/benchmark.js --embed: the benchmark thread, and each
@@ -502,7 +502,7 @@ function forecastFigures(role, key) {
 }
 
 // The fraction of each stage's calls a run must still make. ALL_UNCACHED is the forecast without a cache probe.
-const ALL_UNCACHED = Object.freeze({ prepare: 1, extract: 1, consolidate: 1, reviewAxes: 1, score: 1, synthesize: 1, reviewSynthesis: 1, singleCall: 1 });
+const ALL_UNCACHED = Object.freeze({ prepare: 1, extract: 1, consolidate: 1, reviewAxes: 1, score: 1, synthesize: 1, reviewSynthesis: 1, singleCall: 1, articleSummary: 1 });
 
 // From a cache probe: a stage's uncached share of its calls. A stage absent from the probe follows a stage with
 // a miss, so its requests change and every one of its calls misses. A stage with no calls has nothing left.
@@ -637,6 +637,7 @@ const DEFAULT_CONFIG = Object.freeze({
     concurrency: 30,
     shuffleSeed: 777,
     budgetUsd: 1.0,
+    articleSummary: true,
 });
 
 const STANCE_A = 'A';
@@ -682,7 +683,8 @@ function createArticleSource(text, title = '') {
 }
 function pipelineStageOrder(source, config) {
     if (isArticle(source)) return ['prepare', 'extract', 'consolidate', 'reviewAxes', 'score', 'synthesize', 'reviewSynthesis'];
-    return config.singleCall ? SINGLE_CALL_STAGE_ORDER : STAGE_ORDER;
+    const stages = config.singleCall ? SINGLE_CALL_STAGE_ORDER : STAGE_ORDER;
+    return source.url && config.articleSummary ? [...stages, 'articleSummary'] : stages;
 }
 function sourceFromSnapshot(snapshot) {
     return isArticle(snapshot.source) ? createArticleSource(snapshot.source.text, snapshot.source.title) : flattenThread(snapshot.item);
@@ -840,9 +842,17 @@ function buildSynthesisReviewMessages(source, rows, commentsById, synthesis) {
     ];
 }
 // The forecast for the calls a run must still make; remaining is ALL_UNCACHED or uncachedFractions(probe).
+// The forecast allowance of the linked article's summary: the costlier of two measured summaries of one long
+// article, by GPT-6 Sol low ($0.045, 4 seconds) and Claude Opus 5.5 ($0.19, 12 seconds). Not a cap.
+const ARTICLE_SUMMARY_ALLOWANCE = Object.freeze({ usd: 0.2, seconds: 15 });
+
 function estimateSourceRun(source, keys, remaining) {
     const chars = totalCommentChars(isArticle(source) ? [{ text: source.text }] : source.comments);
     let { usd, seconds } = estimateRun(chars, keys, remaining);
+    if (!isArticle(source) && source.url && DEFAULT_CONFIG.articleSummary) {
+        usd += ARTICLE_SUMMARY_ALLOWANCE.usd * remaining.articleSummary;
+        seconds += ARTICLE_SUMMARY_ALLOWANCE.seconds * remaining.articleSummary;
+    }
     const articleCallsLeft = ['prepare', 'reviewAxes', 'reviewSynthesis'].some(stage => remaining[stage] > 0);
     if (isArticle(source) && articleCallsLeft) {
         // An article adds a full-text preparation call on the extraction model and two review calls. Heuristic,
@@ -1350,6 +1360,48 @@ function parseSingleCallResponse(json, validIds) {
     return { axes, candidates, stances, warnings };
 }
 
+// The linked article's summary. The summary model fetches the page through OpenRouter's web fetch tool, limited to
+// the link's host and one fetch, so it summarizes the article and not other pages.
+const ARTICLE_SUMMARY_SYSTEM_PROMPT = `You summarize the article a Hacker News submission links to, for a reader about to see how the discussion divides.
+
+Fetch the URL the user gives with the web fetch tool, once. Then state in at most 150 words what the article itself reports or argues: its main claims, findings, or announcements, attributed to the article. Do not judge the claims, and do not describe the discussion. Use only the fetched text. If the fetch fails or returns no article text, set fetched to false and give the reason as the summary.
+
+Return JSON matching the schema and nothing else.`;
+const ARTICLE_SUMMARY_SCHEMA = {
+    name: 'article_summary',
+    schema: {
+        type: 'object',
+        properties: {
+            fetched: { type: 'boolean' },
+            summary: { type: 'string' },
+        },
+        required: ['fetched', 'summary'],
+        additionalProperties: false,
+    },
+};
+// The most article text one fetch passes to the model; the native fetch of some providers ignores it.
+const ARTICLE_FETCH_MAX_TOKENS = 30000;
+
+function buildArticleSummaryCall(config, thread) {
+    return {
+        stage: 'articleSummary', ...stageSettings(config, 'synthesize'),
+        messages: [
+            { role: 'system', content: ARTICLE_SUMMARY_SYSTEM_PROMPT },
+            { role: 'user', content: `Title: ${thread.title}\nURL: ${thread.url}` },
+        ],
+        schema: ARTICLE_SUMMARY_SCHEMA,
+        tools: [{ type: 'openrouter:web_fetch', parameters: { max_uses: 1, max_content_tokens: ARTICLE_FETCH_MAX_TOKENS, allowed_domains: [new URL(thread.url).hostname] } }],
+        meta: {},
+    };
+}
+
+function parseArticleSummaryResponse(json) {
+    if (!json || typeof json.fetched !== 'boolean' || typeof json.summary !== 'string' || json.summary.trim() === '') {
+        throw new InvalidResponseError(`article summary response has no fetched flag and summary text: ${describeJson(json)}`, json);
+    }
+    return { fetched: json.fetched, summary: json.summary.trim() };
+}
+
 const SYNTHESIS_SCHEMA = {
     name: 'thread_synthesis',
     schema: {
@@ -1778,6 +1830,7 @@ function parseModelResponse(call, json) {
             case 'consolidate': return parseConsolidateResponse(json, call.meta.candidateCount);
             case 'score': return parseScoreResponse(json, new Set(call.meta.commentIds), call.meta.presentedAxes, call.meta.swapPoles);
             case 'singleCall': return parseSingleCallResponse(json, new Set(call.meta.commentIds));
+            case 'articleSummary': return parseArticleSummaryResponse(json);
             case 'synthesize': {
                 const synthesis = parseSynthesisResponse(json, call.meta.axisIds);
                 return call.meta.axisGroups ? groupSynthesisSections(synthesis, new Map(call.meta.axisGroups), json) : synthesis;
@@ -2260,6 +2313,7 @@ async function callOpenRouter({ apiKey, request, signal, fetchImpl, sleepImpl })
         max_tokens: request.maxTokens,
         response_format: { type: 'json_schema', json_schema: { name: request.schema.name, strict: true, schema: providerResponseSchema(request) } },
         ...(request.reasoning ? { reasoning: request.reasoning } : {}),
+        ...(request.tools ? { tools: request.tools } : {}),
         usage: { include: true },
         provider: { require_parameters: true },
     };
@@ -2605,6 +2659,7 @@ function requestCacheKey(call) {
         sampling: call.sampling || null,
         reasoning: call.reasoning || null,
         maxTokens: call.maxTokens,
+        ...(call.tools ? { tools: call.tools } : {}),
     });
     return `${fnv1a32(material, false)}${fnv1a32(material, true)}-${material.length.toString(16)}`;
 }
@@ -2788,6 +2843,7 @@ const PROBE_PLACEHOLDER_RESPONSES = Object.freeze({
     extract: { candidates: [{ ...PROBE_PLACEHOLDER_STATEMENTS, commentsA: [], commentsB: [] }] },
     consolidate: { axes: [{ ...PROBE_PLACEHOLDER_STATEMENTS, candidates: [] }] },
     score: { stances: [] },
+    articleSummary: { fetched: false, summary: 'placeholder' },
     singleCall: { axes: [PROBE_PLACEHOLDER_STATEMENTS], stances: [] },
 });
 const PROBE_PLACEHOLDER_USAGE = Object.freeze({ promptTokens: 0, completionTokens: 0, cost: 0 });
@@ -3228,6 +3284,21 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
             warnings.push(`Summary unavailable: ${synthesisError}. Comparisons are preserved. Run retries the summary; uncached calls may cost money.`);
         }
     }
+    // The linked article's summary, by the summary model. A text post has no link; a failure leaves the analysis
+    // intact.
+    let articleSummary = null;
+    let articleSummaryError = null;
+    if (!articleMode && thread.url && cfg.articleSummary) {
+        report('articleSummary', 0, 1);
+        try {
+            articleSummary = await runUnbatchable(buildArticleSummaryCall(cfg, thread));
+        } catch (error) {
+            if (error === PROBE_STOP) throw error;
+            articleSummaryError = signal && signal.aborted ? 'Cancelled during the article summary' : error.message;
+            warnings.push(`Article summary unavailable: ${articleSummaryError}`);
+        }
+        report('articleSummary', 1, 1);
+    }
     if (cacheWriteFailures > 0) {
         warnings.push(`${cacheWriteFailures} cache writes failed; a new run or reload may repeat those paid calls`);
     }
@@ -3238,6 +3309,8 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
         synthesis,
         synthesisError,
         synthesisFailure,
+        articleSummary,
+        articleSummaryError,
         unverifiedAxes,
         axes,
         candidates,
@@ -4864,6 +4937,19 @@ function threadCaveat(singleCall) {
         + 'The summary sees at most forty axes and two excerpts of up to 700 characters per stance.';
 }
 
+// The linked article's summary, before the discussion: a heading with the link, then the summary, or why it is
+// missing. Nothing for a result without one (a text post, a pasted article, a result saved before the summary).
+function renderArticleSummary(result) {
+    if (!result.articleSummary && !result.articleSummaryError) return [];
+    const section = makeElement('section', { className: 'article-summary' });
+    const heading = makeElement('h2', { text: 'The linked article' });
+    section.appendChild(heading);
+    const failed = result.articleSummaryError ? `unavailable: ${result.articleSummaryError}` : result.articleSummary.fetched ? null : `not fetched: ${result.articleSummary.summary}`;
+    section.appendChild(makeElement('p', { text: failed === null ? result.articleSummary.summary : `Article summary ${failed}` }));
+    section.appendChild(makeElement('p', { className: 'label', text: 'A model summary of the linked page as OpenRouter fetched it; it can be incomplete.' }));
+    return [section];
+}
+
 function renderResults(result, comments) {
     renderedArticle = result.article || null;
     if (renderedArticle) comments = result.comments;
@@ -4941,7 +5027,7 @@ function renderResults(result, comments) {
         narrative.prepend(makeElement('p', { text: 'Complete text processed · ' + voices + ' textual voices · ' + result.comments.length + ' counted passages. Counts reflect the primary speaker and directly attributed voices in this selected text, not a survey.' }));
         caveats.appendChild(makeElement('p', { text: 'Attribution and semantic reviews are model judgments. Unresolved speech and reported paraphrases are shown separately and do not count as direct testimony. Quotation authenticity and factual claims have not been checked.' }));
     }
-    elements.results.replaceChildren(narrative, ...groupBlocks, caveats, comparisons, ...(renderedArticle ? [renderArticleSource(renderedArticle)] : []));
+    elements.results.replaceChildren(...renderArticleSummary(result), narrative, ...groupBlocks, caveats, comparisons, ...(renderedArticle ? [renderArticleSource(renderedArticle)] : []));
     renderUnverifiedAxes(result.unverifiedAxes || [], commentsById);
     elements.unverifiedAxes.open = false;
     comparisons.appendChild(elements.unverifiedAxes);

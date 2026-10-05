@@ -86,6 +86,12 @@ function formatRow(row) {
 }
 
 function report(result, elapsedSeconds) {
+    if (result.articleSummary) {
+        console.log(`The linked article${result.articleSummary.fetched ? '' : ' (not fetched)'}: ${result.articleSummary.summary}
+`);
+    } else if (result.articleSummaryError) {
+        console.error(`Article summary unavailable: ${result.articleSummaryError}`);
+    }
     if (result.synthesis) {
         for (const section of result.synthesis.sections) console.log(`${section.text}\n`);
         for (const caveat of result.synthesis.caveats) console.log(`Caveat: ${caveat}`);
