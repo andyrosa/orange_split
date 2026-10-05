@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-TgODcNS+8ncV7MG7cLWhi9bO29q+Edw0aV7SGZkD01g=' 'sha256-qD3DacFGefPtN8tqU+Nt9Z55NK7u0a6segjw9SS+M2s='; style-src 'sha256-ykxbkCuA8bV8aejMJYghrqSVuGRLEwY4aEyyXRWCIxs='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-O/L24YQs4qFulpmewvHqFrvCuWAo1gAyu/lVg2QqsTo=' 'sha256-qD3DacFGefPtN8tqU+Nt9Z55NK7u0a6segjw9SS+M2s='; style-src 'sha256-ykxbkCuA8bV8aejMJYghrqSVuGRLEwY4aEyyXRWCIxs='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
 <title>Orange Split - For and Against on Hacker News</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EOS%3C/text%3E%3C/svg%3E">
 <style>
@@ -530,15 +530,19 @@ const PICKER_COLUMNS = Object.freeze([
     ['agreement', 'Agreement with silver'],
 ]);
 const NOT_MEASURED_TEXT = 'Not measured';
-// Dollars below this show a third decimal, so cheap choices do not all read $0.00.
+// Dollars below this need a third decimal, so cheap choices do not all read $0.00.
 const SMALL_USD = 0.095;
 
 function percentText(share) {
     return `${Math.round(share * 100)}%`;
 }
 
-function pickerUsdText(usd) {
-    return `$${usd.toFixed(usd < SMALL_USD ? 3 : 2)}`;
+// Every cost in one role's picker shows the same number of decimals, so $0.200 and $0.040 line up: a
+// third decimal for all of them when any measured choice in the role costs less than SMALL_USD.
+function pickerUsdText(role, usd) {
+    const costs = Object.keys(ROLE_CHOICES[role]).map(key => pickerFigures(role, key).usd).filter(Number.isFinite);
+    const digits = costs.some(cost => cost < SMALL_USD) ? 3 : 2;
+    return `$${usd.toFixed(digits)}`;
 }
 
 // The text of each picker cell for a choice in a role, keyed like PICKER_COLUMNS.
@@ -548,7 +552,7 @@ function pickerCells(role, key) {
     return {
         model: choice.name,
         effort: choice.effort,
-        cost: figures.usd === null ? NOT_MEASURED_TEXT : pickerUsdText(figures.usd),
+        cost: figures.usd === null ? NOT_MEASURED_TEXT : pickerUsdText(role, figures.usd),
         time: figures.seconds === null ? NOT_MEASURED_TEXT : formatDuration(figures.seconds),
         agreement: figures.failed ? 'Failed' : figures.agreement === null ? NOT_MEASURED_TEXT : percentText(figures.agreement),
     };
@@ -560,7 +564,7 @@ function choiceLabel(role, key) {
     const figures = pickerFigures(role, key);
     if (figures.failed) return `${modelDisplayName(choice)}: its ${role} output failed validation on the benchmark thread.`;
     if (figures.agreement === null) return `${modelDisplayName(choice)}: ${choice.note || 'not measured'}.`;
-    return `${modelDisplayName(choice)}: agreement with silver ${percentText(figures.agreement)} (precision ${percentText(figures.precision)}, recall ${percentText(figures.recall)}); about ${pickerUsdText(figures.usd)} and ${formatDuration(figures.seconds)} per ${PICKER_COMMENTS} comments.`;
+    return `${modelDisplayName(choice)}: agreement with silver ${percentText(figures.agreement)} (precision ${percentText(figures.precision)}, recall ${percentText(figures.recall)}); about ${pickerUsdText(role, figures.usd)} and ${formatDuration(figures.seconds)} per ${PICKER_COMMENTS} comments.`;
 }
 
 // Applies per-stage fields (model, sampling, reasoning, maxTokens) to every stage.
