@@ -1,7 +1,8 @@
 // Headless runner: executes the same core pipeline as hn_polarization.html from Node.
 // Usage: node scripts/run_node.js --thread=49525378 [--key=sk-or-...] [--out=result.json] [--thread-file=path] [--cache-dir=path]
-//        [--config-file=path] [--extraction=<key>] [--consolidation=<key>] [--scoring=<key>] [--summary=<key>] [--model=id] [--temperature=0] [--seed=12345] [--concurrency=30]
+//        [--config-file=path] [--extraction=<key>] [--consolidation=<key>] [--scoring=<key>] [--summary=<key>] [--singleCall=<key>] [--model=id] [--temperature=0] [--seed=12345] [--concurrency=30]
 //        [--share=<percent>] [--budget=<usd>]
+// --singleCall sends one request in place of extraction, consolidation, and scoring, as the page's Single call box does.
 // --share analyzes only the top N percent of comments, the same selection as the page's slider; default 100.
 // --budget stops the run once the spend passes this many dollars; default DEFAULT_CONFIG.budgetUsd.
 // The OpenRouter key comes from --key, else from the OPENROUTER_API_KEY environment variable.
@@ -27,10 +28,10 @@ function buildConfig() {
     if (configFile !== null) {
         Object.assign(config, JSON.parse(fs.readFileSync(configFile, 'utf8')));
     }
-    for (const role of ['extraction', 'consolidation', 'scoring', 'summary']) {
+    for (const role of ['extraction', 'consolidation', 'scoring', 'summary', 'singleCall']) {
         const key = readArgument(role);
         if (key !== null) {
-            Object.assign(config, core.roleConfig(role, key));
+            Object.assign(config, core.roleConfig(role, key), role === 'singleCall' ? { singleCall: true } : {});
         }
     }
     const model = readArgument('model');

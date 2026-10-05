@@ -33,6 +33,10 @@ const { HTML_PATH, loadCore } = require('./load_core');
 const { core, MODEL } = lib;
 const DEFAULT_BUDGET_USD = 5;
 const ROLES = Object.freeze(['extraction', 'consolidation', 'scoring', 'summary']);
+// The roles with a README table: the four stage roles and the single call that replaces the first three.
+const TABLE_ROLES = Object.freeze([...ROLES, 'singleCall']);
+const TABLE_TITLES = Object.freeze({ extraction: 'Extraction', consolidation: 'Consolidation', scoring: 'Scoring', summary: 'Summary', singleCall: 'Single call' });
+const SINGLE_CALL_FILE = path.join(lib.REPO_ROOT, 'data', 'single-call-benchmark.json');
 const ROLE_STAGE = Object.freeze({ extraction: 'extract', consolidation: 'consolidate', scoring: 'score', summary: 'synthesize' });
 const EMBED_PATTERN = /^const SILVER_BENCHMARK = .*$/m;
 const README_PATH = path.join(__dirname, '..', 'README.md');
@@ -158,14 +162,29 @@ function writeBenchmark(benchmark) {
     fs.writeFileSync(lib.BENCHMARK_FILE, JSON.stringify(benchmark, null, 1) + '\n', 'utf8');
 }
 
-// Copies the results into the page's SILVER_BENCHMARK constant and regenerates the Content-Security-Policy
-// hashes, which cover the inline script.
-function embed(benchmark) {
+// The single-call results of scripts/single_call.js for the page's single-call choices, in the shape of a role's
+// results: the one-request variant's mean F1 against silver, its runs, and its mean cost and latency on the
+// benchmark thread.
+function singleCallResults(silver) {
+    const results = lib.readStoredResults(SINGLE_CALL_FILE, silver);
+    if (results === null) throw new Error(`${SINGLE_CALL_FILE} is missing or was graded against another build of silver`);
+    return Object.fromEntries(Object.keys(core.SINGLE_CALL_MODELS).filter(key => results[key] !== undefined).map(key => {
+        const variant = results[key].oneCall;
+        return [key, { agreement: variant.agreement.mean, precision: variant.precision.mean, recall: variant.recall.mean,
+            runs: variant.runs.map(({ agreement, precision, recall }) => ({ agreement, precision, recall })),
+            usd: variant.usd.mean, seconds: variant.seconds.mean, calls: 1 }];
+    }));
+}
+
+// Copies the results, with the single-call results, into the page's SILVER_BENCHMARK constant and regenerates
+// the Content-Security-Policy hashes, which cover the inline script.
+function embed(benchmark, silver) {
     const html = fs.readFileSync(HTML_PATH, 'utf8');
     if (!EMBED_PATTERN.test(html)) throw new Error(`${HTML_PATH} has no SILVER_BENCHMARK constant to replace`);
-    fs.writeFileSync(HTML_PATH, html.replace(EMBED_PATTERN, () => `const SILVER_BENCHMARK = Object.freeze(${JSON.stringify(benchmark)});`), 'utf8');
+    const embedded = { ...benchmark, results: { ...benchmark.results, singleCall: singleCallResults(silver) } };
+    fs.writeFileSync(HTML_PATH, html.replace(EMBED_PATTERN, () => `const SILVER_BENCHMARK = Object.freeze(${JSON.stringify(embedded)});`), 'utf8');
     execFileSync(process.execPath, [path.join(__dirname, 'csp.js'), '--write'], { stdio: 'inherit' });
-    console.log(`embedded ${Object.values(benchmark.results).reduce((sum, choices) => sum + Object.keys(choices).length, 0)} results in ${HTML_PATH}`);
+    console.log(`embedded ${Object.values(embedded.results).reduce((sum, choices) => sum + Object.keys(choices).length, 0)} results in ${HTML_PATH}`);
     writeReadmeTables();
 }
 
@@ -174,7 +193,7 @@ function embed(benchmark) {
 function writeReadmeTables() {
     const page = loadCore();
     const percent = share => `${Math.round(share * 100)}%`;
-    const tables = ROLES.map(role => {
+    const tables = TABLE_ROLES.map(role => {
         const rows = Object.keys(page.ROLE_CHOICES[role])
             .sort((left, right) => page.modelDisplayName(page.roleChoice(role, left)).localeCompare(page.modelDisplayName(page.roleChoice(role, right)), 'en', { numeric: true, sensitivity: 'base' }))
             .map(key => {
@@ -184,7 +203,7 @@ function writeReadmeTables() {
                 const runCount = graded ? (result.runs ? result.runs.length : 1) : '';
                 return `| ${cells.model} | ${cells.effort} | ${cells.cost} | ${cells.latency} | ${cells.agreement} | ${graded ? percent(result.precision) : ''} | ${graded ? percent(result.recall) : ''} | ${runCount} |`;
             });
-        return [`### ${role[0].toUpperCase()}${role.slice(1)}`, '', `| Model | Reasoning effort | Cost / ${page.PICKER_COMMENTS} comments | Latency / ${page.PICKER_COMMENTS} comments | Agreement with silver | Precision | Recall | Runs |`,
+        return [`### ${TABLE_TITLES[role]}`, '', `| Model | Reasoning effort | Cost / ${page.PICKER_COMMENTS} comments | Latency / ${page.PICKER_COMMENTS} comments | Agreement with silver | Precision | Recall | Runs |`,
             '| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |', ...rows].join('\n');
     });
     const readme = fs.readFileSync(README_PATH, 'utf8');
@@ -197,7 +216,7 @@ async function main() {
     const silver = lib.readSilver();
     const benchmark = readBenchmark(silver);
     if (process.argv.includes('--embed')) {
-        embed(benchmark);
+        embed(benchmark, silver);
         return;
     }
     const role = lib.readArgument('role');
@@ -228,7 +247,7 @@ async function main() {
         }
     }));
     console.log(`wrote ${lib.BENCHMARK_FILE}; $${ledger.spentUsd.toFixed(2)} spent in this run`);
-    embed(benchmark);
+    embed(benchmark, silver);
 }
 
 main().catch(error => {

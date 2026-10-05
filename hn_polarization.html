@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-zwx1DvtzYq7Wrdxuw83jTeH3yYaiRYQ3s/2FIJ7kSW0=' 'sha256-jD3P7MNTrNyTPuzSMOzM6gszwP7AuHNdLbiiqjWr/H4='; style-src 'sha256-e0ulQ5qs0KalSlvMuYBU4BFD7AVnOTjLvOkuoTX/K2g='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-ag3l+onLQddEWajM7JP1wafIarZwkkPn4tFrocqmWpw=' 'sha256-eNrlI4jS7NL+ZuHv+nQXN0IZzsdjs0NtAvjldvOFqyU='; style-src 'sha256-e0ulQ5qs0KalSlvMuYBU4BFD7AVnOTjLvOkuoTX/K2g='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
 <title>Orange Split - For and Against on Hacker News</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EOS%3C/text%3E%3C/svg%3E">
 <style>
@@ -178,6 +178,7 @@ button { margin-right: 0.5rem; }
 <span id="thread-info"></span>
 <button id="refresh-thread" type="button" hidden>Refetch</button>
 </p>
+<p id="single-call-row"><label title="One request does extraction, consolidation, and scoring for the whole thread, and no second scoring pass checks its stances. On the benchmark thread it found fewer axes than the stages do, except GPT-6.1 Sol at high, which took about 6 minutes for 323 comments. A pasted article always uses the stages."><input id="single-call" type="checkbox"> Single call (discouraged)</label></p>
 <div class="model-choices">
 <div class="model-choice">
 <label id="extraction-model-label" for="extraction-model-button">Extraction</label>
@@ -207,6 +208,16 @@ button { margin-right: 0.5rem; }
 <div id="scoring-model-header" class="model-grid picker-grid model-grid-header" aria-hidden="true"></div>
 </div>
 <select id="scoring-model" hidden aria-hidden="true" tabindex="-1"></select>
+</div>
+</div>
+<div class="model-choice" hidden>
+<label id="single-call-model-label" for="single-call-model-button">Single call</label>
+<div id="single-call-model-picker" class="model-picker">
+<button id="single-call-model-button" class="model-trigger" type="button" aria-labelledby="single-call-model-label single-call-model-button" aria-haspopup="listbox" aria-expanded="false" aria-controls="single-call-model-options"></button>
+<div id="single-call-model-options" class="model-options" role="listbox" aria-labelledby="single-call-model-label" hidden>
+<div id="single-call-model-header" class="model-grid picker-grid model-grid-header" aria-hidden="true"></div>
+</div>
+<select id="single-call-model" hidden aria-hidden="true" tabindex="-1"></select>
 </div>
 </div>
 <div class="model-choice">
@@ -308,14 +319,17 @@ const STAGES = Object.freeze([
     Object.freeze({ key: 'consolidate', suffix: 'Consolidate', callName: 'consolidation', role: 'consolidation' }),
     Object.freeze({ key: 'score', suffix: 'Score', callName: 'scoring', role: 'scoring' }),
     Object.freeze({ key: 'synthesize', suffix: 'Synthesize', callName: 'synthesis', role: 'summary' }),
+    // Replaces the first three stages when the single-call mode is on (config.singleCall).
+    Object.freeze({ key: 'singleCall', suffix: 'SingleCall', callName: 'single call', role: 'singleCall' }),
 ]);
-const STAGE_ORDER = Object.freeze(STAGES.map(stage => stage.key));
+const STAGE_ORDER = Object.freeze(['extract', 'consolidate', 'score', 'synthesize']);
+const SINGLE_CALL_STAGE_ORDER = Object.freeze(['singleCall', 'synthesize']);
 const STAGE_BY_KEY = Object.freeze(Object.fromEntries([...STAGES, { key: 'prepare', callName: 'article preparation' }, { key: 'reviewAxes', callName: 'comparison review' }, { key: 'reviewSynthesis', callName: 'summary review' }].map(stage => [stage.key, stage])));
 const STAGE_OF_ROLE = Object.freeze(Object.fromEntries(STAGES.map(stage => [stage.role, stage.key])));
 
 // Embedded from data/silver-benchmark.json by scripts/benchmark.js --embed: the benchmark thread, and each
 // choice's result by role and choice key.
-const SILVER_BENCHMARK = Object.freeze({"threadId":22866284,"title":"The Wolfram Physics Project","comments":323,"chars":165268,"authors":184,"silverModels":["GPT-6.1 Sol (xhigh)","Claude Opus 5.5 (high)"],"silverBuiltAt":"2026-10-04T20:30:05.702Z","axes":32,"candidates":321,"stances":220,"featuredAxes":4,"results":{"extraction":{"haiku":{"agreement":0.8366,"precision":1,"recall":0.7191,"candidates":55,"matched":50,"unmatched":0,"disputed":5,"axesFound":21,"usd":0.08182400000000001,"calls":17,"failedCalls":0,"meanCallSeconds":5.8158,"maxCallSeconds":8.552,"promptTokens":55064,"completionTokens":5352,"judgeUsd":0.163095,"measuredAt":"2026-10-04T20:34:20.389Z"},"glmFlash":{"agreement":0.8683,"precision":0.9506,"recall":0.7996,"candidates":57,"matched":50,"unmatched":3,"disputed":4,"axesFound":24,"usd":0.04170159252,"calls":17,"failedCalls":0,"meanCallSeconds":117.7779,"maxCallSeconds":735.815,"promptTokens":46464,"completionTokens":77159,"judgeUsd":0.138302,"measuredAt":"2026-10-04T20:49:26.821Z","runs":[{"agreement":0.8443,"precision":0.9434,"recall":0.764},{"agreement":0.8876,"precision":0.975,"recall":0.8146},{"agreement":0.8731,"precision":0.9333,"recall":0.8202}]},"geminiFlash":{"agreement":0.9005,"precision":0.9744,"recall":0.8371,"candidates":42,"matched":38,"unmatched":1,"disputed":3,"axesFound":23,"usd":0.18145800000000004,"calls":17,"failedCalls":0,"meanCallSeconds":9.6028,"maxCallSeconds":14.054,"promptTokens":50594,"completionTokens":38270,"judgeUsd":0.1259092,"measuredAt":"2026-10-04T20:52:42.372Z"},"opus5":{"agreement":0.8808,"precision":0.8132,"recall":0.9607,"candidates":102,"matched":74,"unmatched":17,"disputed":11,"axesFound":30,"usd":1.23237,"calls":17,"failedCalls":0,"meanCallSeconds":25.3289,"maxCallSeconds":40.7,"promptTokens":73040,"completionTokens":34506,"judgeUsd":0.2741002,"measuredAt":"2026-10-04T21:00:12.153Z"},"lunaLow":{"agreement":0.8735,"precision":0.9162,"recall":0.8352,"candidates":64,"matched":53,"unmatched":6,"disputed":5,"axesFound":25,"usd":0.030266500000000005,"calls":17,"failedCalls":0,"meanCallSeconds":12.7005,"maxCallSeconds":20.239,"promptTokens":46225,"completionTokens":15594,"judgeUsd":0.1879315,"measuredAt":"2026-10-04T21:04:54.743Z","runs":[{"agreement":0.845,"precision":0.8983,"recall":0.7978},{"agreement":0.9123,"precision":0.9322,"recall":0.8933},{"agreement":0.8632,"precision":0.918,"recall":0.8146}]},"luna6Low":{"agreement":0.9095,"precision":0.9535,"recall":0.8708,"candidates":49,"matched":43,"unmatched":3,"disputed":3,"axesFound":27,"usd":0.011141850000000002,"calls":17,"failedCalls":0,"meanCallSeconds":7.4636,"maxCallSeconds":9.971,"promptTokens":46225,"completionTokens":10730,"judgeUsd":0.1270427,"measuredAt":"2026-10-04T21:07:50.750Z","runs":[{"agreement":0.9223,"precision":0.9348,"recall":0.9101},{"agreement":0.8945,"precision":0.9756,"recall":0.8258},{"agreement":0.9117,"precision":0.95,"recall":0.8764}]},"opus55":{"agreement":0.9146,"precision":1,"recall":0.8427,"candidates":67,"matched":60,"unmatched":0,"disputed":7,"axesFound":28,"usd":0.459426,"calls":17,"failedCalls":0,"meanCallSeconds":5.9159,"maxCallSeconds":8.037,"promptTokens":73074,"completionTokens":7396,"judgeUsd":0.1835885,"measuredAt":"2026-10-05T02:53:15.626Z"}},"consolidation":{"sonnet5":{"agreement":0.4278,"precision":0.284,"recall":0.867,"candidates":321,"axes":23,"axesBelowFloor":1,"usd":0.47618,"calls":1,"failedCalls":0,"meanCallSeconds":373.551,"maxCallSeconds":373.551,"promptTokens":28235,"completionTokens":41971,"judgeUsd":0,"measuredAt":"2026-10-04T20:36:52.037Z"},"astraLow":{"agreement":0.7755,"precision":0.6991,"recall":0.871,"candidates":321,"axes":43,"axesBelowFloor":1,"usd":0.34393,"calls":1,"failedCalls":0,"meanCallSeconds":30.742,"maxCallSeconds":30.742,"promptTokens":17947,"completionTokens":2392,"judgeUsd":0,"measuredAt":"2026-10-04T20:37:22.796Z","runs":[{"agreement":0.762,"precision":0.6757,"recall":0.8736},{"agreement":0.778,"precision":0.7121,"recall":0.8574},{"agreement":0.7865,"precision":0.7096,"recall":0.8821}]},"glm53":{"agreement":0.5886,"precision":0.4254,"recall":0.955,"candidates":321,"axes":27,"axesBelowFloor":1,"usd":0.39377481,"calls":1,"failedCalls":0,"meanCallSeconds":440.613,"maxCallSeconds":440.613,"promptTokens":18015,"completionTokens":99097,"judgeUsd":0,"measuredAt":"2026-10-04T20:44:43.445Z"},"geminiFlash":{"agreement":0.3843,"precision":0.2576,"recall":0.7563,"candidates":321,"axes":14,"axesBelowFloor":0,"usd":0.04921275,"calls":1,"failedCalls":0,"meanCallSeconds":27.771,"maxCallSeconds":27.771,"promptTokens":18202,"completionTokens":9483,"judgeUsd":0,"measuredAt":"2026-10-04T20:45:11.242Z"},"opus5":{"agreement":0.6312,"precision":0.495,"recall":0.8705,"candidates":321,"axes":32,"axesBelowFloor":0,"usd":0.7115475,"calls":1,"failedCalls":0,"meanCallSeconds":254.254,"maxCallSeconds":254.254,"promptTokens":28235,"completionTokens":22766,"judgeUsd":0,"measuredAt":"2026-10-04T20:49:25.540Z"},"solLow":{"agreement":0.5905,"precision":0.5396,"recall":0.6518,"candidates":321,"axes":38,"axesBelowFloor":3,"usd":0.072356,"calls":1,"failedCalls":0,"meanCallSeconds":29.361,"maxCallSeconds":29.361,"promptTokens":17947,"completionTokens":2749,"judgeUsd":0,"measuredAt":"2026-10-04T20:49:54.920Z"},"lunaMax":{"agreement":0.6343,"precision":0.5508,"recall":0.7477,"candidates":321,"axes":46,"axesBelowFloor":2,"usd":0.0923914,"calls":1,"failedCalls":0,"meanCallSeconds":777.288,"maxCallSeconds":777.288,"promptTokens":17947,"completionTokens":73254,"judgeUsd":0,"measuredAt":"2026-10-04T21:02:52.225Z"},"fableLow":{"agreement":0.6118,"precision":0.4786,"recall":0.8478,"candidates":321,"axes":28,"axesBelowFloor":0,"usd":0.685865,"calls":1,"failedCalls":0,"meanCallSeconds":98.41,"maxCallSeconds":98.41,"promptTokens":28237,"completionTokens":8021,"judgeUsd":0,"measuredAt":"2026-10-04T21:04:30.655Z"},"sol6Low":{"agreement":0.7117,"precision":0.6934,"recall":0.7355,"candidates":321,"axes":42,"axesBelowFloor":1,"usd":0.068436,"calls":1,"failedCalls":0,"meanCallSeconds":22.023,"maxCallSeconds":22.023,"promptTokens":17947,"completionTokens":2357,"judgeUsd":0,"measuredAt":"2026-10-04T21:04:52.710Z","runs":[{"agreement":0.7352,"precision":0.7398,"recall":0.7307},{"agreement":0.6499,"precision":0.5846,"recall":0.7316},{"agreement":0.75,"precision":0.7559,"recall":0.7442}]},"opus55":{"agreement":0.6671,"precision":0.5502,"recall":0.8471,"candidates":321,"axes":29,"axesBelowFloor":0,"usd":0.196506,"calls":1,"failedCalls":0,"meanCallSeconds":38.231,"maxCallSeconds":38.231,"promptTokens":28237,"completionTokens":4129,"judgeUsd":0,"measuredAt":"2026-10-04T21:05:30.971Z"},"sol61Low":{"agreement":0.8038,"precision":0.7409,"recall":0.8789,"candidates":321,"axes":46,"axesBelowFloor":2,"usd":0.078236,"calls":1,"failedCalls":0,"meanCallSeconds":64.849,"maxCallSeconds":64.849,"promptTokens":17947,"completionTokens":3337,"judgeUsd":0,"measuredAt":"2026-10-04T21:06:35.854Z","runs":[{"agreement":0.7739,"precision":0.6983,"recall":0.8679},{"agreement":0.8047,"precision":0.7501,"recall":0.8679},{"agreement":0.8328,"precision":0.7742,"recall":0.9009}]},"sonnet55":{"agreement":0.7831,"precision":0.8931,"recall":0.6996,"candidates":321,"axes":44,"axesBelowFloor":1,"usd":0.126453,"calls":1,"failedCalls":0,"meanCallSeconds":48.824,"maxCallSeconds":48.824,"promptTokens":28237,"completionTokens":6949,"judgeUsd":0,"measuredAt":"2026-10-04T21:07:24.706Z","runs":[{"agreement":0.8232,"precision":0.9,"recall":0.7585},{"agreement":0.7433,"precision":0.8229,"recall":0.6778},{"agreement":0.7828,"precision":0.9565,"recall":0.6625}]}},"scoring":{"haiku":{"agreement":0.6417,"precision":0.7792,"recall":0.5455,"given":154,"correct":120,"silverStances":220,"axes":32,"usd":0.24529299999999998,"calls":34,"failedCalls":0,"meanCallSeconds":3.21,"maxCallSeconds":4.591,"promptTokens":183558,"completionTokens":12347,"judgeUsd":0,"measuredAt":"2026-10-04T20:30:43.839Z"},"glmFlash":{"agreement":0.801,"precision":0.8893,"recall":0.7288,"given":176,"correct":158,"silverStances":220,"axes":32,"usd":0.062291318000000005,"calls":36,"failedCalls":1,"meanCallSeconds":49.921,"maxCallSeconds":660.985,"promptTokens":167913,"completionTokens":85499,"judgeUsd":0,"measuredAt":"2026-10-04T20:42:17.743Z","runs":[{"agreement":0.798,"precision":0.8977,"recall":0.7182},{"agreement":0.7951,"precision":0.8703,"recall":0.7318},{"agreement":0.81,"precision":0.9,"recall":0.7364}]},"geminiFlash":{"agreement":0.8235,"precision":1,"recall":0.7,"given":154,"correct":154,"silverStances":220,"axes":32,"usd":0.6467259083333334,"calls":34,"failedCalls":0,"meanCallSeconds":15.2421,"maxCallSeconds":38.889,"promptTokens":169866,"completionTokens":149397,"judgeUsd":0,"measuredAt":"2026-10-04T20:42:56.691Z"},"opus5":{"agreement":0.9404,"precision":0.9491,"recall":0.9318,"given":216,"correct":205,"silverStances":220,"axes":32,"usd":3.1182900000000005,"calls":34,"failedCalls":0,"meanCallSeconds":24.0462,"maxCallSeconds":50.647,"promptTokens":255058,"completionTokens":71927,"judgeUsd":0,"measuredAt":"2026-10-04T20:43:47.399Z"},"lunaLow":{"agreement":0.8044,"precision":0.843,"recall":0.7697,"given":192,"correct":166,"silverStances":220,"axes":32,"usd":0.07383709000000002,"calls":34,"failedCalls":0,"meanCallSeconds":13.1526,"maxCallSeconds":20.442,"promptTokens":159072,"completionTokens":39310,"judgeUsd":0,"measuredAt":"2026-10-04T20:44:07.893Z","runs":[{"agreement":0.8058,"precision":0.8646,"recall":0.7545},{"agreement":0.8093,"precision":0.8286,"recall":0.7909},{"agreement":0.7981,"precision":0.8358,"recall":0.7636}]},"luna6Low":{"agreement":0.7896,"precision":0.9469,"recall":0.6773,"given":154,"correct":143,"silverStances":220,"axes":32,"usd":0.028394545,"calls":34,"failedCalls":0,"meanCallSeconds":9.7821,"maxCallSeconds":15.294,"promptTokens":159072,"completionTokens":30124,"judgeUsd":0,"measuredAt":"2026-10-04T20:44:23.222Z","runs":[{"agreement":0.7647,"precision":0.9286,"recall":0.65},{"agreement":0.8094,"precision":0.9509,"recall":0.7045},{"agreement":0.7947,"precision":0.9613,"recall":0.6773}]},"opus55":{"agreement":0.9531,"precision":0.9854,"recall":0.9227,"given":206,"correct":203,"silverStances":220,"axes":32,"usd":1.4229440000000002,"calls":34,"failedCalls":0,"meanCallSeconds":6.8788,"maxCallSeconds":12.795,"promptTokens":255126,"completionTokens":18492,"judgeUsd":0,"measuredAt":"2026-10-05T02:53:29.530Z"}},"summary":{"sonnet5":{"agreement":1,"precision":1,"recall":1,"markers":10,"faithful":8,"unfaithful":0,"disputed":2,"featuredCited":4,"featured":4,"usd":0.0671115,"calls":1,"failedCalls":0,"meanCallSeconds":20.909,"maxCallSeconds":20.909,"promptTokens":23174,"completionTokens":1952,"judgeUsd":0.1735455,"measuredAt":"2026-10-04T21:09:49.056Z"},"astraLow":{"agreement":1,"precision":1,"recall":1,"markers":6,"faithful":6,"unfaithful":0,"disputed":0,"featuredCited":4,"featured":4,"usd":0.2028925,"calls":1,"failedCalls":0,"meanCallSeconds":11.596,"maxCallSeconds":11.596,"promptTokens":14420,"completionTokens":453,"judgeUsd":0.134338,"measuredAt":"2026-10-04T20:31:03.528Z"},"glm53":{"agreement":1,"precision":1,"recall":1,"markers":10,"faithful":10,"unfaithful":0,"disputed":0,"featuredCited":4,"featured":4,"usd":0.02137665,"calls":1,"failedCalls":0,"meanCallSeconds":8.516,"maxCallSeconds":8.516,"promptTokens":14519,"completionTokens":1096,"judgeUsd":0.1490478,"measuredAt":"2026-10-04T20:31:42.290Z"},"geminiFlash":{"agreement":0.9091,"precision":0.8333,"recall":1,"markers":6,"faithful":5,"unfaithful":1,"disputed":0,"featuredCited":4,"featured":4,"usd":0.0368227,"calls":1,"failedCalls":0,"meanCallSeconds":25.722,"maxCallSeconds":25.722,"promptTokens":15256,"completionTokens":6982,"judgeUsd":0.1358113,"measuredAt":"2026-10-04T20:32:22.225Z"},"opus5":{"agreement":1,"precision":1,"recall":1,"markers":6,"faithful":6,"unfaithful":0,"disputed":0,"featuredCited":4,"featured":4,"usd":0.16095375,"calls":1,"failedCalls":0,"meanCallSeconds":21.197,"maxCallSeconds":21.197,"promptTokens":23174,"completionTokens":1679,"judgeUsd":0.1375808,"measuredAt":"2026-10-04T21:10:25.683Z"},"solLow":{"agreement":1,"precision":1,"recall":1,"markers":6,"faithful":6,"unfaithful":0,"disputed":0,"featuredCited":4,"featured":4,"usd":0.0405085,"calls":1,"failedCalls":0,"meanCallSeconds":6.916,"maxCallSeconds":6.916,"promptTokens":14420,"completionTokens":446,"judgeUsd":0.1304653,"measuredAt":"2026-10-04T20:32:41.238Z"},"lunaMax":{"agreement":1,"precision":1,"recall":1,"markers":6,"faithful":6,"unfaithful":0,"disputed":0,"featuredCited":4,"featured":4,"usd":0.01125965,"calls":1,"failedCalls":0,"meanCallSeconds":56.405,"maxCallSeconds":56.405,"promptTokens":14420,"completionTokens":6379,"judgeUsd":0.1307718,"measuredAt":"2026-10-04T20:33:47.295Z"},"fableLow":{"agreement":1,"precision":1,"recall":1,"markers":6,"faithful":6,"unfaithful":0,"disputed":0,"featuredCited":4,"featured":4,"usd":0.68924925,"calls":2,"failedCalls":0,"meanCallSeconds":33.9595,"maxCallSeconds":41.787,"promptTokens":47583,"completionTokens":4629,"judgeUsd":0.1325438,"measuredAt":"2026-10-04T21:11:44.951Z"},"sol6Low":{"agreement":1,"precision":1,"recall":1,"markers":6,"faithful":6,"unfaithful":0,"disputed":0,"featuredCited":4,"featured":4,"usd":0.0395585,"calls":1,"failedCalls":0,"meanCallSeconds":5.478,"maxCallSeconds":5.478,"promptTokens":14420,"completionTokens":351,"judgeUsd":0.1329873,"measuredAt":"2026-10-04T20:34:06.052Z"},"opus55":{"agreement":1,"precision":1,"recall":1,"markers":6,"faithful":5,"unfaithful":0,"disputed":1,"featuredCited":4,"featured":4,"usd":0.1016334,"calls":1,"failedCalls":0,"meanCallSeconds":11.827,"maxCallSeconds":11.827,"promptTokens":23176,"completionTokens":919,"judgeUsd":0.1478283,"measuredAt":"2026-10-04T20:34:58.933Z"},"sol61Low":{"agreement":1,"precision":1,"recall":1,"markers":6,"faithful":6,"unfaithful":0,"disputed":0,"featuredCited":4,"featured":4,"usd":0.0398285,"calls":1,"failedCalls":0,"meanCallSeconds":10.516,"maxCallSeconds":10.516,"promptTokens":14420,"completionTokens":378,"judgeUsd":0.1309243,"measuredAt":"2026-10-04T20:35:22.371Z"},"sonnet55":{"agreement":1,"precision":1,"recall":1,"markers":6,"faithful":6,"unfaithful":0,"disputed":0,"featuredCited":4,"featured":4,"usd":0.0590655,"calls":1,"failedCalls":0,"meanCallSeconds":22.708,"maxCallSeconds":22.708,"promptTokens":23176,"completionTokens":1147,"judgeUsd":0.12887379999999998,"measuredAt":"2026-10-04T20:35:54.744Z"}}}});
+const SILVER_BENCHMARK = Object.freeze({"threadId":22866284,"title":"The Wolfram Physics Project","comments":323,"chars":165268,"authors":184,"silverModels":["GPT-6.1 Sol (xhigh)","Claude Opus 5.5 (high)"],"silverBuiltAt":"2026-10-04T20:30:05.702Z","axes":32,"candidates":321,"stances":220,"featuredAxes":4,"results":{"extraction":{"haiku":{"agreement":0.8366,"precision":1,"recall":0.7191,"candidates":55,"matched":50,"unmatched":0,"disputed":5,"axesFound":21,"usd":0.08182400000000001,"calls":17,"failedCalls":0,"meanCallSeconds":5.8158,"maxCallSeconds":8.552,"promptTokens":55064,"completionTokens":5352,"judgeUsd":0.163095,"measuredAt":"2026-10-04T20:34:20.389Z"},"glmFlash":{"agreement":0.8683,"precision":0.9506,"recall":0.7996,"candidates":57,"matched":50,"unmatched":3,"disputed":4,"axesFound":24,"usd":0.04170159252,"calls":17,"failedCalls":0,"meanCallSeconds":117.7779,"maxCallSeconds":735.815,"promptTokens":46464,"completionTokens":77159,"judgeUsd":0.138302,"measuredAt":"2026-10-04T20:49:26.821Z","runs":[{"agreement":0.8443,"precision":0.9434,"recall":0.764},{"agreement":0.8876,"precision":0.975,"recall":0.8146},{"agreement":0.8731,"precision":0.9333,"recall":0.8202}]},"geminiFlash":{"agreement":0.9005,"precision":0.9744,"recall":0.8371,"candidates":42,"matched":38,"unmatched":1,"disputed":3,"axesFound":23,"usd":0.18145800000000004,"calls":17,"failedCalls":0,"meanCallSeconds":9.6028,"maxCallSeconds":14.054,"promptTokens":50594,"completionTokens":38270,"judgeUsd":0.1259092,"measuredAt":"2026-10-04T20:52:42.372Z"},"opus5":{"agreement":0.8808,"precision":0.8132,"recall":0.9607,"candidates":102,"matched":74,"unmatched":17,"disputed":11,"axesFound":30,"usd":1.23237,"calls":17,"failedCalls":0,"meanCallSeconds":25.3289,"maxCallSeconds":40.7,"promptTokens":73040,"completionTokens":34506,"judgeUsd":0.2741002,"measuredAt":"2026-10-04T21:00:12.153Z"},"lunaLow":{"agreement":0.8735,"precision":0.9162,"recall":0.8352,"candidates":64,"matched":53,"unmatched":6,"disputed":5,"axesFound":25,"usd":0.030266500000000005,"calls":17,"failedCalls":0,"meanCallSeconds":12.7005,"maxCallSeconds":20.239,"promptTokens":46225,"completionTokens":15594,"judgeUsd":0.1879315,"measuredAt":"2026-10-04T21:04:54.743Z","runs":[{"agreement":0.845,"precision":0.8983,"recall":0.7978},{"agreement":0.9123,"precision":0.9322,"recall":0.8933},{"agreement":0.8632,"precision":0.918,"recall":0.8146}]},"luna6Low":{"agreement":0.9095,"precision":0.9535,"recall":0.8708,"candidates":49,"matched":43,"unmatched":3,"disputed":3,"axesFound":27,"usd":0.011141850000000002,"calls":17,"failedCalls":0,"meanCallSeconds":7.4636,"maxCallSeconds":9.971,"promptTokens":46225,"completionTokens":10730,"judgeUsd":0.1270427,"measuredAt":"2026-10-04T21:07:50.750Z","runs":[{"agreement":0.9223,"precision":0.9348,"recall":0.9101},{"agreement":0.8945,"precision":0.9756,"recall":0.8258},{"agreement":0.9117,"precision":0.95,"recall":0.8764}]},"opus55":{"agreement":0.9146,"precision":1,"recall":0.8427,"candidates":67,"matched":60,"unmatched":0,"disputed":7,"axesFound":28,"usd":0.459426,"calls":17,"failedCalls":0,"meanCallSeconds":5.9159,"maxCallSeconds":8.037,"promptTokens":73074,"completionTokens":7396,"judgeUsd":0.1835885,"measuredAt":"2026-10-05T02:53:15.626Z"}},"consolidation":{"sonnet5":{"agreement":0.4278,"precision":0.284,"recall":0.867,"candidates":321,"axes":23,"axesBelowFloor":1,"usd":0.47618,"calls":1,"failedCalls":0,"meanCallSeconds":373.551,"maxCallSeconds":373.551,"promptTokens":28235,"completionTokens":41971,"judgeUsd":0,"measuredAt":"2026-10-04T20:36:52.037Z"},"astraLow":{"agreement":0.7755,"precision":0.6991,"recall":0.871,"candidates":321,"axes":43,"axesBelowFloor":1,"usd":0.34393,"calls":1,"failedCalls":0,"meanCallSeconds":30.742,"maxCallSeconds":30.742,"promptTokens":17947,"completionTokens":2392,"judgeUsd":0,"measuredAt":"2026-10-04T20:37:22.796Z","runs":[{"agreement":0.762,"precision":0.6757,"recall":0.8736},{"agreement":0.778,"precision":0.7121,"recall":0.8574},{"agreement":0.7865,"precision":0.7096,"recall":0.8821}]},"glm53":{"agreement":0.5886,"precision":0.4254,"recall":0.955,"candidates":321,"axes":27,"axesBelowFloor":1,"usd":0.39377481,"calls":1,"failedCalls":0,"meanCallSeconds":440.613,"maxCallSeconds":440.613,"promptTokens":18015,"completionTokens":99097,"judgeUsd":0,"measuredAt":"2026-10-04T20:44:43.445Z"},"geminiFlash":{"agreement":0.3843,"precision":0.2576,"recall":0.7563,"candidates":321,"axes":14,"axesBelowFloor":0,"usd":0.04921275,"calls":1,"failedCalls":0,"meanCallSeconds":27.771,"maxCallSeconds":27.771,"promptTokens":18202,"completionTokens":9483,"judgeUsd":0,"measuredAt":"2026-10-04T20:45:11.242Z"},"opus5":{"agreement":0.6312,"precision":0.495,"recall":0.8705,"candidates":321,"axes":32,"axesBelowFloor":0,"usd":0.7115475,"calls":1,"failedCalls":0,"meanCallSeconds":254.254,"maxCallSeconds":254.254,"promptTokens":28235,"completionTokens":22766,"judgeUsd":0,"measuredAt":"2026-10-04T20:49:25.540Z"},"solLow":{"agreement":0.5905,"precision":0.5396,"recall":0.6518,"candidates":321,"axes":38,"axesBelowFloor":3,"usd":0.072356,"calls":1,"failedCalls":0,"meanCallSeconds":29.361,"maxCallSeconds":29.361,"promptTokens":17947,"completionTokens":2749,"judgeUsd":0,"measuredAt":"2026-10-04T20:49:54.920Z"},"lunaMax":{"agreement":0.6343,"precision":0.5508,"recall":0.7477,"candidates":321,"axes":46,"axesBelowFloor":2,"usd":0.0923914,"calls":1,"failedCalls":0,"meanCallSeconds":777.288,"maxCallSeconds":777.288,"promptTokens":17947,"completionTokens":73254,"judgeUsd":0,"measuredAt":"2026-10-04T21:02:52.225Z"},"fableLow":{"agreement":0.6118,"precision":0.4786,"recall":0.8478,"candidates":321,"axes":28,"axesBelowFloor":0,"usd":0.685865,"calls":1,"failedCalls":0,"meanCallSeconds":98.41,"maxCallSeconds":98.41,"promptTokens":28237,"completionTokens":8021,"judgeUsd":0,"measuredAt":"2026-10-04T21:04:30.655Z"},"sol6Low":{"agreement":0.7117,"precision":0.6934,"recall":0.7355,"candidates":321,"axes":42,"axesBelowFloor":1,"usd":0.068436,"calls":1,"failedCalls":0,"meanCallSeconds":22.023,"maxCallSeconds":22.023,"promptTokens":17947,"completionTokens":2357,"judgeUsd":0,"measuredAt":"2026-10-04T21:04:52.710Z","runs":[{"agreement":0.7352,"precision":0.7398,"recall":0.7307},{"agreement":0.6499,"precision":0.5846,"recall":0.7316},{"agreement":0.75,"precision":0.7559,"recall":0.7442}]},"opus55":{"agreement":0.6671,"precision":0.5502,"recall":0.8471,"candidates":321,"axes":29,"axesBelowFloor":0,"usd":0.196506,"calls":1,"failedCalls":0,"meanCallSeconds":38.231,"maxCallSeconds":38.231,"promptTokens":28237,"completionTokens":4129,"judgeUsd":0,"measuredAt":"2026-10-04T21:05:30.971Z"},"sol61Low":{"agreement":0.8038,"precision":0.7409,"recall":0.8789,"candidates":321,"axes":46,"axesBelowFloor":2,"usd":0.078236,"calls":1,"failedCalls":0,"meanCallSeconds":64.849,"maxCallSeconds":64.849,"promptTokens":17947,"completionTokens":3337,"judgeUsd":0,"measuredAt":"2026-10-04T21:06:35.854Z","runs":[{"agreement":0.7739,"precision":0.6983,"recall":0.8679},{"agreement":0.8047,"precision":0.7501,"recall":0.8679},{"agreement":0.8328,"precision":0.7742,"recall":0.9009}]},"sonnet55":{"agreement":0.7831,"precision":0.8931,"recall":0.6996,"candidates":321,"axes":44,"axesBelowFloor":1,"usd":0.126453,"calls":1,"failedCalls":0,"meanCallSeconds":48.824,"maxCallSeconds":48.824,"promptTokens":28237,"completionTokens":6949,"judgeUsd":0,"measuredAt":"2026-10-04T21:07:24.706Z","runs":[{"agreement":0.8232,"precision":0.9,"recall":0.7585},{"agreement":0.7433,"precision":0.8229,"recall":0.6778},{"agreement":0.7828,"precision":0.9565,"recall":0.6625}]}},"scoring":{"haiku":{"agreement":0.6417,"precision":0.7792,"recall":0.5455,"given":154,"correct":120,"silverStances":220,"axes":32,"usd":0.24529299999999998,"calls":34,"failedCalls":0,"meanCallSeconds":3.21,"maxCallSeconds":4.591,"promptTokens":183558,"completionTokens":12347,"judgeUsd":0,"measuredAt":"2026-10-04T20:30:43.839Z"},"glmFlash":{"agreement":0.801,"precision":0.8893,"recall":0.7288,"given":176,"correct":158,"silverStances":220,"axes":32,"usd":0.062291318000000005,"calls":36,"failedCalls":1,"meanCallSeconds":49.921,"maxCallSeconds":660.985,"promptTokens":167913,"completionTokens":85499,"judgeUsd":0,"measuredAt":"2026-10-04T20:42:17.743Z","runs":[{"agreement":0.798,"precision":0.8977,"recall":0.7182},{"agreement":0.7951,"precision":0.8703,"recall":0.7318},{"agreement":0.81,"precision":0.9,"recall":0.7364}]},"geminiFlash":{"agreement":0.8235,"precision":1,"recall":0.7,"given":154,"correct":154,"silverStances":220,"axes":32,"usd":0.6467259083333334,"calls":34,"failedCalls":0,"meanCallSeconds":15.2421,"maxCallSeconds":38.889,"promptTokens":169866,"completionTokens":149397,"judgeUsd":0,"measuredAt":"2026-10-04T20:42:56.691Z"},"opus5":{"agreement":0.9404,"precision":0.9491,"recall":0.9318,"given":216,"correct":205,"silverStances":220,"axes":32,"usd":3.1182900000000005,"calls":34,"failedCalls":0,"meanCallSeconds":24.0462,"maxCallSeconds":50.647,"promptTokens":255058,"completionTokens":71927,"judgeUsd":0,"measuredAt":"2026-10-04T20:43:47.399Z"},"lunaLow":{"agreement":0.8044,"precision":0.843,"recall":0.7697,"given":192,"correct":166,"silverStances":220,"axes":32,"usd":0.07383709000000002,"calls":34,"failedCalls":0,"meanCallSeconds":13.1526,"maxCallSeconds":20.442,"promptTokens":159072,"completionTokens":39310,"judgeUsd":0,"measuredAt":"2026-10-04T20:44:07.893Z","runs":[{"agreement":0.8058,"precision":0.8646,"recall":0.7545},{"agreement":0.8093,"precision":0.8286,"recall":0.7909},{"agreement":0.7981,"precision":0.8358,"recall":0.7636}]},"luna6Low":{"agreement":0.7896,"precision":0.9469,"recall":0.6773,"given":154,"correct":143,"silverStances":220,"axes":32,"usd":0.028394545,"calls":34,"failedCalls":0,"meanCallSeconds":9.7821,"maxCallSeconds":15.294,"promptTokens":159072,"completionTokens":30124,"judgeUsd":0,"measuredAt":"2026-10-04T20:44:23.222Z","runs":[{"agreement":0.7647,"precision":0.9286,"recall":0.65},{"agreement":0.8094,"precision":0.9509,"recall":0.7045},{"agreement":0.7947,"precision":0.9613,"recall":0.6773}]},"opus55":{"agreement":0.9531,"precision":0.9854,"recall":0.9227,"given":206,"correct":203,"silverStances":220,"axes":32,"usd":1.4229440000000002,"calls":34,"failedCalls":0,"meanCallSeconds":6.8788,"maxCallSeconds":12.795,"promptTokens":255126,"completionTokens":18492,"judgeUsd":0,"measuredAt":"2026-10-05T02:53:29.530Z"}},"summary":{"sonnet5":{"agreement":1,"precision":1,"recall":1,"markers":10,"faithful":8,"unfaithful":0,"disputed":2,"featuredCited":4,"featured":4,"usd":0.0671115,"calls":1,"failedCalls":0,"meanCallSeconds":20.909,"maxCallSeconds":20.909,"promptTokens":23174,"completionTokens":1952,"judgeUsd":0.1735455,"measuredAt":"2026-10-04T21:09:49.056Z"},"astraLow":{"agreement":1,"precision":1,"recall":1,"markers":6,"faithful":6,"unfaithful":0,"disputed":0,"featuredCited":4,"featured":4,"usd":0.2028925,"calls":1,"failedCalls":0,"meanCallSeconds":11.596,"maxCallSeconds":11.596,"promptTokens":14420,"completionTokens":453,"judgeUsd":0.134338,"measuredAt":"2026-10-04T20:31:03.528Z"},"glm53":{"agreement":1,"precision":1,"recall":1,"markers":10,"faithful":10,"unfaithful":0,"disputed":0,"featuredCited":4,"featured":4,"usd":0.02137665,"calls":1,"failedCalls":0,"meanCallSeconds":8.516,"maxCallSeconds":8.516,"promptTokens":14519,"completionTokens":1096,"judgeUsd":0.1490478,"measuredAt":"2026-10-04T20:31:42.290Z"},"geminiFlash":{"agreement":0.9091,"precision":0.8333,"recall":1,"markers":6,"faithful":5,"unfaithful":1,"disputed":0,"featuredCited":4,"featured":4,"usd":0.0368227,"calls":1,"failedCalls":0,"meanCallSeconds":25.722,"maxCallSeconds":25.722,"promptTokens":15256,"completionTokens":6982,"judgeUsd":0.1358113,"measuredAt":"2026-10-04T20:32:22.225Z"},"opus5":{"agreement":1,"precision":1,"recall":1,"markers":6,"faithful":6,"unfaithful":0,"disputed":0,"featuredCited":4,"featured":4,"usd":0.16095375,"calls":1,"failedCalls":0,"meanCallSeconds":21.197,"maxCallSeconds":21.197,"promptTokens":23174,"completionTokens":1679,"judgeUsd":0.1375808,"measuredAt":"2026-10-04T21:10:25.683Z"},"solLow":{"agreement":1,"precision":1,"recall":1,"markers":6,"faithful":6,"unfaithful":0,"disputed":0,"featuredCited":4,"featured":4,"usd":0.0405085,"calls":1,"failedCalls":0,"meanCallSeconds":6.916,"maxCallSeconds":6.916,"promptTokens":14420,"completionTokens":446,"judgeUsd":0.1304653,"measuredAt":"2026-10-04T20:32:41.238Z"},"lunaMax":{"agreement":1,"precision":1,"recall":1,"markers":6,"faithful":6,"unfaithful":0,"disputed":0,"featuredCited":4,"featured":4,"usd":0.01125965,"calls":1,"failedCalls":0,"meanCallSeconds":56.405,"maxCallSeconds":56.405,"promptTokens":14420,"completionTokens":6379,"judgeUsd":0.1307718,"measuredAt":"2026-10-04T20:33:47.295Z"},"fableLow":{"agreement":1,"precision":1,"recall":1,"markers":6,"faithful":6,"unfaithful":0,"disputed":0,"featuredCited":4,"featured":4,"usd":0.68924925,"calls":2,"failedCalls":0,"meanCallSeconds":33.9595,"maxCallSeconds":41.787,"promptTokens":47583,"completionTokens":4629,"judgeUsd":0.1325438,"measuredAt":"2026-10-04T21:11:44.951Z"},"sol6Low":{"agreement":1,"precision":1,"recall":1,"markers":6,"faithful":6,"unfaithful":0,"disputed":0,"featuredCited":4,"featured":4,"usd":0.0395585,"calls":1,"failedCalls":0,"meanCallSeconds":5.478,"maxCallSeconds":5.478,"promptTokens":14420,"completionTokens":351,"judgeUsd":0.1329873,"measuredAt":"2026-10-04T20:34:06.052Z"},"opus55":{"agreement":1,"precision":1,"recall":1,"markers":6,"faithful":5,"unfaithful":0,"disputed":1,"featuredCited":4,"featured":4,"usd":0.1016334,"calls":1,"failedCalls":0,"meanCallSeconds":11.827,"maxCallSeconds":11.827,"promptTokens":23176,"completionTokens":919,"judgeUsd":0.1478283,"measuredAt":"2026-10-04T20:34:58.933Z"},"sol61Low":{"agreement":1,"precision":1,"recall":1,"markers":6,"faithful":6,"unfaithful":0,"disputed":0,"featuredCited":4,"featured":4,"usd":0.0398285,"calls":1,"failedCalls":0,"meanCallSeconds":10.516,"maxCallSeconds":10.516,"promptTokens":14420,"completionTokens":378,"judgeUsd":0.1309243,"measuredAt":"2026-10-04T20:35:22.371Z"},"sonnet55":{"agreement":1,"precision":1,"recall":1,"markers":6,"faithful":6,"unfaithful":0,"disputed":0,"featuredCited":4,"featured":4,"usd":0.0590655,"calls":1,"failedCalls":0,"meanCallSeconds":22.708,"maxCallSeconds":22.708,"promptTokens":23176,"completionTokens":1147,"judgeUsd":0.12887379999999998,"measuredAt":"2026-10-04T20:35:54.744Z"}},"singleCall":{"sol61Low":{"agreement":0.3782,"precision":0.4605,"recall":0.3212,"runs":[{"agreement":0.3261,"precision":0.4054,"recall":0.2727},{"agreement":0.4033,"precision":0.5034,"recall":0.3364},{"agreement":0.4052,"precision":0.4727,"recall":0.3545}],"usd":0.0925,"seconds":41.931,"calls":1},"sol61High":{"agreement":0.5551,"precision":0.5621,"recall":0.5485,"runs":[{"agreement":0.4908,"precision":0.4954,"recall":0.4864},{"agreement":0.5681,"precision":0.5874,"recall":0.55},{"agreement":0.6063,"precision":0.6036,"recall":0.6091}],"usd":0.2425,"seconds":363.975,"calls":1},"opus55Low":{"agreement":0.2605,"precision":0.5875,"recall":0.1682,"runs":[{"agreement":0.25,"precision":0.6538,"recall":0.1545},{"agreement":0.2807,"precision":0.6154,"recall":0.1818},{"agreement":0.2508,"precision":0.4933,"recall":0.1682}],"usd":0.2552,"seconds":17.769,"calls":1},"opus55High":{"agreement":0.3482,"precision":0.5528,"recall":0.2545,"runs":[{"agreement":0.3269,"precision":0.5543,"recall":0.2318},{"agreement":0.358,"precision":0.5577,"recall":0.2636},{"agreement":0.3598,"precision":0.5463,"recall":0.2682}],"usd":0.337,"seconds":51.5547,"calls":1}}}});
 
 // An option entry of one or more roles: the model, sampling, and reasoning shared by every stage those roles
 // serve, and the output ceiling per stage key, expanded into the config fields of those stages.
@@ -396,7 +410,22 @@ const CONSOLIDATION_MODELS = Object.freeze({ ...MEASURED_CONSOLIDATION_MODELS,
     jevRouter: consolidationEntry({ ...ROUTER_PROFILE, maxTokens: 64000 }),
 });
 const SUMMARY_MODELS = Object.freeze(Object.fromEntries(Object.entries(CONSOLIDATION_MODELS).map(([key, choice]) => [key, summaryEntry(choice)])));
-const ROLE_CHOICES = Object.freeze({ extraction: VOLUME_MODELS, consolidation: CONSOLIDATION_MODELS, scoring: VOLUME_MODELS, summary: SUMMARY_MODELS });
+// A single-call choice is a consolidation choice's model at a reasoning effort set here. Claude Fable 5.1 was
+// measured too (scripts/single_call.js) and is left out for its cost.
+const singleCallEntry = (consolidationKey, effort) => {
+    const choice = CONSOLIDATION_MODELS[consolidationKey];
+    return optionEntry(['singleCall'], { name: choice.name, effort, model: choice.config.modelConsolidate, sampling: choice.config.samplingConsolidate,
+        reasoning: { effort }, maxTokens: { singleCall: CONSOLIDATION_MAX_TOKENS } });
+};
+const SINGLE_CALL_MODELS = Object.freeze({
+    sol61Low: singleCallEntry('sol61Low', 'low'),
+    sol61High: singleCallEntry('sol61Low', 'high'),
+    opus55Low: singleCallEntry('opus55', 'low'),
+    opus55High: singleCallEntry('opus55', 'high'),
+});
+const DEFAULT_SINGLE_CALL_KEY = 'sol61Low';
+const ROLE_CHOICES = Object.freeze({ extraction: VOLUME_MODELS, consolidation: CONSOLIDATION_MODELS, scoring: VOLUME_MODELS, summary: SUMMARY_MODELS,
+    singleCall: SINGLE_CALL_MODELS });
 
 // One role's option entry by key.
 function roleChoice(role, key) {
@@ -419,10 +448,12 @@ function roleConfig(role, key) {
     return fields;
 }
 
-// The stage config of one run from its four role choices: { extraction, consolidation, scoring, summary }.
+// The stage config of one run from its role choices: { extraction, consolidation, scoring, summary }, and singleCall
+// when one request replaces the first three stages.
 function buildRunConfig(keys) {
+    const singleCall = keys.singleCall ? { ...roleConfig('singleCall', keys.singleCall), singleCall: true } : {};
     return { ...roleConfig('extraction', keys.extraction), ...roleConfig('consolidation', keys.consolidation),
-        ...roleConfig('scoring', keys.scoring), ...roleConfig('summary', keys.summary) };
+        ...roleConfig('scoring', keys.scoring), ...roleConfig('summary', keys.summary), ...singleCall };
 }
 
 // The model name a person sees anywhere outside the picker grids, which have their own effort column:
@@ -451,6 +482,8 @@ const FORECAST_FIGURES = Object.freeze({
         slowestCallSeconds: result.maxCallSeconds }),
     consolidation: result => ({ usdPerCandidate: result.usd / result.candidates, secondsPerCandidate: result.meanCallSeconds * result.calls / result.candidates }),
     summary: result => ({ usd: result.usd, seconds: result.meanCallSeconds * result.calls }),
+    // One request over the whole thread: its output grows with the comments.
+    singleCall: result => ({ usdPerChar: result.usd / SILVER_BENCHMARK.chars, secondsPerChar: result.seconds / SILVER_BENCHMARK.chars }),
 });
 
 // The forecast figures of a choice in a role. A choice without a usable result (a router, a model added
@@ -466,7 +499,7 @@ function forecastFigures(role, key) {
 }
 
 // The fraction of each stage's calls a run must still make. ALL_UNCACHED is the forecast without a cache probe.
-const ALL_UNCACHED = Object.freeze({ prepare: 1, extract: 1, consolidate: 1, reviewAxes: 1, score: 1, synthesize: 1, reviewSynthesis: 1 });
+const ALL_UNCACHED = Object.freeze({ prepare: 1, extract: 1, consolidate: 1, reviewAxes: 1, score: 1, synthesize: 1, reviewSynthesis: 1, singleCall: 1 });
 
 // From a cache probe: a stage's uncached share of its calls. A stage absent from the probe follows a stage with
 // a miss, so its requests change and every one of its calls misses. A stage with no calls has nothing left.
@@ -482,9 +515,14 @@ function uncachedFractions(probe) {
 // comment text. A batched stage runs up to DEFAULT_CONFIG.concurrency calls at once and takes at least as
 // long as its slowest call.
 function stageForecast(chars, keys, remaining) {
+    const summary = forecastFigures('summary', keys.summary);
+    const synthesize = { usd: summary.usd * remaining.synthesize, seconds: summary.seconds * remaining.synthesize };
+    if (keys.singleCall) {
+        const single = forecastFigures('singleCall', keys.singleCall);
+        return { singleCall: { usd: single.usdPerChar * chars * remaining.singleCall, seconds: single.secondsPerChar * chars * remaining.singleCall }, synthesize };
+    }
     const extraction = forecastFigures('extraction', keys.extraction);
     const consolidation = forecastFigures('consolidation', keys.consolidation);
-    const summary = forecastFigures('summary', keys.summary);
     const candidates = extraction.candidatesPerChar * chars;
     const batched = (figures, left) => ({
         usd: figures.usdPerChar * chars * left,
@@ -494,7 +532,7 @@ function stageForecast(chars, keys, remaining) {
         extract: batched(extraction, remaining.extract),
         consolidate: { usd: consolidation.usdPerCandidate * candidates * remaining.consolidate, seconds: consolidation.secondsPerCandidate * candidates * remaining.consolidate },
         score: batched(forecastFigures('scoring', keys.scoring), remaining.score),
-        synthesize: { usd: summary.usd * remaining.synthesize, seconds: summary.seconds * remaining.synthesize },
+        synthesize,
     };
 }
 
@@ -639,8 +677,9 @@ function createArticleSource(text, title = '') {
     const material = JSON.stringify([title, text]);
     return { kind: 'article', id: `paste-${fnv1a32(material, false)}${fnv1a32(material, true)}-${material.length.toString(16)}`, title, text, url: '', comments: [], commentCount: 0 };
 }
-function pipelineStageOrder(source) {
-    return isArticle(source) ? ['prepare', 'extract', 'consolidate', 'reviewAxes', 'score', 'synthesize', 'reviewSynthesis'] : STAGE_ORDER;
+function pipelineStageOrder(source, config) {
+    if (isArticle(source)) return ['prepare', 'extract', 'consolidate', 'reviewAxes', 'score', 'synthesize', 'reviewSynthesis'];
+    return config.singleCall ? SINGLE_CALL_STAGE_ORDER : STAGE_ORDER;
 }
 function sourceFromSnapshot(snapshot) {
     return isArticle(snapshot.source) ? createArticleSource(snapshot.source.text, snapshot.source.title) : flattenThread(snapshot.item);
@@ -1214,6 +1253,100 @@ const SCORE_SCHEMA = {
     },
 };
 
+// The single-call mode asks one request for what extraction, consolidation, and scoring produce: the axes of
+// the whole thread and every comment's stances on them. The rules are those of the three stages' prompts.
+const SINGLE_CALL_SYSTEM_PROMPT = `You analyze a complete Hacker News comment thread. The submission title is: "{title}".
+
+Task: list the axes of disagreement the thread argues about, then classify every comment against every axis.
+
+An axis is a pair of incompatible statements that answer the same question, such that one commenter could hold the first and another the second. Examples of statements that anchor an axis: "remote work makes teams less productive", "static typing prevents more bugs than it costs in effort", "the paper's main result will replicate". An overall verdict on the subject also counts when phrased as a statement ("the product is worth its price"). Examples that do not count: topics ("pricing"), mood statements without a claim about the subject ("I'm disappointed"), traits of the commenter ("has used the product for years").
+
+Axes:
+- An axis is one question the thread argues about, not one comment's particular wording, example, or reason. Comments that give different reasons for the same side hold the same statement. A narrower facet, reason, example, or consequence of one side of a question belongs to that question's axis.
+- Keep two questions apart only when several comments hold each of them and a commenter could plausibly take side A on one and side B on the other.
+- The reader is shown how many people take each side of each axis. An axis is useful only when several people take a side on it. Make each axis broad enough to gather the commenters who address its question. There is no target count, but the application drops every axis on whose two statements fewer than ${MIN_AXIS_PEOPLE} people are placed.
+- statementA and statementB: each one full sentence about the same thing, the two incompatible with each other so a commenter can hold at most one, and each understandable on its own. Word them as the two answers to the question.
+
+Stances: for each comment, and for each axis that the comment clearly takes a position on, output one stance. Name the axis by its position in your axes list, counted from 1:
+- "A" if the comment holds statement A,
+- "B" if the comment holds statement B,
+- "M" if the comment explicitly addresses the question the two statements answer but takes a middle, mixed, or it-depends position.
+
+Rules:
+- Skip axes the comment does not address. Most comments address zero, one, or two axes.
+- A comment addresses an axis only when its position is clear from its own text. A comment header "[id X, re P]" names the comment's parent P. Use the parent only to resolve what the comment refers to, such as a pronoun or an omitted subject. The parent's position is never read as the comment's own. Do not infer a stance from tone or from the author.
+- Words that only agree or disagree with the parent ("this", "exactly", "+1", "same here", "no", "wrong") state no position. Judge the rest of the comment's text as if those words were absent, and give no stance when nothing else is left.
+- A line inside a comment that begins with ">" quotes another comment or the article and is not the commenter's own claim. A comment whose own words only accept or reject a quoted line gets no stance.
+- A position the comment attributes to someone else ("people say", "the article claims") is not the comment's own.
+- "M" is not for a comment whose position is unclear, and not for a comment that holds one statement while granting a point to the other, which is still "A" or "B".
+- Use only the comment ids that appear in the thread. Give a comment at most one stance per axis.
+- Return JSON matching the schema and nothing else.`;
+
+const SINGLE_CALL_SCHEMA = {
+    name: 'single_call_analysis',
+    schema: {
+        type: 'object',
+        properties: {
+            axes: {
+                type: 'array',
+                items: {
+                    type: 'object',
+                    properties: {
+                        statementA: { type: 'string' },
+                        statementB: { type: 'string' },
+                    },
+                    required: ['statementA', 'statementB'],
+                    additionalProperties: false,
+                },
+            },
+            stances: {
+                type: 'array',
+                items: {
+                    type: 'object',
+                    properties: {
+                        comment: { type: 'integer' },
+                        axis: { type: 'integer' },
+                        stance: { type: 'string', enum: [STANCE_A, STANCE_B, STANCE_M] },
+                    },
+                    required: ['comment', 'axis', 'stance'],
+                    additionalProperties: false,
+                },
+            },
+        },
+        required: ['axes', 'stances'],
+        additionalProperties: false,
+    },
+};
+
+// The whole thread as one extraction batch, so each reply names its parent.
+function buildSingleCallMessages(title, comments, commentsById, snippetChars) {
+    return [
+        { role: 'system', content: fillTemplate(SINGLE_CALL_SYSTEM_PROMPT, { title }) },
+        buildExtractMessages(title, comments, commentsById, snippetChars)[1],
+    ];
+}
+
+// The single call's axes, numbered from 1 in the order given, its stances keyed by comment and axis, and one
+// candidate per axis holding the comments on its two statements, so the people floor counts them as it counts
+// the candidates of a consolidated axis. The stance list has the scoring schema's shape.
+function parseSingleCallResponse(json, validIds) {
+    if (!json || !Array.isArray(json.axes)) throw new InvalidResponseError(`single call response has no axes array: ${describeJson(json)}`, json);
+    const axes = json.axes.map((raw, index) => {
+        const statements = readStatementPair(raw);
+        if (statements === null) throw new InvalidResponseError(`single call axis ${index + 1} is missing a statement`, json);
+        return { id: index + 1, ...statements, candidates: [index + 1] };
+    });
+    if (axes.length === 0) throw new InvalidResponseError('single call response lists no axes', json);
+    const { stances, warnings } = parseScoreResponse(json, validIds, axes, false);
+    const candidates = axes.map(axis => ({ statementA: axis.statementA, statementB: axis.statementB, commentsA: [], commentsB: [] }));
+    for (const [key, stance] of stances) {
+        const { commentId, axisId } = parseStanceKey(key);
+        // A middle stance is on neither statement.
+        if (stance !== STANCE_M) candidates[axisId - 1][`comments${stance}`].push(commentId);
+    }
+    return { axes, candidates, stances, warnings };
+}
+
 const SYNTHESIS_SCHEMA = {
     name: 'thread_synthesis',
     schema: {
@@ -1641,6 +1774,7 @@ function parseModelResponse(call, json) {
             case 'extract': return parseExtractResponse(json, new Set(call.meta.commentIds));
             case 'consolidate': return parseConsolidateResponse(json, call.meta.candidateCount);
             case 'score': return parseScoreResponse(json, new Set(call.meta.commentIds), call.meta.presentedAxes, call.meta.swapPoles);
+            case 'singleCall': return parseSingleCallResponse(json, new Set(call.meta.commentIds));
             case 'synthesize': {
                 const synthesis = parseSynthesisResponse(json, call.meta.axisIds);
                 return call.meta.axisGroups ? groupSynthesisSections(synthesis, new Map(call.meta.axisGroups), json) : synthesis;
@@ -1866,7 +2000,9 @@ function formatRunSummary(result) {
     const agreementPercent = stats.reviewedPairs > 0
         ? Math.round((100 * stats.agreedStances) / stats.reviewedPairs)
         : 0;
-    const reviewSummary = Number.isInteger(stats.reviewedPairs)
+    const reviewSummary = stats.singleCall
+        ? `${stats.agreedStances} stances from one call; no second scoring pass checked them.`
+        : Number.isInteger(stats.reviewedPairs)
         ? `${stats.agreedStances} stances passed blind review. Of ${stats.reviewedPairs} comment-axis pairs classified by both passes, ${stats.agreedStances} agreed (${agreementPercent}%); ${stats.conflictingStances} conflicts and ${stats.singlePassStances} single-pass classifications were excluded.`
         : `${stats.agreedStances} of ${stats.classifiedPairs} classifications matched between the two scoring passes; only matching ones count.`;
     const unverifiedCount = Array.isArray(result.unverifiedAxes) ? result.unverifiedAxes.length : 0;
@@ -2252,8 +2388,12 @@ function openRouterAuthUrl(callbackUrl, challenge, keyLabel = CONSTANTS.APP_NAME
 
 const RUN_URL_PARAMETERS = Object.freeze(['article', 'snapshot', 'share', 'extraction', 'consolidation', 'scoring', 'summary', 'budget']);
 
+// The optional run parameter that names the single-call choice; a staged run has none.
+const SINGLE_CALL_PARAMETER = 'single';
+
 function runResultCacheKey(selection) {
-    const key = RUN_URL_PARAMETERS.map(key => `${key}=${encodeURIComponent(selection[key])}`).join('&');
+    const singlePart = selection.singleCall ? `&${SINGLE_CALL_PARAMETER}=${encodeURIComponent(selection.singleCall)}` : '';
+    const key = RUN_URL_PARAMETERS.map(key => `${key}=${encodeURIComponent(selection[key])}`).join('&') + singlePart;
     return isArticleId(selection.article) ? key + '&articleAnalysis=2' : key;
 }
 
@@ -2264,6 +2404,7 @@ function makeRunPageUrl(baseUrl, selection) {
     for (const key of RUN_URL_PARAMETERS) {
         url.searchParams.set(key, String(selection[key]));
     }
+    if (selection.singleCall) url.searchParams.set(SINGLE_CALL_PARAMETER, selection.singleCall);
     return url.toString();
 }
 
@@ -2280,7 +2421,9 @@ function parseRunPageUrl(urlValue) {
     const scoring = params.get('scoring');
     const summary = params.get('summary');
     const budget = Number(params.get('budget'));
-    if ((!/^[1-9]\d*$/.test(article) && !isArticleId(article))
+    const singleCall = params.get(SINGLE_CALL_PARAMETER);
+    if ((singleCall !== null && (!Object.hasOwn(SINGLE_CALL_MODELS, singleCall) || isArticleId(article)))
+        || (!/^[1-9]\d*$/.test(article) && !isArticleId(article))
         || snapshot === '' || !Number.isFinite(Date.parse(snapshot))
         || !Number.isFinite(share) || share <= 0 || share > 100 || (isArticleId(article) && share !== 100)
         || !Object.hasOwn(VOLUME_MODELS, extraction)
@@ -2290,7 +2433,7 @@ function parseRunPageUrl(urlValue) {
         || !Number.isFinite(budget) || budget <= 0) {
         return null;
     }
-    return { article, snapshot, share, extraction, consolidation, scoring, summary, budget };
+    return { article, snapshot, share, extraction, consolidation, scoring, summary, budget, singleCall };
 }
 
 async function exchangeOpenRouterCode({ code, verifier, fetchImpl }) {
@@ -2642,6 +2785,7 @@ const PROBE_PLACEHOLDER_RESPONSES = Object.freeze({
     extract: { candidates: [{ ...PROBE_PLACEHOLDER_STATEMENTS, commentsA: [], commentsB: [] }] },
     consolidate: { axes: [{ ...PROBE_PLACEHOLDER_STATEMENTS, candidates: [] }] },
     score: { stances: [] },
+    singleCall: { axes: [PROBE_PLACEHOLDER_STATEMENTS], stances: [] },
 });
 const PROBE_PLACEHOLDER_USAGE = Object.freeze({ promptTokens: 0, completionTokens: 0, cost: 0 });
 
@@ -2653,7 +2797,7 @@ const PROBE_STOP = new Error('probe stopped after the first stage with a miss');
 // model. Stages after the first stage with a miss are left out of the result, because their requests
 // depend on the missing responses; complete is true when every call of every stage is cached.
 async function probeCache({ thread, store, config }) {
-    const stageOrder = pipelineStageOrder(thread);
+    const stageOrder = pipelineStageOrder(thread, { ...DEFAULT_CONFIG, ...config });
     const counts = new Map(stageOrder.map(stage => [stage, { stage, hits: 0, total: 0 }]));
     let missedStage = null;
     async function probingCallChat(call) {
@@ -2874,7 +3018,7 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
     // The run's statistics; scoring holds the comparison of the two scoring passes.
     function runStats(scoring) {
         return { comments: comments.length, authors: new Set(comments.map(comment => comment.author)).size,
-            cachedCalls, cachedCost, cacheWriteFailures, axesBelowFloor, ...scoring };
+            cachedCalls, cachedCost, cacheWriteFailures, axesBelowFloor, singleCall: Boolean(cfg.singleCall), ...scoring };
     }
 
     function emptyResult(message) {
@@ -2901,41 +3045,64 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
         if (!comments.length) return emptyResult('Comparison analysis did not run: no directly attributable passages were accepted for scoring. The attribution step may have excluded speech whose speaker it could not identify. This does not establish that the text contains no comparisons.');
     }
 
-    // Stage 1: extract candidate axes per batch.
-    const extractUnits = makeExtractBatches(comments, cfg.extractBatchChars).map((batch, batchIndex) => ({ batch, batchIndex }));
-    const mergeExtract = (first, second) => ({ candidates: [...first.candidates, ...second.candidates], warnings: [...first.warnings, ...second.warnings] });
-    const extractResults = await runStage('extract', extractUnits, async (part, unit) => {
-        const partIds = part.map(comment => comment.id);
-        return callModel({
-            stage: 'extract',
-            ...stageSettings(cfg, 'extract'),
-            messages: sourceMessages(buildExtractMessages(thread.title, part, commentsById, cfg.parentSnippetChars)),
-            schema: EXTRACT_SCHEMA,
-            meta: { batchIndex: unit.batchIndex, commentIds: partIds },
+    // A single call replaces stages 1 to 3: one request returns the axes and the stances. A thread only: an article
+    // is prepared into passages first.
+    if (cfg.singleCall && articleMode) throw new Error('A pasted article cannot run as a single call');
+    async function requestSingleCall() {
+        report('singleCall', 0, 1);
+        const single = await runUnbatchable({
+            stage: 'singleCall', ...stageSettings(cfg, 'singleCall'),
+            messages: buildSingleCallMessages(thread.title, comments, commentsById, cfg.parentSnippetChars),
+            schema: SINGLE_CALL_SCHEMA, meta: { commentIds: comments.map(comment => comment.id) },
         });
-    }, mergeExtract);
-    const candidates = [];
-    for (const result of extractResults) {
-        candidates.push(...result.candidates);
-        warnings.push(...result.warnings);
+        warnings.push(...single.warnings);
+        report('singleCall', 1, 1);
+        return single;
     }
+    const single = cfg.singleCall ? await requestSingleCall() : null;
+
+    // Stage 1: extract candidate axes per batch.
+    async function extractCandidates() {
+        const extractUnits = makeExtractBatches(comments, cfg.extractBatchChars).map((batch, batchIndex) => ({ batch, batchIndex }));
+        const mergeExtract = (first, second) => ({ candidates: [...first.candidates, ...second.candidates], warnings: [...first.warnings, ...second.warnings] });
+        const extractResults = await runStage('extract', extractUnits, async (part, unit) => {
+            const partIds = part.map(comment => comment.id);
+            return callModel({
+                stage: 'extract',
+                ...stageSettings(cfg, 'extract'),
+                messages: sourceMessages(buildExtractMessages(thread.title, part, commentsById, cfg.parentSnippetChars)),
+                schema: EXTRACT_SCHEMA,
+                meta: { batchIndex: unit.batchIndex, commentIds: partIds },
+            });
+        }, mergeExtract);
+        const candidates = [];
+        for (const result of extractResults) {
+            candidates.push(...result.candidates);
+            warnings.push(...result.warnings);
+        }
+        return candidates;
+    }
+    const candidates = single !== null ? single.candidates : await extractCandidates();
     if (candidates.length === 0) {
         if (articleMode) return emptyResult('The complete article was analyzed; no candidate comparisons were found.');
         throw new Error('extraction produced no candidate axes');
     }
 
     // Stage 2: consolidate candidates into canonical axes.
-    report('consolidate', 0, 1);
-    const consolidated = await runUnbatchable({
-        stage: 'consolidate',
-        ...stageSettings(cfg, 'consolidate'),
-        messages: sourceMessages(buildConsolidateMessages(thread.title, candidates)),
-        schema: CONSOLIDATE_SCHEMA,
-        meta: { candidateCount: candidates.length },
-    });
-    warnings.push(...consolidated.warnings);
-    let axes = consolidated.axes;
-    report('consolidate', 1, 1);
+    async function consolidateCandidates() {
+        report('consolidate', 0, 1);
+        const consolidated = await runUnbatchable({
+            stage: 'consolidate',
+            ...stageSettings(cfg, 'consolidate'),
+            messages: sourceMessages(buildConsolidateMessages(thread.title, candidates)),
+            schema: CONSOLIDATE_SCHEMA,
+            meta: { candidateCount: candidates.length },
+        });
+        warnings.push(...consolidated.warnings);
+        report('consolidate', 1, 1);
+        return consolidated.axes;
+    }
+    let axes = single !== null ? single.axes : await consolidateCandidates();
     // A thread axis held by fewer than MIN_AXIS_PEOPLE people cannot give the reader a count, so it is not
     // scored. An article is one voice weighing claims, so every article axis is kept.
     if (!articleMode) {
@@ -2958,32 +3125,41 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
 
     // Stage 3: score every comment against every axis, twice. The passes are independent, so both
     // run through one pool; pass 2 shuffles the axes and swaps the statements.
-    const scoreBatches = makeScoreBatches(comments, cfg.scoreBatchComments);
-    const passes = [
-        { presentedAxes: axes, swapPoles: false },
-        { presentedAxes: seededShuffle(axes, cfg.shuffleSeed), swapPoles: true },
-    ].map(pass => ({ ...pass, systemMessage: sourceMessages([buildScoreSystemMessage(thread.title, pass.presentedAxes, pass.swapPoles)])[0] }));
-    const scoreUnits = passes.flatMap((pass, passIndex) => scoreBatches.map((batch, batchIndex) => ({ batch, batchIndex, passIndex, pass })));
-    const mergeScore = (first, second) => ({ stances: new Map([...first.stances, ...second.stances]), warnings: [...first.warnings, ...second.warnings] });
-    const scoreResults = await runStage('score', scoreUnits, async (part, unit) => {
-        const partIds = part.map(comment => comment.id);
-        const { pass } = unit;
-        return callModel({
-            stage: 'score',
-            ...stageSettings(cfg, 'score'),
-            messages: [pass.systemMessage, buildScoreUserMessage(part, commentsById, cfg.parentSnippetChars)],
-            schema: SCORE_SCHEMA,
-            meta: { passIndex: unit.passIndex, batchIndex: unit.batchIndex, commentIds: partIds, presentedAxes: pass.presentedAxes, swapPoles: pass.swapPoles },
+    async function scoreStances() {
+        const scoreBatches = makeScoreBatches(comments, cfg.scoreBatchComments);
+        const passes = [
+            { presentedAxes: axes, swapPoles: false },
+            { presentedAxes: seededShuffle(axes, cfg.shuffleSeed), swapPoles: true },
+        ].map(pass => ({ ...pass, systemMessage: sourceMessages([buildScoreSystemMessage(thread.title, pass.presentedAxes, pass.swapPoles)])[0] }));
+        const scoreUnits = passes.flatMap((pass, passIndex) => scoreBatches.map((batch, batchIndex) => ({ batch, batchIndex, passIndex, pass })));
+        const mergeScore = (first, second) => ({ stances: new Map([...first.stances, ...second.stances]), warnings: [...first.warnings, ...second.warnings] });
+        const scoreResults = await runStage('score', scoreUnits, async (part, unit) => {
+            const partIds = part.map(comment => comment.id);
+            const { pass } = unit;
+            return callModel({
+                stage: 'score',
+                ...stageSettings(cfg, 'score'),
+                messages: [pass.systemMessage, buildScoreUserMessage(part, commentsById, cfg.parentSnippetChars)],
+                schema: SCORE_SCHEMA,
+                meta: { passIndex: unit.passIndex, batchIndex: unit.batchIndex, commentIds: partIds, presentedAxes: pass.presentedAxes, swapPoles: pass.swapPoles },
+            });
+        }, mergeScore);
+        const passMaps = passes.map(() => new Map());
+        scoreResults.forEach((result, index) => {
+            const target = passMaps[scoreUnits[index].passIndex];
+            for (const [key, stance] of result.stances) {
+                target.set(key, stance);
+            }
+            warnings.push(...result.warnings);
         });
-    }, mergeScore);
-    const passMaps = passes.map(() => new Map());
-    scoreResults.forEach((result, index) => {
-        const target = passMaps[scoreUnits[index].passIndex];
-        for (const [key, stance] of result.stances) {
-            target.set(key, stance);
-        }
-        warnings.push(...result.warnings);
-    });
+        return passMaps;
+    }
+    function singleCallPasses() {
+        const keptAxisIds = new Set(axes.map(axis => axis.id));
+        const stances = new Map([...single.stances].filter(([key]) => keptAxisIds.has(parseStanceKey(key).axisId)));
+        return [stances, stances];
+    }
+    const passMaps = single !== null ? singleCallPasses() : await scoreStances();
 
     // Stage 4: aggregate.
     const agreed = mergePasses(passMaps[0], passMaps[1]);
@@ -3078,6 +3254,7 @@ if (typeof module !== 'undefined' && module.exports) {
         buildExtractMessages, buildSynthesisMessages, synthesisTextParts, parseScoreResponse, parseStanceKey, flipStance, axisPeople,
         axisMetaText, formatElapsed, formatProgress, formatRunCost, formatRunSummary,
         makeOpenRouterCallChat, fetchModelPriceTable, makeBudgetedCallChat, makeCachedCallChat, runPipeline, InvalidResponseError, TruncationError,
+        SINGLE_CALL_MODELS, singleCallEntry, SINGLE_CALL_SCHEMA, buildSingleCallMessages, parseSingleCallResponse,
     };
 }
 </script>
@@ -3282,6 +3459,13 @@ const elements = {
     consolidationModelPicker: document.getElementById('consolidation-model-picker'),
     consolidationModelButton: document.getElementById('consolidation-model-button'),
     consolidationModelOptions: document.getElementById('consolidation-model-options'),
+    singleCall: document.getElementById('single-call'),
+    singleCallRow: document.getElementById('single-call-row'),
+    singleCallModel: document.getElementById('single-call-model'),
+    singleCallModelHeader: document.getElementById('single-call-model-header'),
+    singleCallModelPicker: document.getElementById('single-call-model-picker'),
+    singleCallModelButton: document.getElementById('single-call-model-button'),
+    singleCallModelOptions: document.getElementById('single-call-model-options'),
     summaryModel: document.getElementById('summary-model'),
     summaryModelHeader: document.getElementById('summary-model-header'),
     summaryModelPicker: document.getElementById('summary-model-picker'),
@@ -3322,12 +3506,20 @@ const modelPickers = [
         header: elements.scoringModelHeader, button: elements.scoringModelButton, options: elements.scoringModelOptions },
     { role: 'summary', choices: SUMMARY_MODELS, root: elements.summaryModelPicker, select: elements.summaryModel,
         header: elements.summaryModelHeader, button: elements.summaryModelButton, options: elements.summaryModelOptions },
+    { role: 'singleCall', choices: SINGLE_CALL_MODELS, root: elements.singleCallModelPicker, select: elements.singleCallModel,
+        header: elements.singleCallModelHeader, button: elements.singleCallModelButton, options: elements.singleCallModelOptions },
 ];
-const ROLE_TITLES = Object.freeze({ extraction: 'Extraction', consolidation: 'Consolidation', scoring: 'Scoring', summary: 'Summary' });
+const ROLE_TITLES = Object.freeze({ extraction: 'Extraction', consolidation: 'Consolidation', scoring: 'Scoring', summary: 'Summary', singleCall: 'Single call' });
 // The picker columns that hold numbers, and those where a lower number is better.
 const PICKER_METRIC_KEYS = new Set(['cost', 'latency', 'agreement']);
 const LOWER_IS_BETTER = new Set(['cost', 'latency']);
-const PICKER_METHOD_TEXT = `Agreement with silver: how closely the choice's output in this role matches what ${SILVER_BENCHMARK.silverModels.join(' and ')} agree on, measured on one Hacker News thread of ${SILVER_BENCHMARK.comments} comments with every other stage fixed to that reference. Two runs of one choice can differ by several points; a choice that was run several times shows the mean, and its tooltip gives the number of runs and their range. Cost and latency are forecasts for this role's stage on a thread of ${PICKER_COMMENTS} comments.`;
+// The line under a picker's rows that says what its figures mean.
+function pickerMethodText(role) {
+    if (role === 'singleCall') {
+        return `Agreement with silver: the F1 score of the run's stances against what ${SILVER_BENCHMARK.silverModels.join(' and ')} agree on, measured on one Hacker News thread of ${SILVER_BENCHMARK.comments} comments over three runs, after pairing each of the run's axes with the most similar silver axis. GPT-6.1 Sol built half of silver, which favors it. Cost and latency are forecasts of the one request on a thread of ${PICKER_COMMENTS} comments; the summary is extra.`;
+    }
+    return `Agreement with silver: how closely the choice's output in this role matches what ${SILVER_BENCHMARK.silverModels.join(' and ')} agree on, measured on one Hacker News thread of ${SILVER_BENCHMARK.comments} comments with every other stage fixed to that reference. Two runs of one choice can differ by several points; a choice that was run several times shows the mean, and its tooltip gives the number of runs and their range. Cost and latency are forecasts for this role's stage on a thread of ${PICKER_COMMENTS} comments.`;
+}
 
 let activeController = null;
 let importActive = false;
@@ -3376,7 +3568,22 @@ function selectedComments() {
 
 function selectedModelKeys() {
     return { extraction: elements.extractionModel.value, consolidation: elements.consolidationModel.value,
-        scoring: elements.scoringModel.value, summary: elements.summaryModel.value };
+        scoring: elements.scoringModel.value, summary: elements.summaryModel.value,
+        singleCall: singleCallSelected() ? elements.singleCallModel.value : null };
+}
+
+// A pasted article always runs through the stages, so the box applies to threads only.
+function singleCallSelected() {
+    return elements.singleCall.checked && !articleModeSelected;
+}
+
+// Shows the single-call picker in place of the extraction, consolidation, and scoring pickers while it applies.
+function showSingleCallPickers() {
+    const single = singleCallSelected();
+    for (const picker of modelPickers) {
+        if (picker.role === 'summary') continue;
+        picker.root.parentElement.hidden = (picker.role === 'singleCall') !== single;
+    }
 }
 
 function keyAvailable() {
@@ -3468,7 +3675,7 @@ const probeMemo = new Map();
 
 function probeSelection(thread) {
     const keys = selectedModelKeys();
-    const key = [thread.id, thread.comments.length, keys.extraction, keys.consolidation, keys.scoring, keys.summary].join('|');
+    const key = [thread.id, thread.comments.length, keys.extraction, keys.consolidation, keys.scoring, keys.summary, keys.singleCall].join('|');
     if (!probeMemo.has(key)) {
         probeMemo.set(key, probeCache({ thread, store: cacheStore, config: selectedRunConfig() }));
     }
@@ -3654,6 +3861,9 @@ function applyRunSelection(selection) {
     elements.consolidationModel.value = selection.consolidation;
     elements.scoringModel.value = selection.scoring;
     elements.summaryModel.value = selection.summary;
+    elements.singleCall.checked = Boolean(selection.singleCall);
+    if (selection.singleCall) elements.singleCallModel.value = selection.singleCall;
+    showSingleCallPickers();
     for (const picker of modelPickers) {
         syncModelPicker(picker);
     }
@@ -3669,7 +3879,8 @@ function restorableResultRecords() {
             || !Array.isArray(record.comments) || record.selection === undefined) continue;
         const selection = record.selection;
         if (!Object.hasOwn(VOLUME_MODELS, selection.extraction) || !Object.hasOwn(CONSOLIDATION_MODELS, selection.consolidation)
-            || !Object.hasOwn(VOLUME_MODELS, selection.scoring) || !Object.hasOwn(SUMMARY_MODELS, selection.summary)) continue;
+            || !Object.hasOwn(VOLUME_MODELS, selection.scoring) || !Object.hasOwn(SUMMARY_MODELS, selection.summary)
+            || (selection.singleCall && !Object.hasOwn(SINGLE_CALL_MODELS, selection.singleCall))) continue;
         records.push(record);
     }
     return records.sort((left, right) => String(right.savedAt).localeCompare(String(left.savedAt)));
@@ -3688,8 +3899,10 @@ function renderCachedResults() {
         const selection = record.selection;
         const title = storedThread(selection.article)?.title
             ?? (isArticleId(selection.article) ? 'Pasted article' : `Thread ${selection.article}`);
-        const models = [VOLUME_MODELS[selection.extraction], CONSOLIDATION_MODELS[selection.consolidation],
-            VOLUME_MODELS[selection.scoring], SUMMARY_MODELS[selection.summary]].map(modelDisplayName).join(' / ');
+        const models = selection.singleCall
+            ? `${modelDisplayName(SINGLE_CALL_MODELS[selection.singleCall])} single call / ${modelDisplayName(SUMMARY_MODELS[selection.summary])}`
+            : [VOLUME_MODELS[selection.extraction], CONSOLIDATION_MODELS[selection.consolidation],
+                VOLUME_MODELS[selection.scoring], SUMMARY_MODELS[selection.summary]].map(modelDisplayName).join(' / ');
         const item = makeElement('li');
         // Time is that of the run that saved the result; a replay of cached calls only has none.
         const result = record.result;
@@ -3940,7 +4153,7 @@ function initializeModelPicker(picker) {
         });
         return option;
     });
-    picker.options.replaceChildren(picker.header, ...options, makeElement('p', { className: 'model-comparison-method', text: PICKER_METHOD_TEXT }));
+    picker.options.replaceChildren(picker.header, ...options, makeElement('p', { className: 'model-comparison-method', text: pickerMethodText(picker.role) }));
     syncModelPicker(picker);
     picker.button.addEventListener('click', () => {
         if (picker.options.hidden) openModelOptions(picker, 0);
@@ -4932,6 +5145,8 @@ function showArticleMode(show) {
     elements.frontPageScope.setAttribute('aria-pressed', String(!show && storyScope === 'front'));
     elements.searchAllScope.setAttribute('aria-pressed', String(!show && storyScope === 'search'));
     elements.shareControl.hidden = show;
+    elements.singleCallRow.hidden = show;
+    showSingleCallPickers();
     if (show) {
         searchLatest.cancel();
         listLatest.cancel();
@@ -5146,6 +5361,7 @@ fillModelOptions(elements.extractionModel, 'extraction', DEFAULT_EXTRACTION_KEY)
 fillModelOptions(elements.consolidationModel, 'consolidation', DEFAULT_CONSOLIDATION_KEY);
 fillModelOptions(elements.scoringModel, 'scoring', DEFAULT_SCORING_KEY);
 fillModelOptions(elements.summaryModel, 'summary', DEFAULT_SUMMARY_KEY);
+fillModelOptions(elements.singleCallModel, 'singleCall', DEFAULT_SINGLE_CALL_KEY);
 const initialRunSelection = parseRunPageUrl(location.href);
 if (initialRunSelection !== null) {
     elements.maxCost.value = initialRunSelection.budget;
@@ -5154,7 +5370,10 @@ if (initialRunSelection !== null) {
     elements.consolidationModel.value = initialRunSelection.consolidation;
     elements.scoringModel.value = initialRunSelection.scoring;
     elements.summaryModel.value = initialRunSelection.summary;
+    elements.singleCall.checked = initialRunSelection.singleCall !== null;
+    if (initialRunSelection.singleCall !== null) elements.singleCallModel.value = initialRunSelection.singleCall;
 }
+showSingleCallPickers();
 for (const picker of modelPickers) {
     initializeModelPicker(picker);
 }
@@ -5164,6 +5383,10 @@ function refitShareAndEstimate() {
     afterSelectionChange();
 }
 elements.share.addEventListener('input', afterSelectionChange);
+elements.singleCall.addEventListener('change', () => {
+    showSingleCallPickers();
+    refitShareAndEstimate();
+});
 elements.maxCost.addEventListener('change', refitShareAndEstimate);
 // The summary picker's tooltip says whether the selected combination was benchmarked, so every change resyncs it.
 const SUMMARY_PICKER_INDEX = 3;

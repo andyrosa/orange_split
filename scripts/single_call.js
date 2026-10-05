@@ -27,114 +27,23 @@ const SINGLE_CALL_STAGE = 'singleCall';
 // One extraction batch holds the whole thread, so the request's axes are the candidates of one batch.
 const WHOLE_THREAD_BATCH_CHARS = Number.MAX_SAFE_INTEGER;
 
-// The single-call choices: models of the page's consolidation choices, each at a reasoning effort set here.
-// The page lists Claude Opus 5.5 with adaptive reasoning only and GPT-6.1 Sol at low only.
-const LOW_EFFORT = 'low';
-const HIGH_EFFORT = 'high';
-function effortChoice(consolidationKey, effort) {
-    const choice = core.CONSOLIDATION_MODELS[consolidationKey];
-    return Object.freeze({ name: choice.name, effort, model: choice.config.modelConsolidate, sampling: choice.config.samplingConsolidate,
-        reasoning: Object.freeze({ effort }), maxTokens: choice.config.maxTokensConsolidate });
-}
+// The single-call choices: the page's, and Claude Fable 5.1 at low, which the page leaves out for its cost.
+const choiceOf = entry => ({ name: entry.name, effort: entry.effort, model: entry.config.modelSingleCall, sampling: entry.config.samplingSingleCall,
+    reasoning: entry.config.reasoningSingleCall, maxTokens: entry.config.maxTokensSingleCall });
 const SINGLE_CALL_CHOICES = Object.freeze({
-    opus55Low: effortChoice('opus55', LOW_EFFORT),
-    sol61Low: effortChoice('sol61Low', LOW_EFFORT),
-    fableLow: effortChoice('fableLow', LOW_EFFORT),
-    sol61High: effortChoice('sol61Low', HIGH_EFFORT),
-    opus55High: effortChoice('opus55', HIGH_EFFORT),
+    ...Object.fromEntries(Object.entries(core.SINGLE_CALL_MODELS).map(([key, entry]) => [key, choiceOf(entry)])),
+    fableLow: choiceOf(core.singleCallEntry('fableLow', 'low')),
 });
 
-// The rules are those of the pipeline's extraction, consolidation, and scoring prompts, stated for one request.
-const SINGLE_CALL_SYSTEM_PROMPT = `You analyze a complete Hacker News comment thread. The submission title is: "{title}".
-
-Task: list the axes of disagreement the thread argues about, then classify every comment against every axis.
-
-An axis is a pair of incompatible statements that answer the same question, such that one commenter could hold the first and another the second. Examples of statements that anchor an axis: "remote work makes teams less productive", "static typing prevents more bugs than it costs in effort", "the paper's main result will replicate". An overall verdict on the subject also counts when phrased as a statement ("the product is worth its price"). Examples that do not count: topics ("pricing"), mood statements without a claim about the subject ("I'm disappointed"), traits of the commenter ("has used the product for years").
-
-Axes:
-- An axis is one question the thread argues about, not one comment's particular wording, example, or reason. Comments that give different reasons for the same side hold the same statement. A narrower facet, reason, example, or consequence of one side of a question belongs to that question's axis.
-- Keep two questions apart only when several comments hold each of them and a commenter could plausibly take side A on one and side B on the other.
-- The reader is shown how many people take each side of each axis. An axis is useful only when several people take a side on it. Make each axis broad enough to gather the commenters who address its question. There is no target count, but the application drops every axis on whose two statements fewer than ${core.MIN_AXIS_PEOPLE} people are placed.
-- statementA and statementB: each one full sentence about the same thing, the two incompatible with each other so a commenter can hold at most one, and each understandable on its own. Word them as the two answers to the question.
-
-Stances: for each comment, and for each axis that the comment clearly takes a position on, output one stance. Name the axis by its position in your axes list, counted from 1:
-- "A" if the comment holds statement A,
-- "B" if the comment holds statement B,
-- "M" if the comment explicitly addresses the question the two statements answer but takes a middle, mixed, or it-depends position.
-
-Rules:
-- Skip axes the comment does not address. Most comments address zero, one, or two axes.
-- A comment addresses an axis only when its position is clear from its own text. A comment header "[id X, re P]" names the comment's parent P. Use the parent only to resolve what the comment refers to, such as a pronoun or an omitted subject. The parent's position is never read as the comment's own. Do not infer a stance from tone or from the author.
-- Words that only agree or disagree with the parent ("this", "exactly", "+1", "same here", "no", "wrong") state no position. Judge the rest of the comment's text as if those words were absent, and give no stance when nothing else is left.
-- A line inside a comment that begins with ">" quotes another comment or the article and is not the commenter's own claim. A comment whose own words only accept or reject a quoted line gets no stance.
-- A position the comment attributes to someone else ("people say", "the article claims") is not the comment's own.
-- "M" is not for a comment whose position is unclear, and not for a comment that holds one statement while granting a point to the other, which is still "A" or "B".
-- Use only the comment ids that appear in the thread. Give a comment at most one stance per axis.
-- Return JSON matching the schema and nothing else.`;
-
-const SINGLE_CALL_SCHEMA = {
-    name: 'single_call_analysis',
-    schema: {
-        type: 'object',
-        properties: {
-            axes: {
-                type: 'array',
-                items: {
-                    type: 'object',
-                    properties: {
-                        statementA: { type: 'string' },
-                        statementB: { type: 'string' },
-                    },
-                    required: ['statementA', 'statementB'],
-                    additionalProperties: false,
-                },
-            },
-            stances: {
-                type: 'array',
-                items: {
-                    type: 'object',
-                    properties: {
-                        comment: { type: 'integer' },
-                        axis: { type: 'integer' },
-                        stance: { type: 'string', enum: ['A', 'B', 'M'] },
-                    },
-                    required: ['comment', 'axis', 'stance'],
-                    additionalProperties: false,
-                },
-            },
-        },
-        required: ['axes', 'stances'],
-        additionalProperties: false,
-    },
-};
-
-// The request's output: axes numbered from 1 in the order given, and a Map("commentId|axisId" -> stance).
-// The stance list has the scoring schema's shape, so the pipeline's own parser reads it.
-function parseSingleCall(json, thread) {
-    if (!json || !Array.isArray(json.axes)) throw new core.InvalidResponseError('single call response has no axes array', json);
-    const axes = json.axes.map((raw, index) => {
-        const statementA = raw && typeof raw.statementA === 'string' ? raw.statementA.trim() : '';
-        const statementB = raw && typeof raw.statementB === 'string' ? raw.statementB.trim() : '';
-        if (statementA === '' || statementB === '') throw new core.InvalidResponseError(`single call axis ${index + 1} is missing a statement`, json);
-        return { id: index + 1, statementA, statementB };
-    });
-    if (axes.length === 0) throw new core.InvalidResponseError('single call response lists no axes', json);
-    const { stances, warnings } = core.parseScoreResponse(json, new Set(thread.comments.map(comment => comment.id)), axes, false);
-    return { axes, stances, warnings };
-}
-
-// The thread is formatted as one extraction batch that holds every comment, so each reply names its parent.
+// The request the page's single-call mode sends, with the core block's prompt, schema, and parser.
 async function requestSingleCall({ choice, thread, modelCallChat }) {
     const commentsById = core.indexCommentsById(thread.comments);
     const call = {
         stage: SINGLE_CALL_STAGE, model: choice.model, sampling: choice.sampling, reasoning: choice.reasoning, maxTokens: choice.maxTokens,
-        messages: [
-            { role: 'system', content: SINGLE_CALL_SYSTEM_PROMPT.replace('{title}', () => thread.title) },
-            core.buildExtractMessages(thread.title, thread.comments, commentsById, core.DEFAULT_CONFIG.parentSnippetChars)[1],
-        ],
-        schema: SINGLE_CALL_SCHEMA,
+        messages: core.buildSingleCallMessages(thread.title, thread.comments, commentsById, core.DEFAULT_CONFIG.parentSnippetChars),
+        schema: core.SINGLE_CALL_SCHEMA,
     };
-    return parseSingleCall((await modelCallChat(call)).json, thread);
+    return core.parseSingleCallResponse((await modelCallChat(call)).json, new Set(thread.comments.map(comment => comment.id)));
 }
 
 // The pipeline config of both variants: the choice's model in every stage, and one batch per stage.
@@ -244,7 +153,7 @@ async function main() {
     console.log(`wrote ${RESULT_FILE}; $${ledger.spentUsd.toFixed(2)} spent in this run`);
 }
 
-module.exports = { SINGLE_CALL_CHOICES, SINGLE_CALL_SCHEMA, parseSingleCall, pipelineConfig, handlersOf };
+module.exports = { SINGLE_CALL_CHOICES, pipelineConfig, handlersOf };
 if (require.main === module) main().catch(error => {
     process.stderr.write(`ERROR: ${error.message}\n`);
     process.exitCode = 1;
