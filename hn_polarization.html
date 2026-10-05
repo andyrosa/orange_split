@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-zwx1DvtzYq7Wrdxuw83jTeH3yYaiRYQ3s/2FIJ7kSW0=' 'sha256-ATcudThpY05heB/cMt44Mx2MpkdFZTvnjVjspzB9DCo='; style-src 'sha256-e0ulQ5qs0KalSlvMuYBU4BFD7AVnOTjLvOkuoTX/K2g='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-zwx1DvtzYq7Wrdxuw83jTeH3yYaiRYQ3s/2FIJ7kSW0=' 'sha256-jD3P7MNTrNyTPuzSMOzM6gszwP7AuHNdLbiiqjWr/H4='; style-src 'sha256-e0ulQ5qs0KalSlvMuYBU4BFD7AVnOTjLvOkuoTX/K2g='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
 <title>Orange Split - For and Against on Hacker News</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EOS%3C/text%3E%3C/svg%3E">
 <style>
@@ -4648,19 +4648,6 @@ function renderResults(result, comments) {
     const rows = orientRows(rankRows(result.rows.map(row => withAuthorCounts(row, commentsById))));
     const narrative = makeElement('section', { className: 'narrative' });
     if (renderedArticle) narrative.appendChild(makeElement('h2', { text: 'Claims and perspectives in this article' }));
-    const comparisons = makeElement('details');
-    comparisons.id = 'explore-comparisons';
-    comparisons.appendChild(makeElement('summary', { text: `Explore comparisons (${rows.length})` }));
-    // One heading per non-empty group, in rank order, so agreements and splits read as separate sections.
-    for (const group of ROW_GROUPS) {
-        const members = rows.filter(row => row.group === group.key);
-        if (members.length === 0) continue;
-        comparisons.appendChild(makeElement('h3', { className: 'row-group', text: `${group.title} (${members.length})` }));
-        comparisons.append(...members.map(row => renderAxis(row, commentsById)));
-    }
-    if (result.stats.axesBelowFloor > 0) {
-        comparisons.appendChild(makeElement('p', { text: axesBelowFloorText(result.stats.axesBelowFloor) }));
-    }
     let synthesis = null;
     let summaryError = result.synthesisError;
     if (result.synthesis) {
@@ -4671,19 +4658,50 @@ function renderResults(result, comments) {
             summaryError = error.message;
         }
     }
-    if (synthesis) {
-        // A thread summary gets the comparisons' group heading before the first paragraph of each group.
-        synthesis.sections.forEach((section, index) => {
-            if (section.group && section.group !== synthesis.sections[index - 1]?.group) {
-                narrative.appendChild(makeElement('h3', { text: ROW_GROUPS.find(group => group.key === section.group).title }));
-            }
-            narrative.appendChild(renderNarrativeSection(section, rows, result.rows, commentsById, index));
-        });
-    } else {
+    if (!synthesis) {
         narrative.appendChild(makeElement('p', { text: summaryError
             ? `Summary unavailable: ${summaryError}. Comparisons are preserved. Press Run to retry; uncached calls may cost money.`
             : rows.length === 0 ? emptyComparisonMessage(result)
                 : 'Summary unavailable. Press Run to retry; uncached model calls may incur cost.' }));
+    }
+    const sections = synthesis ? synthesis.sections : [];
+    // A thread result shows each non-empty group in rank order: its heading, the summary paragraphs that
+    // cite its axes, then its comparisons in an expandable list, so a group the summary does not cite still
+    // shows its comparisons. The list sits outside the narrative section, whose evidence styles would
+    // otherwise apply to the comparisons' evidence.
+    const groupBlocks = [];
+    // An article summary has no groups: its paragraphs come first, and every comparison sits in one
+    // expandable list after the caveats, with one heading per non-empty group.
+    let comparisons;
+    if (renderedArticle) {
+        sections.forEach((section, index) => narrative.appendChild(renderNarrativeSection(section, rows, result.rows, commentsById, index)));
+        comparisons = makeElement('details');
+        comparisons.id = 'explore-comparisons';
+        comparisons.appendChild(makeElement('summary', { text: `Explore comparisons (${rows.length})` }));
+    } else {
+        comparisons = makeElement('div');
+    }
+    for (const group of ROW_GROUPS) {
+        const members = rows.filter(row => row.group === group.key);
+        if (members.length === 0) continue;
+        const axes = members.map(row => renderAxis(row, commentsById));
+        if (renderedArticle) {
+            comparisons.appendChild(makeElement('h3', { className: 'row-group', text: `${group.title} (${members.length})` }));
+            comparisons.append(...axes);
+            continue;
+        }
+        const groupNarrative = makeElement('section', { className: 'narrative' });
+        groupNarrative.appendChild(makeElement('h3', { text: group.title }));
+        sections.forEach((section, index) => {
+            if (section.group === group.key) groupNarrative.appendChild(renderNarrativeSection(section, rows, result.rows, commentsById, index));
+        });
+        const groupComparisons = makeElement('details');
+        groupComparisons.appendChild(makeElement('summary', { text: `Explore comparisons (${members.length})` }));
+        groupComparisons.append(...axes);
+        groupBlocks.push(groupNarrative, groupComparisons);
+    }
+    if (result.stats.axesBelowFloor > 0) {
+        comparisons.appendChild(makeElement('p', { text: axesBelowFloorText(result.stats.axesBelowFloor) }));
     }
     const caveats = makeElement('details');
     caveats.appendChild(makeElement('summary', { text: 'Scope and caveats' }));
@@ -4696,7 +4714,7 @@ function renderResults(result, comments) {
         narrative.prepend(makeElement('p', { text: 'Complete text processed · ' + voices + ' textual voices · ' + result.comments.length + ' counted passages. Counts reflect the primary speaker and directly attributed voices in this selected text, not a survey.' }));
         caveats.appendChild(makeElement('p', { text: 'Attribution and semantic reviews are model judgments. Unresolved speech and reported paraphrases are shown separately and do not count as direct testimony. Quotation authenticity and factual claims have not been checked.' }));
     }
-    elements.results.replaceChildren(narrative, caveats, comparisons, ...(renderedArticle ? [renderArticleSource(renderedArticle)] : []));
+    elements.results.replaceChildren(narrative, ...groupBlocks, caveats, comparisons, ...(renderedArticle ? [renderArticleSource(renderedArticle)] : []));
     renderUnverifiedAxes(result.unverifiedAxes || [], commentsById);
     elements.unverifiedAxes.open = false;
     comparisons.appendChild(elements.unverifiedAxes);
