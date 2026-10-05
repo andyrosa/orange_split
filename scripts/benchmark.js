@@ -39,26 +39,21 @@ const README_PATH = path.join(__dirname, '..', 'README.md');
 const README_START = '<!-- silver-benchmark:start -->';
 const README_END = '<!-- silver-benchmark:end -->';
 const README_TABLES_PATTERN = new RegExp(`${README_START}[\\s\\S]*${README_END}`);
-const PRECISION_DIGITS = 4;
 const FAILURE_MESSAGE_CHARS = 300;
 
 function roleChoices(role) {
     return { extraction: core.VOLUME_MODELS, consolidation: core.CONSOLIDATION_MODELS, scoring: core.VOLUME_MODELS, summary: core.SUMMARY_MODELS }[role];
 }
 
-function rounded(value) {
-    return Number(value.toFixed(PRECISION_DIGITS));
-}
-
 function graded({ precision, recall }) {
-    return { agreement: rounded(lib.agreementOf(precision, recall)), precision: rounded(precision), recall: rounded(recall) };
+    return { agreement: lib.rounded(lib.agreementOf(precision, recall)), precision: lib.rounded(precision), recall: lib.rounded(recall) };
 }
 
 // The measured cost and latency of the role's own calls.
 function measured(meter, role) {
     const stage = meter.stage(ROLE_STAGE[role]);
-    return { usd: stage.usd, calls: stage.calls, failedCalls: stage.failedCalls, meanCallSeconds: rounded(stage.meanCallSeconds),
-        maxCallSeconds: rounded(stage.maxCallSeconds), promptTokens: stage.promptTokens, completionTokens: stage.completionTokens };
+    return { usd: stage.usd, calls: stage.calls, failedCalls: stage.failedCalls, meanCallSeconds: lib.rounded(stage.meanCallSeconds),
+        maxCallSeconds: lib.rounded(stage.maxCallSeconds), promptTokens: stage.promptTokens, completionTokens: stage.completionTokens };
 }
 
 const GRADERS = {
@@ -129,7 +124,7 @@ async function benchmarkChoice({ role, choiceKey, silver, thread, modelCallChat,
     }
     const judgeUsd = judgeMeter.calls.reduce((sum, call) => sum + call.usd, 0);
     const outcome = { ...grade, ...measured(meter, role), judgeUsd, measuredAt: new Date().toISOString() };
-    console.log(`${label}: agreement ${(outcome.agreement * 100).toFixed(1)}% (precision ${(outcome.precision * 100).toFixed(1)}%, recall ${(outcome.recall * 100).toFixed(1)}%), $${outcome.usd.toFixed(4)}, ${outcome.calls} calls, mean ${outcome.meanCallSeconds} s${outcome.failed ? `, FAILED: ${outcome.failed}` : ''}`);
+    console.log(`${label}: agreement ${lib.percent(outcome.agreement)} (precision ${lib.percent(outcome.precision)}, recall ${lib.percent(outcome.recall)}), $${outcome.usd.toFixed(4)}, ${outcome.calls} calls, mean ${outcome.meanCallSeconds} s${outcome.failed ? `, FAILED: ${outcome.failed}` : ''}`);
     return outcome;
 }
 
@@ -143,7 +138,7 @@ async function withRepeats({ first, role, choiceKey, repeats, silver, thread, ap
     const runs = [first.runs ? first.runs[0] : gradeOf(first)];
     for (let repeat = 1; repeat <= repeats; repeat += 1) {
         const label = `${role} ${choiceKey} repeat ${repeat}`;
-        const modelCallChat = lib.repeatCallChat({ apiKey, ledger, name: `${role}-${choiceKey}`, repeat });
+        const modelCallChat = lib.runCallChat({ apiKey, ledger, name: `${role}-${choiceKey}`, runNumber: repeat + 1, firstCacheDirectory: lib.CACHE_DIRECTORY });
         let grade;
         try {
             const result = await lib.runStages({ thread, config: { ...core.roleConfig(role, choiceKey), concurrency }, handlers: handlersFor(role, silver), modelCallChat, label });
@@ -153,7 +148,7 @@ async function withRepeats({ first, role, choiceKey, repeats, silver, thread, ap
             grade = { agreement: 0, precision: 0, recall: 0 };
         }
         runs.push(gradeOf(grade));
-        console.log(`${label}: agreement ${(grade.agreement * 100).toFixed(1)}%`);
+        console.log(`${label}: agreement ${lib.percent(grade.agreement)}`);
     }
     const mean = field => lib.runSpread(runs, field).mean;
     return { ...first, agreement: mean('agreement'), precision: mean('precision'), recall: mean('recall'), runs };
@@ -163,9 +158,7 @@ function readBenchmark(silver) {
     const header = { threadId: silver.threadId, title: silver.title, comments: silver.comments, chars: silver.chars, authors: silver.authors,
         silverModels: silver.models.map(model => `${model.name} (${model.effort})`), silverBuiltAt: silver.builtAt,
         axes: silver.axes.length, candidates: silver.candidates.length, stances: silver.stances.length, featuredAxes: silver.featuredAxes.length };
-    const stored = fs.existsSync(lib.BENCHMARK_FILE) ? JSON.parse(fs.readFileSync(lib.BENCHMARK_FILE, 'utf8')) : null;
-    // Results measured against another build of the reference do not compare with new ones.
-    const results = stored && stored.silverBuiltAt === silver.builtAt ? stored.results : Object.fromEntries(ROLES.map(role => [role, {}]));
+    const results = lib.readStoredResults(lib.BENCHMARK_FILE, silver) ?? Object.fromEntries(ROLES.map(role => [role, {}]));
     return { ...header, results };
 }
 
@@ -231,9 +224,7 @@ async function main() {
     const apiKey = lib.requireApiKey();
     const modelCallChat = lib.makeModelCallChat({ apiKey, ledger, cacheDirectory: lib.CACHE_DIRECTORY });
     const thread = await lib.loadThread(silver.threadId);
-    if (thread.comments.length !== silver.comments || lib.threadChars(thread) !== silver.chars) {
-        throw new Error(`the thread snapshot (${thread.comments.length} comments) is not the one the reference was built on (${silver.comments} comments)`);
-    }
+    lib.checkSilverSnapshot(thread, silver);
     const concurrency = Number(lib.readArgument('concurrency') ?? core.DEFAULT_CONFIG.concurrency);
     // Choices run one after another per role and the roles run side by side; each result is saved as it arrives.
     await Promise.all(ROLES.map(async taskRole => {

@@ -26,96 +26,62 @@ const RESULT_FILE = path.join(lib.REPO_ROOT, 'data', 'pipeline-benchmark.json');
 const DEFAULT_BUDGET_USD = 20;
 const SILVER_THREAD_ID = 22866284;
 const LARGE_THREAD_ID = 44163063;
-// The snapshot of each thread that the first runs were made on. A later fetch can differ, which would change
-// every request.
-const THREAD_FILES = Object.freeze({
-    [SILVER_THREAD_ID]: path.join(lib.WORK_DIRECTORY, `thread-${SILVER_THREAD_ID}.json`),
-    [LARGE_THREAD_ID]: path.join(lib.REPO_ROOT, 'outputs', 'cheap-44163063', `thread-${LARGE_THREAD_ID}.json`),
-});
-const BOTH_THREADS = Object.freeze([SILVER_THREAD_ID, LARGE_THREAD_ID]);
-// Where scripts/run_node.js kept the calls of each configuration's first run, by thread.
-const FIRST_RUN_DIRECTORY = thread => path.join(lib.REPO_ROOT, 'outputs', `defaults-${thread}`, 'cache');
-const BEST_FIRST_RUN_DIRECTORY = () => path.join(lib.REPO_ROOT, 'outputs', `best-${SILVER_THREAD_ID}`, 'cache');
 const PIPELINE_HANDLERS = Object.freeze({ extract: MODEL, consolidate: MODEL, score: MODEL, synthesize: MODEL });
+const SPREAD_FIELDS = Object.freeze(['axes', 'rowsWithEnoughPeople', 'stances', 'agreement', 'precision', 'recall', 'usd', 'seconds']);
+// Where scripts/run_node.js kept the calls of a configuration's first run on a thread.
+const firstRunDirectory = folder => threadId => path.join(lib.REPO_ROOT, 'outputs', `${folder}-${threadId}`, 'cache');
 
 // The configurations: the four pairs compared for the defaults, each with GPT-6 Luna low extraction and GPT-6
 // Sol low summary, and the highest-agreement choice of each role. Claude Opus 5.5 scoring on the large thread
 // would cost about $10 a run, so that configuration runs on the silver thread only.
+function configuration(consolidation, scoring, overrides) {
+    return { keys: { extraction: 'luna6Low', consolidation, scoring, summary: 'sol6Low' }, threads: [SILVER_THREAD_ID, LARGE_THREAD_ID],
+        firstRunDirectory: firstRunDirectory('defaults'), ...overrides };
+}
 const CONFIGURATIONS = Object.freeze({
-    defaults: { keys: { extraction: 'luna6Low', consolidation: 'sonnet55', scoring: 'lunaLow', summary: 'sol6Low' }, threads: BOTH_THREADS, firstRunDirectory: FIRST_RUN_DIRECTORY },
-    sonnet55Luna6: { keys: { extraction: 'luna6Low', consolidation: 'sonnet55', scoring: 'luna6Low', summary: 'sol6Low' }, threads: BOTH_THREADS, firstRunDirectory: FIRST_RUN_DIRECTORY },
-    sol61Luna56: { keys: { extraction: 'luna6Low', consolidation: 'sol61Low', scoring: 'lunaLow', summary: 'sol6Low' }, threads: BOTH_THREADS, firstRunDirectory: FIRST_RUN_DIRECTORY },
-    sol61Luna6: { keys: { extraction: 'luna6Low', consolidation: 'sol61Low', scoring: 'luna6Low', summary: 'sol6Low' }, threads: BOTH_THREADS, firstRunDirectory: FIRST_RUN_DIRECTORY },
-    best: { keys: { extraction: 'luna6Low', consolidation: 'sonnet55', scoring: 'opus55', summary: 'sol6Low' }, threads: [SILVER_THREAD_ID], firstRunDirectory: BEST_FIRST_RUN_DIRECTORY },
+    sol61Luna56: configuration('sol61Low', 'lunaLow'),
+    sol61Luna6: configuration('sol61Low', 'luna6Low'),
+    sonnet55Luna56: configuration('sonnet55', 'lunaLow'),
+    sonnet55Luna6: configuration('sonnet55', 'luna6Low'),
+    best: configuration('sonnet55', 'opus55', { threads: [SILVER_THREAD_ID], firstRunDirectory: firstRunDirectory('best') }),
 });
-const SPREAD_FIELDS = Object.freeze(['axes', 'rowsWithEnoughPeople', 'stances', 'agreement', 'precision', 'recall', 'usd', 'seconds']);
-
-function loadThreadSnapshot(threadId) {
-    const file = THREAD_FILES[threadId];
-    if (file === undefined) throw new Error(`no snapshot is listed for thread ${threadId}`);
-    const item = JSON.parse(fs.readFileSync(file, 'utf8'));
-    if (String(item.id) !== String(threadId)) throw new Error(`${file} holds thread ${item.id}, not ${threadId}`);
-    return core.flattenThread(item);
-}
-
-function percent(share) {
-    return `${(share * 100).toFixed(1)}%`;
-}
 
 function runLine(label, run) {
-    const silverPart = run.agreement === null ? '' : `; F1 against silver ${percent(run.agreement)} (precision ${percent(run.precision)}, recall ${percent(run.recall)})`;
+    const silverPart = run.agreement === null ? '' : `; F1 against silver ${lib.percent(run.agreement)} (precision ${lib.percent(run.precision)}, recall ${lib.percent(run.recall)})`;
     const latencyPart = run.seconds === null ? 'latency not recorded' : `${run.seconds} s`;
     return `${label}: ${run.axes} axes, ${run.rowsWithEnoughPeople} outside "too few", ${run.stances} stances${silverPart}; $${run.usd.toFixed(4)}, ${latencyPart}, ${run.calls} calls (${run.cachedCalls} replayed)`;
 }
 
-async function runOnce({ configuration, thread, silver, modelCallChat, concurrency, label }) {
+async function runOnce({ keys, thread, silver, modelCallChat, concurrency, label }) {
     const meter = lib.makeMeter();
-    const result = await lib.runStages({ thread, config: { ...core.buildRunConfig(configuration.keys), concurrency }, handlers: PIPELINE_HANDLERS,
+    const result = await lib.runStages({ thread, config: { ...core.buildRunConfig(keys), concurrency }, handlers: PIPELINE_HANDLERS,
         modelCallChat: meter.wrap(modelCallChat), label });
     const graded = silver === null ? { ...lib.wholeRunShape(result), agreement: null, precision: null, recall: null } : lib.gradeWholeRun(result, silver);
-    return { axes: graded.axes, axesBelowFloor: graded.axesBelowFloor, rowsWithEnoughPeople: graded.rowsWithEnoughPeople, rows: graded.rows, stances: graded.stances,
-        agreement: graded.agreement, precision: graded.precision, recall: graded.recall,
-        usd: meter.calls.reduce((sum, call) => sum + call.usd, 0), seconds: lib.runLatencySeconds(meter.calls, concurrency),
+    return { ...graded, usd: meter.calls.reduce((sum, call) => sum + call.usd, 0), seconds: lib.runLatencySeconds(meter.calls, concurrency),
         calls: meter.calls.length, cachedCalls: result.stats.cachedCalls, summaryFailed: result.synthesis === null };
 }
 
 async function measure({ configKey, threadId, repeats, silver, apiKey, ledger, concurrency }) {
-    const configuration = CONFIGURATIONS[configKey];
-    const thread = loadThreadSnapshot(threadId);
+    const { keys, firstRunDirectory: firstRunDirectoryOf } = CONFIGURATIONS[configKey];
+    const thread = await lib.loadThread(threadId);
     const reference = threadId === silver.threadId ? silver : null;
-    if (reference !== null && (thread.comments.length !== silver.comments || lib.threadChars(thread) !== silver.chars)) {
-        throw new Error(`the snapshot of thread ${threadId} is not the one silver was built on`);
-    }
+    if (reference !== null) lib.checkSilverSnapshot(thread, silver);
     const runs = [];
     for (let runNumber = 1; runNumber <= 1 + repeats; runNumber += 1) {
-        const modelCallChat = runNumber === 1
-            ? lib.makeModelCallChat({ apiKey, ledger, cacheDirectory: configuration.firstRunDirectory(threadId) })
-            : lib.repeatCallChat({ apiKey, ledger, name: `pipeline-${threadId}-${configKey}`, repeat: runNumber - 1 });
+        const modelCallChat = lib.runCallChat({ apiKey, ledger, name: `pipeline-${threadId}-${configKey}`, runNumber, firstCacheDirectory: firstRunDirectoryOf(threadId) });
         const label = `${configKey} thread ${threadId} run ${runNumber}`;
-        const run = await runOnce({ configuration, thread, silver: reference, modelCallChat, concurrency, label });
+        const run = await runOnce({ keys, thread, silver: reference, modelCallChat, concurrency, label });
         console.log(runLine(label, run));
         runs.push(run);
     }
-    const models = Object.fromEntries(Object.entries(configuration.keys).map(([role, key]) => [role, core.modelDisplayName(core.roleChoice(role, key))]));
-    return { config: configKey, threadId, keys: configuration.keys, models, runs,
-        ...Object.fromEntries(SPREAD_FIELDS.map(field => [field, lib.runSpread(runs, field)])), measuredAt: new Date().toISOString() };
-}
-
-function readResults(silver) {
-    const stored = fs.existsSync(RESULT_FILE) ? JSON.parse(fs.readFileSync(RESULT_FILE, 'utf8')) : null;
-    // Grades against another build of silver do not compare with new ones.
-    const results = stored !== null && stored.silverBuiltAt === silver.builtAt ? stored.results : {};
-    return { silverThreadId: silver.threadId, silverBuiltAt: silver.builtAt, results };
+    const models = Object.fromEntries(Object.entries(keys).map(([role, key]) => [role, core.modelDisplayName(core.roleChoice(role, key))]));
+    return { config: configKey, threadId, keys, models, runs, ...lib.runSummary(runs, SPREAD_FIELDS), measuredAt: new Date().toISOString() };
 }
 
 async function main() {
     const silver = lib.readSilver();
     if (silver.threadId !== SILVER_THREAD_ID) throw new Error(`silver is built on thread ${silver.threadId}, not ${SILVER_THREAD_ID}`);
-    const configList = lib.readArgument('config');
-    const configKeys = process.argv.includes('--all') ? Object.keys(CONFIGURATIONS) : configList === null ? [] : configList.split(',');
-    if (configKeys.length === 0) throw new Error('pass --config=<key>[,<key>...] or --all');
-    const unknown = configKeys.filter(key => CONFIGURATIONS[key] === undefined);
-    if (unknown.length > 0) throw new Error(`unknown configuration ${unknown.join(', ')}; the configurations are ${Object.keys(CONFIGURATIONS).join(', ')}`);
+    const configKeys = lib.readKeyList('config', CONFIGURATIONS);
     const threadList = lib.readArgument('thread');
     const threadIds = threadList === null ? null : threadList.split(',').map(Number);
     const tasks = configKeys.flatMap(configKey => CONFIGURATIONS[configKey].threads
@@ -123,11 +89,12 @@ async function main() {
         .map(threadId => ({ configKey, threadId })));
     if (tasks.length === 0) throw new Error('no listed configuration runs on the given threads');
     const repeats = lib.readRepeats();
-    const benchmark = readResults(silver);
+    const benchmark = { silverThreadId: silver.threadId, silverBuiltAt: silver.builtAt, results: lib.readStoredResults(RESULT_FILE, silver) ?? {} };
     const ledger = { spentUsd: 0, capUsd: Number(lib.readArgument('budget') ?? DEFAULT_BUDGET_USD) };
     const apiKey = lib.requireApiKey();
     const concurrency = Number(lib.readArgument('concurrency') ?? core.DEFAULT_CONFIG.concurrency);
-    // The tasks run side by side; the runs of one task run one after another. Each result is saved as it arrives.
+    // The tasks run side by side; the runs of one task run one after another, so that the calls in flight stay
+    // within one run's concurrency per task. Each result is saved as it arrives.
     await Promise.all(tasks.map(async task => {
         benchmark.results[`${task.configKey}-${task.threadId}`] = await measure({ ...task, repeats, silver, apiKey, ledger, concurrency });
         fs.writeFileSync(RESULT_FILE, JSON.stringify(benchmark, null, 1) + '\n', 'utf8');
@@ -135,8 +102,7 @@ async function main() {
     console.log(`wrote ${RESULT_FILE}; $${ledger.spentUsd.toFixed(2)} spent in this run`);
 }
 
-module.exports = { CONFIGURATIONS };
-if (require.main === module) main().catch(error => {
+main().catch(error => {
     process.stderr.write(`ERROR: ${error.message}\n`);
     process.exitCode = 1;
 });

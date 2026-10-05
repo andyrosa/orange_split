@@ -180,15 +180,11 @@ function isOutputFailure(error) {
     return error instanceof core.InvalidResponseError || error instanceof core.TruncationError;
 }
 
-function percent(share) {
-    return `${(share * 100).toFixed(1)}%`;
-}
-
 function runLine(label, run) {
     const figures = run.failed
         ? `FAILED: ${run.failed}`
-        : `${run.axes} axes, ${run.rowsWithEnoughPeople} outside "too few", ${run.stances} stances; F1 against silver ${percent(run.agreement)} `
-            + `(precision ${percent(run.precision)}, recall ${percent(run.recall)}), ${run.pairedAxes} of ${run.referenceAxes} silver axes paired`;
+        : `${run.axes} axes, ${run.rowsWithEnoughPeople} outside "too few", ${run.stances} stances; F1 against silver ${lib.percent(run.agreement)} `
+            + `(precision ${lib.percent(run.precision)}, recall ${lib.percent(run.recall)}), ${run.pairedAxes} of ${run.referenceAxes} silver axes paired`;
     return `${label}: ${figures}; $${run.usd.toFixed(4)}, ${run.seconds} s, ${run.calls} calls`;
 }
 
@@ -224,17 +220,14 @@ async function runChoice({ choiceKey, silver, thread, modelCallChat, label }) {
 // F1 0 and has no shape.
 const SPREAD_FIELDS = Object.freeze(['agreement', 'precision', 'recall', 'axes', 'rowsWithEnoughPeople', 'stances', 'usd', 'seconds']);
 function variantSummary(runs) {
-    return { runs, ...Object.fromEntries(SPREAD_FIELDS.map(field => [field, lib.runSpread(runs, field)])) };
+    return { runs, ...lib.runSummary(runs, SPREAD_FIELDS) };
 }
 
-// Run 1 replays the shared cache; each repeat has its own cache, so its requests are answered anew.
 async function measureChoice({ choiceKey, repeats, silver, thread, apiKey, ledger }) {
     const choice = SINGLE_CALL_CHOICES[choiceKey];
     const runs = [];
     for (let runNumber = 1; runNumber <= 1 + repeats; runNumber += 1) {
-        const modelCallChat = runNumber === 1
-            ? lib.makeModelCallChat({ apiKey, ledger, cacheDirectory: lib.CACHE_DIRECTORY })
-            : lib.repeatCallChat({ apiKey, ledger, name: `single-${choiceKey}`, repeat: runNumber - 1 });
+        const modelCallChat = lib.runCallChat({ apiKey, ledger, name: `single-${choiceKey}`, runNumber, firstCacheDirectory: lib.CACHE_DIRECTORY });
         const label = `${choiceKey} run ${runNumber}`;
         const result = await runChoice({ choiceKey, silver, thread, modelCallChat, label });
         console.log(runLine(`${label} oneCall`, result.oneCall));
@@ -245,31 +238,16 @@ async function measureChoice({ choiceKey, repeats, silver, thread, apiKey, ledge
         twoCalls: variantSummary(runs.map(run => run.twoCalls)), measuredAt: new Date().toISOString() };
 }
 
-function readResults(silver) {
-    const header = { threadId: silver.threadId, title: silver.title, comments: silver.comments, chars: silver.chars, silverBuiltAt: silver.builtAt };
-    const stored = fs.existsSync(RESULT_FILE) ? JSON.parse(fs.readFileSync(RESULT_FILE, 'utf8')) : null;
-    // Results graded against another build of silver, or stored before each variant kept its runs, do not
-    // compare with new ones.
-    const comparable = stored !== null && stored.silverBuiltAt === silver.builtAt;
-    const results = comparable ? Object.fromEntries(Object.entries(stored.results).filter(([key, result]) => Array.isArray(result.oneCall?.runs))) : {};
-    return { ...header, results };
-}
-
 async function main() {
     const silver = lib.readSilver();
-    const choiceList = lib.readArgument('choice');
-    const keys = process.argv.includes('--all') ? Object.keys(SINGLE_CALL_CHOICES) : choiceList === null ? [] : choiceList.split(',');
-    if (keys.length === 0) throw new Error('pass --choice=<key>[,<key>...] or --all');
-    const unknown = keys.filter(key => SINGLE_CALL_CHOICES[key] === undefined);
-    if (unknown.length > 0) throw new Error(`unknown choice ${unknown.join(', ')}; the choices are ${Object.keys(SINGLE_CALL_CHOICES).join(', ')}`);
+    const keys = lib.readKeyList('choice', SINGLE_CALL_CHOICES);
     const repeats = lib.readRepeats();
-    const benchmark = readResults(silver);
+    const benchmark = { threadId: silver.threadId, title: silver.title, comments: silver.comments, chars: silver.chars, silverBuiltAt: silver.builtAt,
+        results: lib.readStoredResults(RESULT_FILE, silver) ?? {} };
     const ledger = { spentUsd: 0, capUsd: Number(lib.readArgument('budget') ?? DEFAULT_BUDGET_USD) };
     const apiKey = lib.requireApiKey();
     const thread = await lib.loadThread(silver.threadId);
-    if (thread.comments.length !== silver.comments || lib.threadChars(thread) !== silver.chars) {
-        throw new Error(`the thread snapshot (${thread.comments.length} comments) is not the one the reference was built on (${silver.comments} comments)`);
-    }
+    lib.checkSilverSnapshot(thread, silver);
     // The choices run side by side; each result is saved as it arrives.
     await Promise.all(keys.map(async key => {
         benchmark.results[key] = await measureChoice({ choiceKey: key, repeats, silver, thread, apiKey, ledger });

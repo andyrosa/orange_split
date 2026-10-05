@@ -85,9 +85,39 @@ async function loadThread(threadId) {
         process.stderr.write(`Fetching thread ${threadId}\n`);
         fs.writeFileSync(threadFile, JSON.stringify(await core.fetchThreadItem(String(threadId))), 'utf8');
     }
+    return readThreadSnapshot(threadFile, threadId);
+}
+
+// A saved thread snapshot, checked to hold the expected thread, as the pipeline sees it.
+function readThreadSnapshot(threadFile, threadId) {
     const item = JSON.parse(fs.readFileSync(threadFile, 'utf8'));
     if (String(item.id) !== String(threadId)) throw new Error(`${threadFile} holds thread ${item.id}, not ${threadId}`);
     return core.flattenThread(item);
+}
+
+// Stops when the thread is not the snapshot silver was built on, which would make every grade meaningless.
+function checkSilverSnapshot(thread, silver) {
+    if (thread.comments.length !== silver.comments || threadChars(thread) !== silver.chars) {
+        throw new Error(`the thread snapshot (${thread.comments.length} comments) is not the one silver was built on (${silver.comments} comments)`);
+    }
+}
+
+// The keys a command names with --<name>=<key>[,<key>...], or every key of the table with --all.
+function readKeyList(name, table) {
+    const list = readArgument(name);
+    const keys = process.argv.includes('--all') ? Object.keys(table) : list === null ? [] : list.split(',');
+    if (keys.length === 0) throw new Error(`pass --${name}=<key>[,<key>...] or --all`);
+    const unknown = keys.filter(key => table[key] === undefined);
+    if (unknown.length > 0) throw new Error(`unknown ${name} ${unknown.join(', ')}; the keys are ${Object.keys(table).join(', ')}`);
+    return keys;
+}
+
+// The results stored in a results file, or null when there is none or it was graded against another build
+// of silver, whose results do not compare with new ones.
+function readStoredResults(file, silver) {
+    if (!fs.existsSync(file)) return null;
+    const stored = JSON.parse(fs.readFileSync(file, 'utf8'));
+    return stored.silverBuiltAt === silver.builtAt ? stored.results : null;
 }
 
 function threadChars(thread) {
@@ -120,12 +150,14 @@ function makeModelCallChat({ apiKey, ledger, cacheDirectory }) {
     return core.makeCachedCallChat(timed, makeFileStore(cacheDirectory));
 }
 
-// The call path of one repeat of a measurement: repeat 1 is the second run. Each repeat keeps its model calls
-// in its own directory under REPEATS_DIRECTORY, so an identical request is answered anew and a rerun of the
-// repeat is free. name identifies the measurement, such as "consolidation-sonnet55".
-function repeatCallChat({ apiKey, ledger, name, repeat }) {
-    if (!Number.isInteger(repeat) || repeat < 1) throw new Error(`repeat must be a whole number from 1, not ${repeat}`);
-    return makeModelCallChat({ apiKey, ledger, cacheDirectory: path.join(REPEATS_DIRECTORY, `${name}-run${repeat}`) });
+// The call path of run `runNumber` of a measurement. Run 1 uses firstCacheDirectory, which is shared, so
+// measuring again replays it. Every later run keeps its model calls in its own directory under
+// REPEATS_DIRECTORY, so an identical request is answered anew and a rerun of that run is free. name identifies
+// the measurement, such as "consolidation-sonnet55"; run 2 is its "run1" directory.
+function runCallChat({ apiKey, ledger, name, runNumber, firstCacheDirectory }) {
+    if (!Number.isInteger(runNumber) || runNumber < 1) throw new Error(`runNumber must be a whole number from 1, not ${runNumber}`);
+    const cacheDirectory = runNumber === 1 ? firstCacheDirectory : path.join(REPEATS_DIRECTORY, `${name}-run${runNumber - 1}`);
+    return makeModelCallChat({ apiKey, ledger, cacheDirectory });
 }
 
 // The number of runs a measurement has after `repeats` more: --repeats=<n> on the command line, 0 when absent.
@@ -340,8 +372,18 @@ function runSpread(runs, field) {
     return { mean: rounded(values.reduce((sum, value) => sum + value, 0) / values.length), lowest: Math.min(...values), highest: Math.max(...values), runs: values.length };
 }
 
+// The mean, lowest, and highest of each field over runs, keyed by field.
+function runSummary(runs, fields) {
+    return Object.fromEntries(fields.map(field => [field, runSpread(runs, field)]));
+}
+
 function rounded(value) {
     return Number(value.toFixed(PRECISION_DIGITS));
+}
+
+// A share as a percentage with one decimal, as the benchmark scripts print it.
+function percent(share) {
+    return `${(share * 100).toFixed(1)}%`;
 }
 
 // Whole runs --------------------------------------------------------------------
@@ -435,19 +477,6 @@ function wholeRunShape(result) {
 function gradeWholeRun(result, reference) {
     const { agreed } = stancesOfResult(result);
     return { ...gradeStancesAgainst({ axes: result.axes, agreed }, reference), ...wholeRunShape(result) };
-}
-
-// A whole run in the shape of the silver reference, so that another run can be graded against it: its scored
-// axes, the stances both of its scoring passes gave, as disputed cells those only one pass gave or the passes
-// gave differently, and the people on each row.
-function referenceOfWholeRun(result) {
-    const { agreed, unsure } = stancesOfResult(result);
-    const cell = key => {
-        const { commentId, axisId } = core.parseStanceKey(key);
-        return [commentId, axisId];
-    };
-    return { axes: result.axes, stances: [...agreed].map(([key, stance]) => [...cell(key), stance]), disputedCells: [...unsure].map(cell),
-        rows: result.rows.map(row => ({ axisId: row.axisId, people: row.authors })) };
 }
 
 // The latency of a run's calls, by stage, as the page forecasts it: a stage takes at least its slowest call,
@@ -546,10 +575,11 @@ function silverStanceTable(silver) {
 }
 
 module.exports = {
-    core, REPO_ROOT, SILVER_FILE, BENCHMARK_FILE, WORK_DIRECTORY, CACHE_DIRECTORY, REPEATS_DIRECTORY, SILVER_MODELS, MODEL,
-    readArgument, requireApiKey, silverConfig, loadThread, threadChars, makeModelCallChat, repeatCallChat, readRepeats, makeMeter, runStages,
+    core, REPO_ROOT, SILVER_FILE, BENCHMARK_FILE, WORK_DIRECTORY, CACHE_DIRECTORY, SILVER_MODELS, MODEL,
+    readArgument, requireApiKey, silverConfig, loadThread, readThreadSnapshot, checkSilverSnapshot, readKeyList, readStoredResults, threadChars,
+    makeModelCallChat, runCallChat, readRepeats, makeMeter, runStages,
     fixedCandidates, fixedAxes, oneAxisOfAllCandidates, fixedStances, noStances, noSummary,
-    stancesOfResult, summaryMarkers, agreementOf, companions, consolidationAgreement, scoringAgreement, runSpread, rounded,
-    gradeStancesAgainst, wholeRunShape, gradeWholeRun, referenceOfWholeRun, runLatencySeconds,
+    stancesOfResult, summaryMarkers, agreementOf, companions, consolidationAgreement, scoringAgreement, runSpread, runSummary, rounded, percent,
+    gradeStancesAgainst, wholeRunShape, gradeWholeRun, runLatencySeconds,
     matchCandidates, checkSummary, readSilver, silverStanceTable,
 };

@@ -2,8 +2,8 @@
  "silverThreadId": 22866284,
  "silverBuiltAt": "2026-10-04T20:30:05.702Z",
  "results": {
-  "defaults-22866284": {
-   "config": "defaults",
+  "sonnet55Luna56-22866284": {
+   "config": "sonnet55Luna56",
    "threadId": 22866284,
    "keys": {
     "extraction": "luna6Low",
@@ -19,14 +19,71 @@
    },
    "runs": [
     {
-     "axes": 8,
-     "axesBelowFloor": 0,
-     "rowsWithEnoughPeople": 4,
-     "rows": 8,
-     "stances": 211,
      "agreement": 0.3671,
      "precision": 0.4621,
      "recall": 0.3045,
+     "given": 145,
+     "correct": 67,
+     "referenceStances": 220,
+     "axes": 8,
+     "pairedAxes": 7,
+     "referenceAxes": 32,
+     "pairedPeopleShare": 0.4213,
+     "pairs": [
+      {
+       "runAxisId": 1,
+       "referenceAxisId": 1,
+       "sharedComments": 19,
+       "similarity": 0.5429,
+       "swapped": false
+      },
+      {
+       "runAxisId": 2,
+       "referenceAxisId": 2,
+       "sharedComments": 12,
+       "similarity": 0.5455,
+       "swapped": false
+      },
+      {
+       "runAxisId": 3,
+       "referenceAxisId": 21,
+       "sharedComments": 8,
+       "similarity": 0.3478,
+       "swapped": false
+      },
+      {
+       "runAxisId": 5,
+       "referenceAxisId": 7,
+       "sharedComments": 10,
+       "similarity": 0.4762,
+       "swapped": false
+      },
+      {
+       "runAxisId": 6,
+       "referenceAxisId": 3,
+       "sharedComments": 10,
+       "similarity": 0.303,
+       "swapped": false
+      },
+      {
+       "runAxisId": 7,
+       "referenceAxisId": 10,
+       "sharedComments": 5,
+       "similarity": 0.25,
+       "swapped": true
+      },
+      {
+       "runAxisId": 8,
+       "referenceAxisId": 16,
+       "sharedComments": 5,
+       "similarity": 0.3333,
+       "swapped": false
+      }
+     ],
+     "axesBelowFloor": 0,
+     "stances": 211,
+     "rows": 8,
+     "rowsWithEnoughPeople": 4,
      "usd": 0.11739754000000002,
      "seconds": null,
      "calls": 53,
@@ -34,33 +91,140 @@
      "summaryFailed": false
     },
     {
-     "axes": 8,
-     "axesBelowFloor": 0,
-     "rowsWithEnoughPeople": 5,
-     "rows": 8,
-     "stances": 213,
      "agreement": 0.4098,
      "precision": 0.5137,
      "recall": 0.3409,
-     "usd": 0.11419580500000001,
+     "given": 146,
+     "correct": 75,
+     "referenceStances": 220,
+     "axes": 8,
+     "pairedAxes": 7,
+     "referenceAxes": 32,
+     "pairedPeopleShare": 0.4101,
+     "pairs": [
+      {
+       "runAxisId": 1,
+       "referenceAxisId": 1,
+       "sharedComments": 20,
+       "similarity": 0.625,
+       "swapped": false
+      },
+      {
+       "runAxisId": 2,
+       "referenceAxisId": 4,
+       "sharedComments": 13,
+       "similarity": 0.4815,
+       "swapped": false
+      },
+      {
+       "runAxisId": 4,
+       "referenceAxisId": 22,
+       "sharedComments": 6,
+       "similarity": 0.4286,
+       "swapped": false
+      },
+      {
+       "runAxisId": 5,
+       "referenceAxisId": 7,
+       "sharedComments": 10,
+       "similarity": 0.4545,
+       "swapped": false
+      },
+      {
+       "runAxisId": 6,
+       "referenceAxisId": 15,
+       "sharedComments": 8,
+       "similarity": 0.8889,
+       "swapped": false
+      },
+      {
+       "runAxisId": 7,
+       "referenceAxisId": 3,
+       "sharedComments": 15,
+       "similarity": 0.4054,
+       "swapped": false
+      },
+      {
+       "runAxisId": 8,
+       "referenceAxisId": 16,
+       "sharedComments": 6,
+       "similarity": 0.375,
+       "swapped": false
+      }
+     ],
+     "axesBelowFloor": 0,
+     "stances": 213,
+     "rows": 8,
+     "rowsWithEnoughPeople": 5,
+     "usd": 0.11419580500000004,
      "seconds": 42.891,
      "calls": 53,
-     "cachedCalls": 0,
+     "cachedCalls": 53,
      "summaryFailed": false
     },
     {
-     "axes": 6,
-     "axesBelowFloor": 0,
-     "rowsWithEnoughPeople": 4,
-     "rows": 6,
-     "stances": 169,
      "agreement": 0.3389,
      "precision": 0.4357,
      "recall": 0.2773,
-     "usd": 0.10541194,
+     "given": 140,
+     "correct": 61,
+     "referenceStances": 220,
+     "axes": 6,
+     "pairedAxes": 6,
+     "referenceAxes": 32,
+     "pairedPeopleShare": 0.3146,
+     "pairs": [
+      {
+       "runAxisId": 1,
+       "referenceAxisId": 1,
+       "sharedComments": 19,
+       "similarity": 0.4524,
+       "swapped": false
+      },
+      {
+       "runAxisId": 2,
+       "referenceAxisId": 2,
+       "sharedComments": 12,
+       "similarity": 0.5455,
+       "swapped": false
+      },
+      {
+       "runAxisId": 3,
+       "referenceAxisId": 7,
+       "sharedComments": 9,
+       "similarity": 0.3913,
+       "swapped": false
+      },
+      {
+       "runAxisId": 4,
+       "referenceAxisId": 10,
+       "sharedComments": 9,
+       "similarity": 0.3,
+       "swapped": false
+      },
+      {
+       "runAxisId": 5,
+       "referenceAxisId": 15,
+       "sharedComments": 9,
+       "similarity": 1,
+       "swapped": true
+      },
+      {
+       "runAxisId": 6,
+       "referenceAxisId": 16,
+       "sharedComments": 6,
+       "similarity": 0.2609,
+       "swapped": false
+      }
+     ],
+     "axesBelowFloor": 0,
+     "stances": 169,
+     "rows": 6,
+     "rowsWithEnoughPeople": 4,
+     "usd": 0.10541193999999997,
      "seconds": 37.632,
      "calls": 53,
-     "cachedCalls": 0,
+     "cachedCalls": 53,
      "summaryFailed": false
     }
    ],
@@ -102,7 +266,7 @@
    },
    "usd": {
     "mean": 0.1123,
-    "lowest": 0.10541194,
+    "lowest": 0.10541193999999997,
     "highest": 0.11739754000000002,
     "runs": 3
    },
@@ -112,7 +276,7 @@
     "highest": 42.891,
     "runs": 2
    },
-   "measuredAt": "2026-10-05T04:01:03.450Z"
+   "measuredAt": "2026-10-05T04:44:10.259Z"
   },
   "sonnet55Luna6-22866284": {
    "config": "sonnet55Luna6",
@@ -131,14 +295,64 @@
    },
    "runs": [
     {
-     "axes": 8,
-     "axesBelowFloor": 0,
-     "rowsWithEnoughPeople": 2,
-     "rows": 8,
-     "stances": 183,
      "agreement": 0.3743,
      "precision": 0.5246,
      "recall": 0.2909,
+     "given": 122,
+     "correct": 64,
+     "referenceStances": 220,
+     "axes": 8,
+     "pairedAxes": 6,
+     "referenceAxes": 32,
+     "pairedPeopleShare": 0.4101,
+     "pairs": [
+      {
+       "runAxisId": 1,
+       "referenceAxisId": 1,
+       "sharedComments": 21,
+       "similarity": 0.6,
+       "swapped": false
+      },
+      {
+       "runAxisId": 2,
+       "referenceAxisId": 2,
+       "sharedComments": 12,
+       "similarity": 0.6316,
+       "swapped": false
+      },
+      {
+       "runAxisId": 3,
+       "referenceAxisId": 4,
+       "sharedComments": 11,
+       "similarity": 0.44,
+       "swapped": false
+      },
+      {
+       "runAxisId": 5,
+       "referenceAxisId": 7,
+       "sharedComments": 10,
+       "similarity": 0.5556,
+       "swapped": false
+      },
+      {
+       "runAxisId": 6,
+       "referenceAxisId": 3,
+       "sharedComments": 8,
+       "similarity": 0.2286,
+       "swapped": false
+      },
+      {
+       "runAxisId": 8,
+       "referenceAxisId": 16,
+       "sharedComments": 4,
+       "similarity": 0.3077,
+       "swapped": false
+      }
+     ],
+     "axesBelowFloor": 0,
+     "stances": 183,
+     "rows": 8,
+     "rowsWithEnoughPeople": 2,
      "usd": 0.07157434,
      "seconds": null,
      "calls": 53,
@@ -146,33 +360,161 @@
      "summaryFailed": false
     },
     {
-     "axes": 7,
-     "axesBelowFloor": 0,
-     "rowsWithEnoughPeople": 1,
-     "rows": 7,
-     "stances": 137,
      "agreement": 0.3333,
      "precision": 0.4828,
      "recall": 0.2545,
+     "given": 116,
+     "correct": 56,
+     "referenceStances": 220,
+     "axes": 7,
+     "pairedAxes": 7,
+     "referenceAxes": 32,
+     "pairedPeopleShare": 0.3258,
+     "pairs": [
+      {
+       "runAxisId": 1,
+       "referenceAxisId": 1,
+       "sharedComments": 15,
+       "similarity": 0.375,
+       "swapped": false
+      },
+      {
+       "runAxisId": 2,
+       "referenceAxisId": 22,
+       "sharedComments": 5,
+       "similarity": 0.3125,
+       "swapped": true
+      },
+      {
+       "runAxisId": 3,
+       "referenceAxisId": 7,
+       "sharedComments": 10,
+       "similarity": 0.4762,
+       "swapped": true
+      },
+      {
+       "runAxisId": 4,
+       "referenceAxisId": 15,
+       "sharedComments": 7,
+       "similarity": 0.7778,
+       "swapped": false
+      },
+      {
+       "runAxisId": 5,
+       "referenceAxisId": 10,
+       "sharedComments": 8,
+       "similarity": 0.4,
+       "swapped": false
+      },
+      {
+       "runAxisId": 6,
+       "referenceAxisId": 12,
+       "sharedComments": 7,
+       "similarity": 0.4667,
+       "swapped": false
+      },
+      {
+       "runAxisId": 7,
+       "referenceAxisId": 21,
+       "sharedComments": 5,
+       "similarity": 0.4167,
+       "swapped": false
+      }
+     ],
+     "axesBelowFloor": 0,
+     "stances": 137,
+     "rows": 7,
+     "rowsWithEnoughPeople": 1,
      "usd": 0.06907203,
      "seconds": 34.106,
      "calls": 53,
-     "cachedCalls": 0,
+     "cachedCalls": 53,
      "summaryFailed": false
     },
     {
-     "axes": 10,
-     "axesBelowFloor": 0,
-     "rowsWithEnoughPeople": 4,
-     "rows": 10,
-     "stances": 160,
      "agreement": 0.4244,
      "precision": 0.5887,
      "recall": 0.3318,
-     "usd": 0.07304169,
+     "given": 124,
+     "correct": 73,
+     "referenceStances": 220,
+     "axes": 10,
+     "pairedAxes": 9,
+     "referenceAxes": 32,
+     "pairedPeopleShare": 0.4438,
+     "pairs": [
+      {
+       "runAxisId": 1,
+       "referenceAxisId": 1,
+       "sharedComments": 15,
+       "similarity": 0.5769,
+       "swapped": false
+      },
+      {
+       "runAxisId": 2,
+       "referenceAxisId": 2,
+       "sharedComments": 9,
+       "similarity": 0.4286,
+       "swapped": false
+      },
+      {
+       "runAxisId": 3,
+       "referenceAxisId": 4,
+       "sharedComments": 12,
+       "similarity": 0.5,
+       "swapped": false
+      },
+      {
+       "runAxisId": 5,
+       "referenceAxisId": 7,
+       "sharedComments": 10,
+       "similarity": 0.5882,
+       "swapped": false
+      },
+      {
+       "runAxisId": 6,
+       "referenceAxisId": 15,
+       "sharedComments": 8,
+       "similarity": 0.8889,
+       "swapped": true
+      },
+      {
+       "runAxisId": 7,
+       "referenceAxisId": 5,
+       "sharedComments": 5,
+       "similarity": 0.3333,
+       "swapped": false
+      },
+      {
+       "runAxisId": 8,
+       "referenceAxisId": 10,
+       "sharedComments": 5,
+       "similarity": 0.3846,
+       "swapped": true
+      },
+      {
+       "runAxisId": 9,
+       "referenceAxisId": 16,
+       "sharedComments": 5,
+       "similarity": 0.3571,
+       "swapped": false
+      },
+      {
+       "runAxisId": 10,
+       "referenceAxisId": 14,
+       "sharedComments": 5,
+       "similarity": 0.5,
+       "swapped": true
+      }
+     ],
+     "axesBelowFloor": 0,
+     "stances": 160,
+     "rows": 10,
+     "rowsWithEnoughPeople": 4,
+     "usd": 0.07304169000000002,
      "seconds": 39.673,
      "calls": 53,
-     "cachedCalls": 0,
+     "cachedCalls": 53,
      "summaryFailed": false
     }
    ],
@@ -215,7 +557,7 @@
    "usd": {
     "mean": 0.0712,
     "lowest": 0.06907203,
-    "highest": 0.07304169,
+    "highest": 0.07304169000000002,
     "runs": 3
    },
    "seconds": {
@@ -224,7 +566,7 @@
     "highest": 39.673,
     "runs": 2
    },
-   "measuredAt": "2026-10-05T04:00:52.540Z"
+   "measuredAt": "2026-10-05T04:44:10.260Z"
   },
   "sol61Luna56-22866284": {
    "config": "sol61Luna56",
@@ -243,14 +585,106 @@
    },
    "runs": [
     {
-     "axes": 15,
-     "axesBelowFloor": 0,
-     "rowsWithEnoughPeople": 5,
-     "rows": 15,
-     "stances": 185,
      "agreement": 0.4205,
      "precision": 0.5606,
      "recall": 0.3364,
+     "given": 132,
+     "correct": 74,
+     "referenceStances": 220,
+     "axes": 15,
+     "pairedAxes": 12,
+     "referenceAxes": 32,
+     "pairedPeopleShare": 0.5,
+     "pairs": [
+      {
+       "runAxisId": 1,
+       "referenceAxisId": 1,
+       "sharedComments": 17,
+       "similarity": 0.6538,
+       "swapped": false
+      },
+      {
+       "runAxisId": 2,
+       "referenceAxisId": 2,
+       "sharedComments": 9,
+       "similarity": 0.4091,
+       "swapped": false
+      },
+      {
+       "runAxisId": 3,
+       "referenceAxisId": 22,
+       "sharedComments": 5,
+       "similarity": 0.3571,
+       "swapped": false
+      },
+      {
+       "runAxisId": 5,
+       "referenceAxisId": 7,
+       "sharedComments": 10,
+       "similarity": 0.4762,
+       "swapped": false
+      },
+      {
+       "runAxisId": 6,
+       "referenceAxisId": 15,
+       "sharedComments": 8,
+       "similarity": 0.8889,
+       "swapped": true
+      },
+      {
+       "runAxisId": 7,
+       "referenceAxisId": 3,
+       "sharedComments": 11,
+       "similarity": 0.3143,
+       "swapped": false
+      },
+      {
+       "runAxisId": 9,
+       "referenceAxisId": 13,
+       "sharedComments": 4,
+       "similarity": 0.6667,
+       "swapped": true
+      },
+      {
+       "runAxisId": 10,
+       "referenceAxisId": 14,
+       "sharedComments": 3,
+       "similarity": 0.5,
+       "swapped": true
+      },
+      {
+       "runAxisId": 11,
+       "referenceAxisId": 25,
+       "sharedComments": 3,
+       "similarity": 0.375,
+       "swapped": false
+      },
+      {
+       "runAxisId": 12,
+       "referenceAxisId": 18,
+       "sharedComments": 2,
+       "similarity": 0.5,
+       "swapped": false
+      },
+      {
+       "runAxisId": 14,
+       "referenceAxisId": 16,
+       "sharedComments": 5,
+       "similarity": 0.7143,
+       "swapped": false
+      },
+      {
+       "runAxisId": 15,
+       "referenceAxisId": 29,
+       "sharedComments": 3,
+       "similarity": 0.75,
+       "swapped": true
+      }
+     ],
+     "axesBelowFloor": 0,
+     "stances": 185,
+     "rows": 15,
+     "rowsWithEnoughPeople": 5,
      "usd": 0.11278461999999999,
      "seconds": null,
      "calls": 53,
@@ -258,33 +692,196 @@
      "summaryFailed": false
     },
     {
-     "axes": 11,
-     "axesBelowFloor": 0,
-     "rowsWithEnoughPeople": 2,
-     "rows": 11,
-     "stances": 166,
      "agreement": 0.4903,
      "precision": 0.6331,
      "recall": 0.4,
-     "usd": 0.11833694,
+     "given": 139,
+     "correct": 88,
+     "referenceStances": 220,
+     "axes": 11,
+     "pairedAxes": 11,
+     "referenceAxes": 32,
+     "pairedPeopleShare": 0.4944,
+     "pairs": [
+      {
+       "runAxisId": 1,
+       "referenceAxisId": 1,
+       "sharedComments": 15,
+       "similarity": 0.6,
+       "swapped": false
+      },
+      {
+       "runAxisId": 2,
+       "referenceAxisId": 2,
+       "sharedComments": 11,
+       "similarity": 0.55,
+       "swapped": false
+      },
+      {
+       "runAxisId": 3,
+       "referenceAxisId": 22,
+       "sharedComments": 6,
+       "similarity": 0.75,
+       "swapped": false
+      },
+      {
+       "runAxisId": 4,
+       "referenceAxisId": 4,
+       "sharedComments": 11,
+       "similarity": 0.55,
+       "swapped": false
+      },
+      {
+       "runAxisId": 5,
+       "referenceAxisId": 21,
+       "sharedComments": 8,
+       "similarity": 0.8,
+       "swapped": false
+      },
+      {
+       "runAxisId": 6,
+       "referenceAxisId": 15,
+       "sharedComments": 7,
+       "similarity": 0.7778,
+       "swapped": false
+      },
+      {
+       "runAxisId": 7,
+       "referenceAxisId": 7,
+       "sharedComments": 10,
+       "similarity": 0.4545,
+       "swapped": false
+      },
+      {
+       "runAxisId": 8,
+       "referenceAxisId": 17,
+       "sharedComments": 2,
+       "similarity": 0.5,
+       "swapped": false
+      },
+      {
+       "runAxisId": 9,
+       "referenceAxisId": 12,
+       "sharedComments": 8,
+       "similarity": 0.6667,
+       "swapped": false
+      },
+      {
+       "runAxisId": 10,
+       "referenceAxisId": 16,
+       "sharedComments": 4,
+       "similarity": 0.5714,
+       "swapped": false
+      },
+      {
+       "runAxisId": 11,
+       "referenceAxisId": 10,
+       "sharedComments": 6,
+       "similarity": 0.2222,
+       "swapped": false
+      }
+     ],
+     "axesBelowFloor": 0,
+     "stances": 166,
+     "rows": 11,
+     "rowsWithEnoughPeople": 2,
+     "usd": 0.11833693999999996,
      "seconds": 65.457,
      "calls": 53,
-     "cachedCalls": 0,
+     "cachedCalls": 53,
      "summaryFailed": false
     },
     {
-     "axes": 12,
-     "axesBelowFloor": 0,
-     "rowsWithEnoughPeople": 4,
-     "rows": 12,
-     "stances": 179,
      "agreement": 0.4157,
      "precision": 0.5441,
      "recall": 0.3364,
-     "usd": 0.11554114,
+     "given": 136,
+     "correct": 74,
+     "referenceStances": 220,
+     "axes": 12,
+     "pairedAxes": 10,
+     "referenceAxes": 32,
+     "pairedPeopleShare": 0.4831,
+     "pairs": [
+      {
+       "runAxisId": 1,
+       "referenceAxisId": 1,
+       "sharedComments": 17,
+       "similarity": 0.5313,
+       "swapped": false
+      },
+      {
+       "runAxisId": 2,
+       "referenceAxisId": 2,
+       "sharedComments": 11,
+       "similarity": 0.5,
+       "swapped": false
+      },
+      {
+       "runAxisId": 3,
+       "referenceAxisId": 15,
+       "sharedComments": 9,
+       "similarity": 1,
+       "swapped": true
+      },
+      {
+       "runAxisId": 4,
+       "referenceAxisId": 13,
+       "sharedComments": 2,
+       "similarity": 0.3333,
+       "swapped": false
+      },
+      {
+       "runAxisId": 5,
+       "referenceAxisId": 14,
+       "sharedComments": 4,
+       "similarity": 0.6667,
+       "swapped": false
+      },
+      {
+       "runAxisId": 7,
+       "referenceAxisId": 7,
+       "sharedComments": 10,
+       "similarity": 0.4545,
+       "swapped": false
+      },
+      {
+       "runAxisId": 8,
+       "referenceAxisId": 21,
+       "sharedComments": 7,
+       "similarity": 0.5833,
+       "swapped": false
+      },
+      {
+       "runAxisId": 10,
+       "referenceAxisId": 29,
+       "sharedComments": 3,
+       "similarity": 0.3,
+       "swapped": true
+      },
+      {
+       "runAxisId": 11,
+       "referenceAxisId": 3,
+       "sharedComments": 11,
+       "similarity": 0.2973,
+       "swapped": false
+      },
+      {
+       "runAxisId": 12,
+       "referenceAxisId": 22,
+       "sharedComments": 4,
+       "similarity": 0.5,
+       "swapped": true
+      }
+     ],
+     "axesBelowFloor": 0,
+     "stances": 179,
+     "rows": 12,
+     "rowsWithEnoughPeople": 4,
+     "usd": 0.11554114000000001,
      "seconds": 56.024,
      "calls": 53,
-     "cachedCalls": 0,
+     "cachedCalls": 53,
      "summaryFailed": false
     }
    ],
@@ -327,7 +924,7 @@
    "usd": {
     "mean": 0.1156,
     "lowest": 0.11278461999999999,
-    "highest": 0.11833694,
+    "highest": 0.11833693999999996,
     "runs": 3
    },
    "seconds": {
@@ -336,7 +933,7 @@
     "highest": 65.457,
     "runs": 2
    },
-   "measuredAt": "2026-10-05T04:01:47.472Z"
+   "measuredAt": "2026-10-05T04:44:10.256Z"
   },
   "sol61Luna6-22866284": {
    "config": "sol61Luna6",
@@ -355,14 +952,106 @@
    },
    "runs": [
     {
-     "axes": 15,
-     "axesBelowFloor": 0,
-     "rowsWithEnoughPeople": 3,
-     "rows": 15,
-     "stances": 135,
      "agreement": 0.4321,
      "precision": 0.6731,
      "recall": 0.3182,
+     "given": 104,
+     "correct": 70,
+     "referenceStances": 220,
+     "axes": 15,
+     "pairedAxes": 12,
+     "referenceAxes": 32,
+     "pairedPeopleShare": 0.4775,
+     "pairs": [
+      {
+       "runAxisId": 1,
+       "referenceAxisId": 1,
+       "sharedComments": 13,
+       "similarity": 0.5652,
+       "swapped": false
+      },
+      {
+       "runAxisId": 2,
+       "referenceAxisId": 2,
+       "sharedComments": 10,
+       "similarity": 0.5882,
+       "swapped": false
+      },
+      {
+       "runAxisId": 3,
+       "referenceAxisId": 22,
+       "sharedComments": 5,
+       "similarity": 0.8333,
+       "swapped": false
+      },
+      {
+       "runAxisId": 4,
+       "referenceAxisId": 4,
+       "sharedComments": 9,
+       "similarity": 0.45,
+       "swapped": false
+      },
+      {
+       "runAxisId": 5,
+       "referenceAxisId": 7,
+       "sharedComments": 10,
+       "similarity": 0.4545,
+       "swapped": false
+      },
+      {
+       "runAxisId": 6,
+       "referenceAxisId": 15,
+       "sharedComments": 6,
+       "similarity": 0.6667,
+       "swapped": true
+      },
+      {
+       "runAxisId": 7,
+       "referenceAxisId": 5,
+       "sharedComments": 6,
+       "similarity": 0.375,
+       "swapped": false
+      },
+      {
+       "runAxisId": 9,
+       "referenceAxisId": 13,
+       "sharedComments": 2,
+       "similarity": 0.3333,
+       "swapped": true
+      },
+      {
+       "runAxisId": 10,
+       "referenceAxisId": 14,
+       "sharedComments": 2,
+       "similarity": 0.3333,
+       "swapped": true
+      },
+      {
+       "runAxisId": 11,
+       "referenceAxisId": 25,
+       "sharedComments": 2,
+       "similarity": 0.6667,
+       "swapped": false
+      },
+      {
+       "runAxisId": 14,
+       "referenceAxisId": 16,
+       "sharedComments": 2,
+       "similarity": 0.2857,
+       "swapped": false
+      },
+      {
+       "runAxisId": 15,
+       "referenceAxisId": 29,
+       "sharedComments": 3,
+       "similarity": 0.6,
+       "swapped": true
+      }
+     ],
+     "axesBelowFloor": 0,
+     "stances": 135,
+     "rows": 15,
+     "rowsWithEnoughPeople": 3,
      "usd": 0.07146123000000001,
      "seconds": null,
      "calls": 53,
@@ -370,33 +1059,154 @@
      "summaryFailed": false
     },
     {
-     "axes": 9,
-     "axesBelowFloor": 0,
-     "rowsWithEnoughPeople": 2,
-     "rows": 9,
-     "stances": 118,
      "agreement": 0.3746,
      "precision": 0.6211,
      "recall": 0.2682,
-     "usd": 0.06469926,
+     "given": 95,
+     "correct": 59,
+     "referenceStances": 220,
+     "axes": 9,
+     "pairedAxes": 8,
+     "referenceAxes": 32,
+     "pairedPeopleShare": 0.3258,
+     "pairs": [
+      {
+       "runAxisId": 1,
+       "referenceAxisId": 1,
+       "sharedComments": 22,
+       "similarity": 0.5946,
+       "swapped": false
+      },
+      {
+       "runAxisId": 2,
+       "referenceAxisId": 22,
+       "sharedComments": 6,
+       "similarity": 0.75,
+       "swapped": false
+      },
+      {
+       "runAxisId": 3,
+       "referenceAxisId": 15,
+       "sharedComments": 8,
+       "similarity": 0.8889,
+       "swapped": false
+      },
+      {
+       "runAxisId": 5,
+       "referenceAxisId": 31,
+       "sharedComments": 3,
+       "similarity": 1,
+       "swapped": false
+      },
+      {
+       "runAxisId": 6,
+       "referenceAxisId": 14,
+       "sharedComments": 3,
+       "similarity": 0.5,
+       "swapped": true
+      },
+      {
+       "runAxisId": 7,
+       "referenceAxisId": 7,
+       "sharedComments": 10,
+       "similarity": 0.4762,
+       "swapped": false
+      },
+      {
+       "runAxisId": 8,
+       "referenceAxisId": 16,
+       "sharedComments": 2,
+       "similarity": 0.2222,
+       "swapped": false
+      },
+      {
+       "runAxisId": 9,
+       "referenceAxisId": 10,
+       "sharedComments": 7,
+       "similarity": 0.5,
+       "swapped": false
+      }
+     ],
+     "axesBelowFloor": 0,
+     "stances": 118,
+     "rows": 9,
+     "rowsWithEnoughPeople": 2,
+     "usd": 0.06469925999999998,
      "seconds": 58.645,
      "calls": 53,
-     "cachedCalls": 0,
+     "cachedCalls": 53,
      "summaryFailed": false
     },
     {
-     "axes": 8,
-     "axesBelowFloor": 0,
-     "rowsWithEnoughPeople": 1,
-     "rows": 8,
-     "stances": 116,
      "agreement": 0.3478,
      "precision": 0.6582,
      "recall": 0.2364,
+     "given": 79,
+     "correct": 52,
+     "referenceStances": 220,
+     "axes": 8,
+     "pairedAxes": 7,
+     "referenceAxes": 32,
+     "pairedPeopleShare": 0.2978,
+     "pairs": [
+      {
+       "runAxisId": 1,
+       "referenceAxisId": 1,
+       "sharedComments": 19,
+       "similarity": 0.5758,
+       "swapped": false
+      },
+      {
+       "runAxisId": 2,
+       "referenceAxisId": 7,
+       "sharedComments": 9,
+       "similarity": 0.45,
+       "swapped": false
+      },
+      {
+       "runAxisId": 3,
+       "referenceAxisId": 15,
+       "sharedComments": 8,
+       "similarity": 0.8,
+       "swapped": true
+      },
+      {
+       "runAxisId": 5,
+       "referenceAxisId": 13,
+       "sharedComments": 3,
+       "similarity": 0.6,
+       "swapped": false
+      },
+      {
+       "runAxisId": 6,
+       "referenceAxisId": 29,
+       "sharedComments": 3,
+       "similarity": 0.3333,
+       "swapped": true
+      },
+      {
+       "runAxisId": 7,
+       "referenceAxisId": 10,
+       "sharedComments": 7,
+       "similarity": 0.7,
+       "swapped": false
+      },
+      {
+       "runAxisId": 8,
+       "referenceAxisId": 14,
+       "sharedComments": 3,
+       "similarity": 0.5,
+       "swapped": false
+      }
+     ],
+     "axesBelowFloor": 0,
+     "stances": 116,
+     "rows": 8,
+     "rowsWithEnoughPeople": 1,
      "usd": 0.06173084,
      "seconds": 62.762,
      "calls": 53,
-     "cachedCalls": 0,
+     "cachedCalls": 53,
      "summaryFailed": false
     }
    ],
@@ -448,7 +1258,7 @@
     "highest": 62.762,
     "runs": 2
    },
-   "measuredAt": "2026-10-05T04:01:39.519Z"
+   "measuredAt": "2026-10-05T04:44:10.259Z"
   },
   "best-22866284": {
    "config": "best",
@@ -467,14 +1277,78 @@
    },
    "runs": [
     {
-     "axes": 8,
-     "axesBelowFloor": 0,
-     "rowsWithEnoughPeople": 2,
-     "rows": 8,
-     "stances": 161,
      "agreement": 0.4593,
      "precision": 0.6371,
      "recall": 0.3591,
+     "given": 124,
+     "correct": 79,
+     "referenceStances": 220,
+     "axes": 8,
+     "pairedAxes": 8,
+     "referenceAxes": 32,
+     "pairedPeopleShare": 0.3989,
+     "pairs": [
+      {
+       "runAxisId": 1,
+       "referenceAxisId": 1,
+       "sharedComments": 18,
+       "similarity": 0.6429,
+       "swapped": false
+      },
+      {
+       "runAxisId": 2,
+       "referenceAxisId": 4,
+       "sharedComments": 12,
+       "similarity": 0.8571,
+       "swapped": false
+      },
+      {
+       "runAxisId": 3,
+       "referenceAxisId": 21,
+       "sharedComments": 8,
+       "similarity": 0.7273,
+       "swapped": false
+      },
+      {
+       "runAxisId": 4,
+       "referenceAxisId": 2,
+       "sharedComments": 13,
+       "similarity": 0.65,
+       "swapped": true
+      },
+      {
+       "runAxisId": 5,
+       "referenceAxisId": 22,
+       "sharedComments": 6,
+       "similarity": 0.6667,
+       "swapped": true
+      },
+      {
+       "runAxisId": 6,
+       "referenceAxisId": 7,
+       "sharedComments": 11,
+       "similarity": 0.5789,
+       "swapped": false
+      },
+      {
+       "runAxisId": 7,
+       "referenceAxisId": 10,
+       "sharedComments": 8,
+       "similarity": 0.2667,
+       "swapped": false
+      },
+      {
+       "runAxisId": 8,
+       "referenceAxisId": 13,
+       "sharedComments": 3,
+       "similarity": 0.6,
+       "swapped": true
+      }
+     ],
+     "axesBelowFloor": 0,
+     "stances": 161,
+     "rows": 8,
+     "rowsWithEnoughPeople": 2,
      "usd": 1.08267394,
      "seconds": null,
      "calls": 53,
@@ -482,33 +1356,147 @@
      "summaryFailed": false
     },
     {
-     "axes": 7,
-     "axesBelowFloor": 0,
-     "rowsWithEnoughPeople": 3,
-     "rows": 7,
-     "stances": 168,
      "agreement": 0.4123,
      "precision": 0.5324,
      "recall": 0.3364,
-     "usd": 0.96118694,
+     "given": 139,
+     "correct": 74,
+     "referenceStances": 220,
+     "axes": 7,
+     "pairedAxes": 7,
+     "referenceAxes": 32,
+     "pairedPeopleShare": 0.3371,
+     "pairs": [
+      {
+       "runAxisId": 1,
+       "referenceAxisId": 1,
+       "sharedComments": 21,
+       "similarity": 0.5676,
+       "swapped": false
+      },
+      {
+       "runAxisId": 2,
+       "referenceAxisId": 2,
+       "sharedComments": 14,
+       "similarity": 0.7,
+       "swapped": false
+      },
+      {
+       "runAxisId": 3,
+       "referenceAxisId": 7,
+       "sharedComments": 11,
+       "similarity": 0.55,
+       "swapped": false
+      },
+      {
+       "runAxisId": 4,
+       "referenceAxisId": 10,
+       "sharedComments": 8,
+       "similarity": 0.2581,
+       "swapped": false
+      },
+      {
+       "runAxisId": 5,
+       "referenceAxisId": 16,
+       "sharedComments": 6,
+       "similarity": 0.4286,
+       "swapped": false
+      },
+      {
+       "runAxisId": 6,
+       "referenceAxisId": 15,
+       "sharedComments": 9,
+       "similarity": 0.75,
+       "swapped": false
+      },
+      {
+       "runAxisId": 7,
+       "referenceAxisId": 22,
+       "sharedComments": 6,
+       "similarity": 0.6667,
+       "swapped": false
+      }
+     ],
+     "axesBelowFloor": 0,
+     "stances": 168,
+     "rows": 7,
+     "rowsWithEnoughPeople": 3,
+     "usd": 0.9611869400000002,
      "seconds": 39.277,
      "calls": 53,
-     "cachedCalls": 0,
+     "cachedCalls": 53,
      "summaryFailed": false
     },
     {
-     "axes": 7,
-     "axesBelowFloor": 0,
-     "rowsWithEnoughPeople": 4,
-     "rows": 7,
-     "stances": 160,
      "agreement": 0.4138,
      "precision": 0.5625,
      "recall": 0.3273,
-     "usd": 1.0582480400000003,
+     "given": 128,
+     "correct": 72,
+     "referenceStances": 220,
+     "axes": 7,
+     "pairedAxes": 7,
+     "referenceAxes": 32,
+     "pairedPeopleShare": 0.3427,
+     "pairs": [
+      {
+       "runAxisId": 1,
+       "referenceAxisId": 1,
+       "sharedComments": 20,
+       "similarity": 0.5405,
+       "swapped": false
+      },
+      {
+       "runAxisId": 2,
+       "referenceAxisId": 2,
+       "sharedComments": 14,
+       "similarity": 0.7368,
+       "swapped": true
+      },
+      {
+       "runAxisId": 3,
+       "referenceAxisId": 7,
+       "sharedComments": 11,
+       "similarity": 0.5,
+       "swapped": true
+      },
+      {
+       "runAxisId": 4,
+       "referenceAxisId": 10,
+       "sharedComments": 8,
+       "similarity": 0.2667,
+       "swapped": false
+      },
+      {
+       "runAxisId": 5,
+       "referenceAxisId": 21,
+       "sharedComments": 8,
+       "similarity": 0.8,
+       "swapped": false
+      },
+      {
+       "runAxisId": 6,
+       "referenceAxisId": 22,
+       "sharedComments": 6,
+       "similarity": 1,
+       "swapped": false
+      },
+      {
+       "runAxisId": 7,
+       "referenceAxisId": 16,
+       "sharedComments": 5,
+       "similarity": 0.5,
+       "swapped": false
+      }
+     ],
+     "axesBelowFloor": 0,
+     "stances": 160,
+     "rows": 7,
+     "rowsWithEnoughPeople": 4,
+     "usd": 1.05824804,
      "seconds": 34.995,
      "calls": 53,
-     "cachedCalls": 0,
+     "cachedCalls": 53,
      "summaryFailed": false
     }
    ],
@@ -550,7 +1538,7 @@
    },
    "usd": {
     "mean": 1.034,
-    "lowest": 0.96118694,
+    "lowest": 0.9611869400000002,
     "highest": 1.08267394,
     "runs": 3
    },
@@ -560,10 +1548,10 @@
     "highest": 39.277,
     "runs": 2
    },
-   "measuredAt": "2026-10-05T04:00:49.370Z"
+   "measuredAt": "2026-10-05T04:44:10.260Z"
   },
-  "defaults-44163063": {
-   "config": "defaults",
+  "sonnet55Luna56-44163063": {
+   "config": "sonnet55Luna56",
    "threadId": 44163063,
    "keys": {
     "extraction": "luna6Low",
@@ -581,9 +1569,9 @@
     {
      "axes": 63,
      "axesBelowFloor": 0,
-     "rowsWithEnoughPeople": 41,
-     "rows": 63,
      "stances": 2249,
+     "rows": 63,
+     "rowsWithEnoughPeople": 41,
      "agreement": null,
      "precision": null,
      "recall": null,
@@ -596,9 +1584,9 @@
     {
      "axes": 64,
      "axesBelowFloor": 0,
-     "rowsWithEnoughPeople": 34,
-     "rows": 64,
      "stances": 2275,
+     "rows": 64,
+     "rowsWithEnoughPeople": 34,
      "agreement": null,
      "precision": null,
      "recall": null,
@@ -611,16 +1599,16 @@
     {
      "axes": 64,
      "axesBelowFloor": 0,
-     "rowsWithEnoughPeople": 31,
-     "rows": 64,
      "stances": 2224,
+     "rows": 64,
+     "rowsWithEnoughPeople": 31,
      "agreement": null,
      "precision": null,
      "recall": null,
-     "usd": 0.9285140599999998,
+     "usd": 0.9285140599999999,
      "seconds": 244.9051,
      "calls": 403,
-     "cachedCalls": 131,
+     "cachedCalls": 403,
      "summaryFailed": false
     }
    ],
@@ -647,7 +1635,7 @@
    "recall": null,
    "usd": {
     "mean": 0.9619,
-    "lowest": 0.9285140599999998,
+    "lowest": 0.9285140599999999,
     "highest": 0.9797794450000001,
     "runs": 3
    },
@@ -657,7 +1645,7 @@
     "highest": 277.0902,
     "runs": 2
    },
-   "measuredAt": "2026-10-05T04:16:05.184Z"
+   "measuredAt": "2026-10-05T04:44:12.891Z"
   },
   "sonnet55Luna6-44163063": {
    "config": "sonnet55Luna6",
@@ -678,9 +1666,9 @@
     {
      "axes": 63,
      "axesBelowFloor": 0,
-     "rowsWithEnoughPeople": 29,
-     "rows": 63,
      "stances": 1976,
+     "rows": 63,
+     "rowsWithEnoughPeople": 29,
      "agreement": null,
      "precision": null,
      "recall": null,
@@ -693,9 +1681,9 @@
     {
      "axes": 63,
      "axesBelowFloor": 0,
-     "rowsWithEnoughPeople": 29,
-     "rows": 63,
      "stances": 1851,
+     "rows": 63,
+     "rowsWithEnoughPeople": 29,
      "agreement": null,
      "precision": null,
      "recall": null,
@@ -708,16 +1696,16 @@
     {
      "axes": 88,
      "axesBelowFloor": 0,
-     "rowsWithEnoughPeople": 29,
-     "rows": 87,
      "stances": 1832,
+     "rows": 87,
+     "rowsWithEnoughPeople": 29,
      "agreement": null,
      "precision": null,
      "recall": null,
      "usd": 0.6115395699999999,
      "seconds": 257.0087,
      "calls": 403,
-     "cachedCalls": 131,
+     "cachedCalls": 403,
      "summaryFailed": false
     }
    ],
@@ -754,7 +1742,7 @@
     "highest": 257.0087,
     "runs": 2
    },
-   "measuredAt": "2026-10-05T04:15:50.431Z"
+   "measuredAt": "2026-10-05T04:44:12.891Z"
   },
   "sol61Luna56-44163063": {
    "config": "sol61Luna56",
@@ -775,9 +1763,9 @@
     {
      "axes": 77,
      "axesBelowFloor": 0,
-     "rowsWithEnoughPeople": 34,
-     "rows": 77,
      "stances": 2011,
+     "rows": 77,
+     "rowsWithEnoughPeople": 34,
      "agreement": null,
      "precision": null,
      "recall": null,
@@ -790,9 +1778,9 @@
     {
      "axes": 84,
      "axesBelowFloor": 0,
-     "rowsWithEnoughPeople": 34,
-     "rows": 84,
      "stances": 2133,
+     "rows": 84,
+     "rowsWithEnoughPeople": 34,
      "agreement": null,
      "precision": null,
      "recall": null,
@@ -805,16 +1793,16 @@
     {
      "axes": 83,
      "axesBelowFloor": 0,
-     "rowsWithEnoughPeople": 34,
-     "rows": 83,
      "stances": 2096,
+     "rows": 83,
+     "rowsWithEnoughPeople": 34,
      "agreement": null,
      "precision": null,
      "recall": null,
      "usd": 0.8371749200000003,
      "seconds": 234.5612,
      "calls": 403,
-     "cachedCalls": 131,
+     "cachedCalls": 403,
      "summaryFailed": false
     }
    ],
@@ -851,7 +1839,7 @@
     "highest": 241.6515,
     "runs": 2
    },
-   "measuredAt": "2026-10-05T04:15:30.176Z"
+   "measuredAt": "2026-10-05T04:44:12.891Z"
   },
   "sol61Luna6-44163063": {
    "config": "sol61Luna6",
@@ -872,9 +1860,9 @@
     {
      "axes": 77,
      "axesBelowFloor": 0,
-     "rowsWithEnoughPeople": 25,
-     "rows": 76,
      "stances": 1594,
+     "rows": 76,
+     "rowsWithEnoughPeople": 25,
      "agreement": null,
      "precision": null,
      "recall": null,
@@ -887,9 +1875,9 @@
     {
      "axes": 80,
      "axesBelowFloor": 0,
-     "rowsWithEnoughPeople": 30,
-     "rows": 79,
      "stances": 1689,
+     "rows": 79,
+     "rowsWithEnoughPeople": 30,
      "agreement": null,
      "precision": null,
      "recall": null,
@@ -902,16 +1890,16 @@
     {
      "axes": 64,
      "axesBelowFloor": 0,
-     "rowsWithEnoughPeople": 31,
-     "rows": 64,
      "stances": 1565,
+     "rows": 64,
+     "rowsWithEnoughPeople": 31,
      "agreement": null,
      "precision": null,
      "recall": null,
      "usd": 0.44426146000000016,
      "seconds": 182.8456,
      "calls": 403,
-     "cachedCalls": 397,
+     "cachedCalls": 403,
      "summaryFailed": false
     }
    ],
@@ -948,7 +1936,7 @@
     "highest": 197.0717,
     "runs": 2
    },
-   "measuredAt": "2026-10-05T04:12:17.346Z"
+   "measuredAt": "2026-10-05T04:44:12.891Z"
   }
  }
 }
