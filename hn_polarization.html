@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-wi30hCO0zOglgmweOqu0Cc7x/2sQFFlXNHNAk7hwJ18=' 'sha256-IVzTcpDaKOfkPIp4z2whZ2qwfCz9jBP90XnRagd59vM='; style-src 'sha256-e0ulQ5qs0KalSlvMuYBU4BFD7AVnOTjLvOkuoTX/K2g='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-O+VBtZqP/NAwLk+oNZXjengzu4ear59XumQoiYjYmRg=' 'sha256-IVzTcpDaKOfkPIp4z2whZ2qwfCz9jBP90XnRagd59vM='; style-src 'sha256-e0ulQ5qs0KalSlvMuYBU4BFD7AVnOTjLvOkuoTX/K2g='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
 <title>Orange Split - For and Against on Hacker News</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EOS%3C/text%3E%3C/svg%3E">
 <style>
@@ -1391,7 +1391,8 @@ function buildArticleSummaryCall(config, thread) {
         ],
         schema: ARTICLE_SUMMARY_SCHEMA,
         tools: [{ type: 'openrouter:web_fetch', parameters: { max_uses: 1, max_content_tokens: ARTICLE_FETCH_MAX_TOKENS, allowed_domains: [new URL(thread.url).hostname] } }],
-        meta: {},
+        // Runs beside the analysis, which depends on none of it: its failure must not stop the run.
+        meta: { independent: true },
     };
 }
 
@@ -2860,7 +2861,8 @@ async function probeCache({ thread, store, config }) {
     const counts = new Map(stageOrder.map(stage => [stage, { stage, hits: 0, total: 0 }]));
     let missedStage = null;
     async function probingCallChat(call) {
-        if (missedStage !== null && call.stage !== missedStage) {
+        const independent = call.meta?.independent === true;
+        if (!independent && missedStage !== null && call.stage !== missedStage) {
             throw PROBE_STOP;
         }
         const count = counts.get(call.stage);
@@ -2870,7 +2872,7 @@ async function probeCache({ thread, store, config }) {
             count.hits += 1;
             return cachedResponse(hit);
         }
-        missedStage = call.stage;
+        if (!independent) missedStage = call.stage;
         const json = call.stage === 'prepare' ? { speakers: [], passages: [{ firstWord: 1, lastWord: [...thread.text.matchAll(/\S+/g)].length, kind: 'background', speakerId: null }] }
             : call.stage === 'reviewAxes' ? { decisions: call.meta.axes.map(axis => ({ axisId: axis.id, valid: true, reason: '' })) }
             : call.stage === 'reviewSynthesis' ? { valid: true, reason: '' }
@@ -3001,7 +3003,7 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
             try {
                 response = await callChat({ ...call, signal });
             } catch (error) {
-                if (!isResponseFailure(error)) stoppedError = stoppedError || error;
+                if (!isResponseFailure(error) && !call.meta.independent) stoppedError = stoppedError || error;
                 if (error.usage || isResponseFailure(error)) {
                     addSpend(error.usage, call.model);
                 } else if (error instanceof CostUnavailableError) {
@@ -3080,14 +3082,26 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
             cachedCalls, cachedCost, cacheWriteFailures, axesBelowFloor, singleCall: Boolean(cfg.singleCall), ...scoring };
     }
 
-    function emptyResult(message) {
+    async function emptyResult(message) {
+        const linkedArticle = await articleSummaryRun;
         warnings.push(message);
         if (cacheWriteFailures > 0) warnings.push(`${cacheWriteFailures} cache writes failed; a new run or reload may repeat those paid calls`);
         report('done', 1, 1);
         return { rows: [], axes: [], candidates: [], unverifiedAxes: [], synthesis: null, synthesisError: null,
-            cost, calls: callCount, warnings, ...(articleMode ? { article, comments } : {}), emptyReason: message,
+            ...linkedArticle, cost, calls: callCount, warnings, ...(articleMode ? { article, comments } : {}), emptyReason: message,
             stats: runStats({ agreedStances: 0, classifiedPairs: 0, reviewedPairs: 0, conflictingStances: 0, singlePassStances: 0 }) };
     }
+    // The linked article's summary, by the summary model, runs beside the analysis. A text post has no link. A failure
+    // is reported and leaves the analysis intact.
+    const articleSummaryRun = !articleMode && thread.url && cfg.articleSummary
+        ? runUnbatchable(buildArticleSummaryCall(cfg, thread)).then(
+            articleSummary => ({ articleSummary, articleSummaryError: null }),
+            error => {
+                const articleSummaryError = signal && signal.aborted ? 'Cancelled during the article summary' : error.message;
+                warnings.push(`Article summary unavailable: ${articleSummaryError}`);
+                return { articleSummary: null, articleSummaryError };
+            })
+        : Promise.resolve({ articleSummary: null, articleSummaryError: null });
     if (articleMode) {
         report('prepare', 0, 1);
         const prepared = await runUnbatchable({
@@ -3284,21 +3298,7 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
             warnings.push(`Summary unavailable: ${synthesisError}. Comparisons are preserved. Run retries the summary; uncached calls may cost money.`);
         }
     }
-    // The linked article's summary, by the summary model. A text post has no link; a failure leaves the analysis
-    // intact.
-    let articleSummary = null;
-    let articleSummaryError = null;
-    if (!articleMode && thread.url && cfg.articleSummary) {
-        report('articleSummary', 0, 1);
-        try {
-            articleSummary = await runUnbatchable(buildArticleSummaryCall(cfg, thread));
-        } catch (error) {
-            if (error === PROBE_STOP) throw error;
-            articleSummaryError = signal && signal.aborted ? 'Cancelled during the article summary' : error.message;
-            warnings.push(`Article summary unavailable: ${articleSummaryError}`);
-        }
-        report('articleSummary', 1, 1);
-    }
+    const { articleSummary, articleSummaryError } = await articleSummaryRun;
     if (cacheWriteFailures > 0) {
         warnings.push(`${cacheWriteFailures} cache writes failed; a new run or reload may repeat those paid calls`);
     }
