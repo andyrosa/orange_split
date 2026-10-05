@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-LgV1Y0DxZtUmL2fw4FKIeP1xIKbM4FJIlFyGFKkCRp0=' 'sha256-/+qMxfgoYY1gH/hxadMnNPY3yn3pZdShvQn0W5tSyls='; style-src 'sha256-e0ulQ5qs0KalSlvMuYBU4BFD7AVnOTjLvOkuoTX/K2g='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-LgV1Y0DxZtUmL2fw4FKIeP1xIKbM4FJIlFyGFKkCRp0=' 'sha256-gSdiSQt2peQQLTzBw/xkL1Klj51Kwj2csasybYqeaHg='; style-src 'sha256-e0ulQ5qs0KalSlvMuYBU4BFD7AVnOTjLvOkuoTX/K2g='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
 <title>Orange Split - For and Against on Hacker News</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EOS%3C/text%3E%3C/svg%3E">
 <style>
@@ -4852,6 +4852,18 @@ function emptyComparisonMessage(result) {
     return 'No verified comparisons were found in this selection.';
 }
 
+// The caveat under a thread result. A 2-calls result's stances come from one request, which no second pass checks.
+function threadCaveat(singleCall) {
+    const verification = singleCall
+        ? 'Every stance comes from one request; no second pass checks it.'
+        : 'A stance counts only when two independent scoring passes agree on it.';
+    return 'This is a model interpretation of the analyzed comments, not a poll or fact check. The analyzed comments are the top share chosen with the slider, in Hacker News order. '
+        + `${verification} Each person counts once per axis, and axes held by fewer than ${MIN_AXIS_PEOPLE} people are left out. `
+        + `The groups come from the counts (a 95% interval and fixed cutoffs of ${CONSENSUS_SHARE * 100}% and ${SPLIT_SHARE * 100}%), not from the model. Runs with the same settings can produce different axes. `
+        + 'On a one-sided axis, no one in the analyzed comments took the other side, but the analysis can miss comments that did. '
+        + 'The summary sees at most forty axes and two excerpts of up to 700 characters per stance.';
+}
+
 function renderResults(result, comments) {
     renderedArticle = result.article || null;
     if (renderedArticle) comments = result.comments;
@@ -4922,7 +4934,7 @@ function renderResults(result, comments) {
     caveats.appendChild(makeElement('summary', { text: 'Scope and caveats' }));
     caveats.appendChild(makeElement('p', { text: renderedArticle
         ? 'This is a model interpretation of the selected text, not a poll or fact check. Textual voices are counted once per comparison. One voice may weigh alternatives without endorsing either. A literary speaker does not establish the author\'s personal beliefs. Summary evidence is limited to forty ranked comparisons and their complete supporting passages.'
-        : 'This is a model interpretation of the analyzed selection, not a poll or fact check. People are counted once per axis; axes do not define author camps. On a one-sided axis, no one in the analyzed selection took the other side; the analysis can miss comments that do. Summary evidence is limited to forty ranked axes and two excerpts per class; excerpts may be truncated.' }));
+        : threadCaveat(result.stats.singleCall) }));
     for (const text of synthesis ? synthesis.caveats : []) caveats.appendChild(makeElement('p', { text }));
     if (renderedArticle) {
         const voices = new Set(result.comments.map(c => c.author)).size;
