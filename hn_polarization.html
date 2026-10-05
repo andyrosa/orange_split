@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-ag3l+onLQddEWajM7JP1wafIarZwkkPn4tFrocqmWpw=' 'sha256-eNrlI4jS7NL+ZuHv+nQXN0IZzsdjs0NtAvjldvOFqyU='; style-src 'sha256-e0ulQ5qs0KalSlvMuYBU4BFD7AVnOTjLvOkuoTX/K2g='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-LgV1Y0DxZtUmL2fw4FKIeP1xIKbM4FJIlFyGFKkCRp0=' 'sha256-/+qMxfgoYY1gH/hxadMnNPY3yn3pZdShvQn0W5tSyls='; style-src 'sha256-e0ulQ5qs0KalSlvMuYBU4BFD7AVnOTjLvOkuoTX/K2g='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
 <title>Orange Split - For and Against on Hacker News</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EOS%3C/text%3E%3C/svg%3E">
 <style>
@@ -178,7 +178,7 @@ button { margin-right: 0.5rem; }
 <span id="thread-info"></span>
 <button id="refresh-thread" type="button" hidden>Refetch</button>
 </p>
-<p id="single-call-row"><label title="One request does extraction, consolidation, and scoring for the whole thread, and no second scoring pass checks its stances. On the benchmark thread it found fewer axes than the stages do, except GPT-6.1 Sol at high, which took about 6 minutes for 323 comments. A pasted article always uses the stages."><input id="single-call" type="checkbox"> Single call (discouraged)</label></p>
+<p id="single-call-row"><label title="One request does extraction, consolidation, and scoring for the whole thread, and a second request by the same model writes the summary. No second scoring pass checks the stances. On the benchmark thread the first request found fewer axes than the stages do, except GPT-6.1 Sol at high, which took about 6 minutes for 323 comments. A pasted article always uses the stages."><input id="single-call" type="checkbox"> 2 calls (discouraged)</label></p>
 <div class="model-choices">
 <div class="model-choice">
 <label id="extraction-model-label" for="extraction-model-button">Extraction</label>
@@ -211,7 +211,7 @@ button { margin-right: 0.5rem; }
 </div>
 </div>
 <div class="model-choice" hidden>
-<label id="single-call-model-label" for="single-call-model-button">Single call</label>
+<label id="single-call-model-label" for="single-call-model-button">Model</label>
 <div id="single-call-model-picker" class="model-picker">
 <button id="single-call-model-button" class="model-trigger" type="button" aria-labelledby="single-call-model-label single-call-model-button" aria-haspopup="listbox" aria-expanded="false" aria-controls="single-call-model-options"></button>
 <div id="single-call-model-options" class="model-options" role="listbox" aria-labelledby="single-call-model-label" hidden>
@@ -410,12 +410,15 @@ const CONSOLIDATION_MODELS = Object.freeze({ ...MEASURED_CONSOLIDATION_MODELS,
     jevRouter: consolidationEntry({ ...ROUTER_PROFILE, maxTokens: 64000 }),
 });
 const SUMMARY_MODELS = Object.freeze(Object.fromEntries(Object.entries(CONSOLIDATION_MODELS).map(([key, choice]) => [key, summaryEntry(choice)])));
-// A single-call choice is a consolidation choice's model at a reasoning effort set here. Claude Fable 5.1 was
-// measured too (scripts/single_call.js) and is left out for its cost.
+// A single-call choice is a consolidation choice's model at a reasoning effort set here. It makes 2 calls: the one
+// request that replaces extraction, consolidation, and scoring, and the summary, with the same settings.
+// summaryKey names the summary choice of the same model, whose benchmark figures forecast the summary; at another
+// effort than that choice's, the forecast is an approximation. Claude Fable 5.1 was measured too
+// (scripts/single_call.js) and is left out for its cost.
 const singleCallEntry = (consolidationKey, effort) => {
     const choice = CONSOLIDATION_MODELS[consolidationKey];
-    return optionEntry(['singleCall'], { name: choice.name, effort, model: choice.config.modelConsolidate, sampling: choice.config.samplingConsolidate,
-        reasoning: { effort }, maxTokens: { singleCall: CONSOLIDATION_MAX_TOKENS } });
+    return optionEntry(['singleCall', 'summary'], { name: choice.name, effort, summaryKey: consolidationKey, model: choice.config.modelConsolidate,
+        sampling: choice.config.samplingConsolidate, reasoning: { effort }, maxTokens: { singleCall: CONSOLIDATION_MAX_TOKENS, synthesize: SUMMARY_MAX_TOKENS } });
 };
 const SINGLE_CALL_MODELS = Object.freeze({
     sol61Low: singleCallEntry('sol61Low', 'low'),
@@ -451,7 +454,7 @@ function roleConfig(role, key) {
 // The stage config of one run from its role choices: { extraction, consolidation, scoring, summary }, and singleCall
 // when one request replaces the first three stages.
 function buildRunConfig(keys) {
-    const singleCall = keys.singleCall ? { ...roleConfig('singleCall', keys.singleCall), singleCall: true } : {};
+    const singleCall = keys.singleCall ? { ...roleChoice('singleCall', keys.singleCall).config, singleCall: true } : {};
     return { ...roleConfig('extraction', keys.extraction), ...roleConfig('consolidation', keys.consolidation),
         ...roleConfig('scoring', keys.scoring), ...roleConfig('summary', keys.summary), ...singleCall };
 }
@@ -515,7 +518,7 @@ function uncachedFractions(probe) {
 // comment text. A batched stage runs up to DEFAULT_CONFIG.concurrency calls at once and takes at least as
 // long as its slowest call.
 function stageForecast(chars, keys, remaining) {
-    const summary = forecastFigures('summary', keys.summary);
+    const summary = forecastFigures('summary', keys.singleCall ? roleChoice('singleCall', keys.singleCall).summaryKey : keys.summary);
     const synthesize = { usd: summary.usd * remaining.synthesize, seconds: summary.seconds * remaining.synthesize };
     if (keys.singleCall) {
         const single = forecastFigures('singleCall', keys.singleCall);
@@ -553,7 +556,7 @@ function pickerFigures(role, key) {
     if (result.failed) return { usd: null, seconds: null, agreement: 0, failed: true };
     const chars = PICKER_COMMENTS * SILVER_BENCHMARK.chars / SILVER_BENCHMARK.comments;
     const keys = { extraction: DEFAULT_EXTRACTION_KEY, consolidation: DEFAULT_CONSOLIDATION_KEY, scoring: DEFAULT_SCORING_KEY, summary: DEFAULT_SUMMARY_KEY, [role]: key };
-    const stage = stageForecast(chars, keys, ALL_UNCACHED)[STAGE_OF_ROLE[role]];
+    const stage = role === 'singleCall' ? estimateRun(chars, keys, ALL_UNCACHED) : stageForecast(chars, keys, ALL_UNCACHED)[STAGE_OF_ROLE[role]];
     const runAgreements = result.runs ? result.runs.map(run => run.agreement) : [result.agreement];
     return { usd: stage.usd, seconds: stage.seconds, agreement: result.agreement, precision: result.precision, recall: result.recall,
         runs: runAgreements.length, lowestAgreement: Math.min(...runAgreements), highestAgreement: Math.max(...runAgreements), failed: false };
@@ -3509,14 +3512,14 @@ const modelPickers = [
     { role: 'singleCall', choices: SINGLE_CALL_MODELS, root: elements.singleCallModelPicker, select: elements.singleCallModel,
         header: elements.singleCallModelHeader, button: elements.singleCallModelButton, options: elements.singleCallModelOptions },
 ];
-const ROLE_TITLES = Object.freeze({ extraction: 'Extraction', consolidation: 'Consolidation', scoring: 'Scoring', summary: 'Summary', singleCall: 'Single call' });
+const ROLE_TITLES = Object.freeze({ extraction: 'Extraction', consolidation: 'Consolidation', scoring: 'Scoring', summary: 'Summary', singleCall: '2 calls' });
 // The picker columns that hold numbers, and those where a lower number is better.
 const PICKER_METRIC_KEYS = new Set(['cost', 'latency', 'agreement']);
 const LOWER_IS_BETTER = new Set(['cost', 'latency']);
 // The line under a picker's rows that says what its figures mean.
 function pickerMethodText(role) {
     if (role === 'singleCall') {
-        return `Agreement with silver: the F1 score of the run's stances against what ${SILVER_BENCHMARK.silverModels.join(' and ')} agree on, measured on one Hacker News thread of ${SILVER_BENCHMARK.comments} comments over three runs, after pairing each of the run's axes with the most similar silver axis. GPT-6.1 Sol built half of silver, which favors it. Cost and latency are forecasts of the one request on a thread of ${PICKER_COMMENTS} comments; the summary is extra.`;
+        return `Agreement with silver: the F1 score of the run's stances against what ${SILVER_BENCHMARK.silverModels.join(' and ')} agree on, measured on one Hacker News thread of ${SILVER_BENCHMARK.comments} comments over three runs, after pairing each of the run's axes with the most similar silver axis. GPT-6.1 Sol built half of silver, which favors it. Cost and latency are forecasts of both calls on a thread of ${PICKER_COMMENTS} comments.`;
     }
     return `Agreement with silver: how closely the choice's output in this role matches what ${SILVER_BENCHMARK.silverModels.join(' and ')} agree on, measured on one Hacker News thread of ${SILVER_BENCHMARK.comments} comments with every other stage fixed to that reference. Two runs of one choice can differ by several points; a choice that was run several times shows the mean, and its tooltip gives the number of runs and their range. Cost and latency are forecasts for this role's stage on a thread of ${PICKER_COMMENTS} comments.`;
 }
@@ -3577,11 +3580,10 @@ function singleCallSelected() {
     return elements.singleCall.checked && !articleModeSelected;
 }
 
-// Shows the single-call picker in place of the extraction, consolidation, and scoring pickers while it applies.
+// Shows the 2-calls picker in place of the four stage pickers while it applies.
 function showSingleCallPickers() {
     const single = singleCallSelected();
     for (const picker of modelPickers) {
-        if (picker.role === 'summary') continue;
         picker.root.parentElement.hidden = (picker.role === 'singleCall') !== single;
     }
 }
@@ -3900,7 +3902,7 @@ function renderCachedResults() {
         const title = storedThread(selection.article)?.title
             ?? (isArticleId(selection.article) ? 'Pasted article' : `Thread ${selection.article}`);
         const models = selection.singleCall
-            ? `${modelDisplayName(SINGLE_CALL_MODELS[selection.singleCall])} single call / ${modelDisplayName(SUMMARY_MODELS[selection.summary])}`
+            ? `${modelDisplayName(SINGLE_CALL_MODELS[selection.singleCall])}, 2 calls`
             : [VOLUME_MODELS[selection.extraction], CONSOLIDATION_MODELS[selection.consolidation],
                 VOLUME_MODELS[selection.scoring], SUMMARY_MODELS[selection.summary]].map(modelDisplayName).join(' / ');
         const item = makeElement('li');
