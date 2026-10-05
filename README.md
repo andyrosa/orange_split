@@ -22,68 +22,68 @@ Given a Hacker News comment thread id or pasted article, produce the bipolar axe
 
 ## Model comparison
 
-The four model pickers show one benchmark, measured on one Hacker News thread (id 22866284, 323 comments). Agreement with silver states how closely a choice's output in a role matches what GPT-6.1 Sol at xhigh reasoning effort and Claude Opus 5.5 at high reasoning effort agree on; **Silver reference and benchmark** describes the method. Cost and latency are forecasts of the role's stage for a thread of 1000 comments. `node scripts/benchmark.js --embed` rewrites these tables from `data/silver-benchmark.json`.
+The four model pickers show one benchmark, measured on one Hacker News thread (id 22866284, 323 comments). Agreement with silver states how closely a choice's output in a role matches what GPT-6.1 Sol at xhigh reasoning effort and Claude Opus 5.5 at high reasoning effort agree on; **Silver reference and benchmark** describes the method. Agreement, precision, and recall are means over the runs in the Runs column. Cost and latency are forecasts of the role's stage for a thread of 1000 comments, from the first run. `node scripts/benchmark.js --embed` rewrites these tables from `data/silver-benchmark.json`.
 
 <!-- silver-benchmark:start -->
 ### Extraction
 
-| Model | Reasoning effort | Cost / 1000 comments | Latency / 1000 comments | Agreement with silver | Precision | Recall |
-| --- | --- | ---: | ---: | ---: | ---: | ---: |
-| Claude Haiku 4.5 | none | $0.253 | 10 seconds | 84% | 100% | 72% |
-| Claude Opus 5 | adaptive | $3.815 | 44 seconds | 88% | 81% | 96% |
-| Claude Opus 5.5 | adaptive | $1.422 | 10 seconds | 91% | 100% | 84% |
-| Gemini 3.8 Flash | none | $0.562 | 17 seconds | 90% | 97% | 84% |
-| GLM 5.3 Flash | low | $0.129 | 12 minutes | 84% | 94% | 76% |
-| GPT-5.6 Luna | low | $0.094 | 22 seconds | 85% | 90% | 80% |
-| GPT-6 Luna | low | $0.034 | 13 seconds | 92% | 93% | 91% |
+| Model | Reasoning effort | Cost / 1000 comments | Latency / 1000 comments | Agreement with silver | Precision | Recall | Runs |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Claude Haiku 4.5 | none | $0.253 | 10 seconds | 84% | 100% | 72% | 1 |
+| Claude Opus 5 | adaptive | $3.815 | 44 seconds | 88% | 81% | 96% | 1 |
+| Claude Opus 5.5 | adaptive | $1.422 | 10 seconds | 91% | 100% | 84% | 1 |
+| Gemini 3.8 Flash | none | $0.562 | 17 seconds | 90% | 97% | 84% | 1 |
+| GLM 5.3 Flash | low | $0.129 | 12 minutes | 87% | 95% | 80% | 3 |
+| GPT-5.6 Luna | low | $0.094 | 22 seconds | 87% | 92% | 84% | 3 |
+| GPT-6 Luna | low | $0.034 | 13 seconds | 91% | 95% | 87% | 3 |
 
 ### Consolidation
 
-| Model | Reasoning effort | Cost / 1000 comments | Latency / 1000 comments | Agreement with silver | Precision | Recall |
-| --- | --- | ---: | ---: | ---: | ---: | ---: |
-| Claude Fable 5.1 | low | $0.324 | 47 seconds | 61% | 48% | 85% |
-| Claude Opus 5 | adaptive | $0.336 | 2 minutes | 63% | 50% | 87% |
-| Claude Opus 5.5 | adaptive | $0.093 | 18 seconds | 67% | 55% | 85% |
-| Claude Sonnet 5 | adaptive | $0.225 | 3 minutes | 43% | 28% | 87% |
-| Claude Sonnet 5.5 | adaptive | $0.060 | 23 seconds | 82% | 90% | 76% |
-| Gemini 3.8 Flash | default | $0.023 | 13 seconds | 38% | 26% | 76% |
-| GLM 5.3 | high | $0.186 | 3 minutes | 59% | 43% | 96% |
-| GPT-5.6 Luna | max | $0.044 | 6 minutes | 63% | 55% | 75% |
-| GPT-5.6 Sol | low | $0.034 | 14 seconds | 59% | 54% | 65% |
-| GPT-6 Astra | low | $0.163 | 15 seconds | 76% | 68% | 87% |
-| GPT-6 Sol | low | $0.032 | 10 seconds | 74% | 74% | 73% |
-| GPT-6.1 Sol | low | $0.037 | 31 seconds | 77% | 70% | 87% |
-| Jev Router | default | Not measured | Not measured | Not measured |  |  |
+| Model | Reasoning effort | Cost / 1000 comments | Latency / 1000 comments | Agreement with silver | Precision | Recall | Runs |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Claude Fable 5.1 | low | $0.324 | 47 seconds | 61% | 48% | 85% | 1 |
+| Claude Opus 5 | adaptive | $0.336 | 2 minutes | 63% | 50% | 87% | 1 |
+| Claude Opus 5.5 | adaptive | $0.093 | 18 seconds | 67% | 55% | 85% | 1 |
+| Claude Sonnet 5 | adaptive | $0.225 | 3 minutes | 43% | 28% | 87% | 1 |
+| Claude Sonnet 5.5 | adaptive | $0.060 | 23 seconds | 78% | 89% | 70% | 3 |
+| Gemini 3.8 Flash | default | $0.023 | 13 seconds | 38% | 26% | 76% | 1 |
+| GLM 5.3 | high | $0.186 | 3 minutes | 59% | 43% | 96% | 1 |
+| GPT-5.6 Luna | max | $0.044 | 6 minutes | 63% | 55% | 75% | 1 |
+| GPT-5.6 Sol | low | $0.034 | 14 seconds | 59% | 54% | 65% | 1 |
+| GPT-6 Astra | low | $0.163 | 15 seconds | 78% | 70% | 87% | 3 |
+| GPT-6 Sol | low | $0.032 | 10 seconds | 71% | 69% | 74% | 3 |
+| GPT-6.1 Sol | low | $0.037 | 31 seconds | 80% | 74% | 88% | 3 |
+| Jev Router | default | Not measured | Not measured | Not measured |  |  |  |
 
 ### Scoring
 
-| Model | Reasoning effort | Cost / 1000 comments | Latency / 1000 comments | Agreement with silver | Precision | Recall |
-| --- | --- | ---: | ---: | ---: | ---: | ---: |
-| Claude Haiku 4.5 | none | $0.759 | 11 seconds | 64% | 78% | 55% |
-| Claude Opus 5 | adaptive | $9.654 | 84 seconds | 94% | 95% | 93% |
-| Claude Opus 5.5 | adaptive | $4.405 | 24 seconds | 95% | 99% | 92% |
-| Gemini 3.8 Flash | none | $2.002 | 53 seconds | 82% | 100% | 70% |
-| GLM 5.3 Flash | low | $0.193 | 11 minutes | 80% | 90% | 72% |
-| GPT-5.6 Luna | low | $0.229 | 46 seconds | 81% | 86% | 75% |
-| GPT-6 Luna | low | $0.088 | 34 seconds | 76% | 93% | 65% |
+| Model | Reasoning effort | Cost / 1000 comments | Latency / 1000 comments | Agreement with silver | Precision | Recall | Runs |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Claude Haiku 4.5 | none | $0.759 | 11 seconds | 64% | 78% | 55% | 1 |
+| Claude Opus 5 | adaptive | $9.654 | 84 seconds | 94% | 95% | 93% | 1 |
+| Claude Opus 5.5 | adaptive | $4.405 | 24 seconds | 95% | 99% | 92% | 1 |
+| Gemini 3.8 Flash | none | $2.002 | 53 seconds | 82% | 100% | 70% | 1 |
+| GLM 5.3 Flash | low | $0.193 | 11 minutes | 80% | 89% | 73% | 3 |
+| GPT-5.6 Luna | low | $0.229 | 46 seconds | 80% | 84% | 77% | 3 |
+| GPT-6 Luna | low | $0.088 | 34 seconds | 79% | 95% | 68% | 3 |
 
 ### Summary
 
-| Model | Reasoning effort | Cost / 1000 comments | Latency / 1000 comments | Agreement with silver | Precision | Recall |
-| --- | --- | ---: | ---: | ---: | ---: | ---: |
-| Claude Fable 5.1 | low | $0.689 | 68 seconds | 100% | 100% | 100% |
-| Claude Opus 5 | adaptive | $0.161 | 21 seconds | 100% | 100% | 100% |
-| Claude Opus 5.5 | adaptive | $0.102 | 12 seconds | 100% | 100% | 100% |
-| Claude Sonnet 5 | adaptive | $0.067 | 21 seconds | 100% | 100% | 100% |
-| Claude Sonnet 5.5 | adaptive | $0.059 | 23 seconds | 100% | 100% | 100% |
-| Gemini 3.8 Flash | default | $0.037 | 26 seconds | 91% | 83% | 100% |
-| GLM 5.3 | high | $0.021 | 9 seconds | 100% | 100% | 100% |
-| GPT-5.6 Luna | max | $0.011 | 56 seconds | 100% | 100% | 100% |
-| GPT-5.6 Sol | low | $0.041 | 7 seconds | 100% | 100% | 100% |
-| GPT-6 Astra | low | $0.203 | 12 seconds | 100% | 100% | 100% |
-| GPT-6 Sol | low | $0.040 | 5 seconds | 100% | 100% | 100% |
-| GPT-6.1 Sol | low | $0.040 | 11 seconds | 100% | 100% | 100% |
-| Jev Router | default | Not measured | Not measured | Not measured |  |  |
+| Model | Reasoning effort | Cost / 1000 comments | Latency / 1000 comments | Agreement with silver | Precision | Recall | Runs |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Claude Fable 5.1 | low | $0.689 | 68 seconds | 100% | 100% | 100% | 1 |
+| Claude Opus 5 | adaptive | $0.161 | 21 seconds | 100% | 100% | 100% | 1 |
+| Claude Opus 5.5 | adaptive | $0.102 | 12 seconds | 100% | 100% | 100% | 1 |
+| Claude Sonnet 5 | adaptive | $0.067 | 21 seconds | 100% | 100% | 100% | 1 |
+| Claude Sonnet 5.5 | adaptive | $0.059 | 23 seconds | 100% | 100% | 100% | 1 |
+| Gemini 3.8 Flash | default | $0.037 | 26 seconds | 91% | 83% | 100% | 1 |
+| GLM 5.3 | high | $0.021 | 9 seconds | 100% | 100% | 100% | 1 |
+| GPT-5.6 Luna | max | $0.011 | 56 seconds | 100% | 100% | 100% | 1 |
+| GPT-5.6 Sol | low | $0.041 | 7 seconds | 100% | 100% | 100% | 1 |
+| GPT-6 Astra | low | $0.203 | 12 seconds | 100% | 100% | 100% | 1 |
+| GPT-6 Sol | low | $0.040 | 5 seconds | 100% | 100% | 100% | 1 |
+| GPT-6.1 Sol | low | $0.040 | 11 seconds | 100% | 100% | 100% | 1 |
+| Jev Router | default | Not measured | Not measured | Not measured |  |  |  |
 <!-- silver-benchmark:end -->
 
 ## Input
@@ -125,7 +125,7 @@ A final model synthesis covers where the discussion agrees, then where it splits
 ## Constraints
 
 - No human review.
-- Models are called through OpenRouter. Defaults: GPT-6 Luna low for extraction, Claude Sonnet 5.5 for consolidation, GPT-5.6 Luna low for scoring, and GPT-6 Sol low for the summary. Each is the choice with the highest agreement with silver among the choices whose stage costs at most a quarter of the default Max cost for a thread of 1000 comments; equal agreement goes to the faster choice. The defaults are fixed in the page, so a later benchmark run changes one only through an edit.
+- Models are called through OpenRouter. Defaults: GPT-6 Luna low for extraction, Claude Sonnet 5.5 for consolidation, GPT-5.6 Luna low for scoring, and GPT-6 Sol low for the summary. **Choosing the defaults** under **Silver reference and benchmark** gives the rule and the evidence. The defaults are fixed in the page, so a later benchmark run changes one only through an edit.
 - A run never spends past the Max cost box (default 1 dollar) on extraction and scoring calls, which run up to 30 at once. Before sending each of those calls, the page and runner reserve the most it can cost: its request bytes plus 4,096 at the higher of the input and cache-write prices, plus its output ceiling at the output price, from OpenRouter's model list; a model with a variable price, such as Jev Router, gets the highest listed price. The call is sent only while spent plus reserved stays within the budget. Consolidation, summary, and the article stages make one call at a time, whose worst case is far above its usual cost, so each is sent while spend is under the budget, and that one call can pass it. Cached calls reserve nothing. A refused call stops the run; finished calls stay cached, so a rerun with a higher Max cost does not pay for them again.
 - If OpenRouter omits `usage.cost`, the client reads the generation's billed `total_cost` from [generation metadata](https://openrouter.ai/docs/api/api-reference/generations/get-generation), with up to three reads (10-second timeout each) for delayed billing. It never substitutes zero or a price estimate. If billing remains unknown, new work stops, already in-flight calls finish and cache normally, and the raw response is saved for a same-settings retry that checks billing without repeating the paid generation. Unresolved responses are not free cache hits; recovered charges count toward the retry's budget. Reported spend excludes unresolved charges (explicitly warned). If storage fails, the error warns that reloading or starting another run can lose this protection.
 - Two runs on the same stored copy of a thread should produce similar top-20 lists.
@@ -231,13 +231,26 @@ The reference on thread 22866284 (323 comments, 165k characters): 321 pool candi
 | Scoring | Of the stances the choice gives on graded cells, the share equal to the silver stance | The share of the silver stances the choice gives |
 | Summary | Of the cited sides both silver models judge alike, the share they judge faithful to the evidence | The share of the featured axes the summary cites |
 
-The run also records what the role's calls cost and how long they took; the forecasts use those figures. Results are in `data/silver-benchmark.json` and embedded in the page, so opening a picker makes no API call.
+The run also records what the role's calls cost and how long they took; the forecasts use those figures. `--repeats=<n>` sends a choice's identical request n more times, each answered anew, and the result then holds every run and their means. Results are in `data/silver-benchmark.json` and embedded in the page, so opening a picker makes no API call.
+
+### Choosing the defaults
+
+The contenders for a role's default are the choices whose stage costs at most a quarter of the default Max cost for a thread of 1000 comments. Each contender near the top was run three times, and one whose mean agreement is more than 5 points below the best mean is out; 5 points is the smallest gap three runs can show. That leaves GPT-6 Luna low alone in extraction, where it is both best and cheapest. It leaves several in consolidation and in scoring, and agreement cannot choose among them. The cheapest of them, GPT-6.1 Sol low and GPT-6 Luna low, were therefore run through the whole pipeline against Claude Sonnet 5.5 and GPT-5.6 Luna low, with GPT-6 Luna low extraction and GPT-6 Sol low summary, one run each:
+
+| Consolidation | Scoring | Thread 22866284: axes, outside "too few" | Thread 44163063: axes, outside "too few" |
+| --- | --- | ---: | ---: |
+| Claude Sonnet 5.5 | GPT-5.6 Luna low | 8, 4 | 63, 41 |
+| Claude Sonnet 5.5 | GPT-6 Luna low | 8, 2 | 63, 29 |
+| GPT-6.1 Sol low | GPT-5.6 Luna low | 15, 5 | 77, 34 |
+| GPT-6.1 Sol low | GPT-6 Luna low | 15, 3 | 76, 25 |
+
+The page exists to show counts with enough people behind them, so the default is the pair in the first row. GPT-6 Luna low scores as well as GPT-5.6 Luna low on agreement because its higher precision offsets its lower recall, but it finds about 9 points fewer of the silver stances in every run, and fewer stances leave fewer axes with enough people. GPT-6.1 Sol low keeps more and narrower axes than Claude Sonnet 5.5, which spreads the people thinner. Two contenders within the margin were not run through the whole pipeline: GLM 5.3 Flash for scoring, which takes about 11 minutes for 1000 comments, and GPT-6 Astra low for consolidation, which costs about three times as much as Claude Sonnet 5.5. The summary scores do not separate the choices, so its default is the fastest of the choices at 100%.
 
 Limits:
 
 - Silver is model agreement, not truth. Where both models err alike, the reference errs.
 - The benchmark thread is small: 4 of its 32 silver axes have enough people for a consensus and none for a split, so every summary choice but one cites the same axes faithfully and reaches 100%. The summary column separates only a weak choice from the rest.
 - Consolidation agreement rewards the grain of the silver models, which keep more and narrower axes than GPT-5.6 Sol at reasoning low does. On thread 44163063 (2689 comments) the default models gave 63 axes, 41 of them outside "too few", for $0.98 against a forecast of $0.88.
-- The benchmark is one thread and one run per choice, so a difference of a few points is within run-to-run variation. The summary figures rest on a handful of cited sides per summary and 4 featured axes.
+- The benchmark is one thread. Two runs of one choice differ: across three runs the agreement of one choice ranged over as much as 10 points in consolidation, 7 in extraction, and 4 in scoring, and a fixed seed did not make GPT-6.1 Sol repeat its answer. The contenders for a default have three runs and show the mean; every other choice has one run, so a difference of several points between two of those is not evidence. The summary figures rest on a handful of cited sides per summary and 4 featured axes.
 - Claude Opus 5.5 and GPT-6.1 Sol are also picker choices, at other reasoning efforts, graded against a reference their own models helped build.
 - Extraction and summary are graded with the silver models as judges, which is still model judgment.

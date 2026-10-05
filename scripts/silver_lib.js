@@ -12,6 +12,10 @@ const SILVER_FILE = path.join(REPO_ROOT, 'data', 'silver.json');
 const BENCHMARK_FILE = path.join(REPO_ROOT, 'data', 'silver-benchmark.json');
 // Not in git: the thread snapshot and every finished model call, so a rerun pays for nothing twice.
 const WORK_DIRECTORY = path.join(REPO_ROOT, 'outputs', 'silver');
+// The model calls of the reference and of each choice's first benchmark run.
+const CACHE_DIRECTORY = path.join(WORK_DIRECTORY, 'cache');
+// One directory per repeat of a benchmark run, so that an identical request is a separate sample.
+const REPEATS_DIRECTORY = path.join(WORK_DIRECTORY, 'repeats');
 
 // The silver reference is what these two models agree on: the strongest OpenAI and Anthropic models at a
 // high reasoning effort. No person annotated anything.
@@ -87,11 +91,11 @@ function threadChars(thread) {
     return thread.comments.reduce((sum, comment) => sum + comment.text.length + core.CONSTANTS.COMMENT_FRAME_CHARS, 0);
 }
 
-// The model call path: cache over a timed, capped OpenRouter client. ledger = { spentUsd, capUsd }. A call
+// The model call path: a cache in cacheDirectory over a timed, capped OpenRouter client. ledger = { spentUsd, capUsd }. A call
 // is refused once the spend has reached the cap; calls already in flight still finish, so keep the
 // concurrency low enough that their cost is an acceptable overshoot. The call's wall-clock seconds are stored
 // with its usage, so a replay from the cache still reports how long the call took.
-function makeModelCallChat({ apiKey, ledger }) {
+function makeModelCallChat({ apiKey, ledger, cacheDirectory }) {
     const direct = core.makeOpenRouterCallChat({ apiKey });
     async function timed(call) {
         if (ledger.spentUsd >= ledger.capUsd) {
@@ -110,7 +114,7 @@ function makeModelCallChat({ apiKey, ledger }) {
             throw error;
         }
     }
-    return core.makeCachedCallChat(timed, makeFileStore(path.join(WORK_DIRECTORY, 'cache')));
+    return core.makeCachedCallChat(timed, makeFileStore(cacheDirectory));
 }
 
 // Collects what each model call cost and how long it took, whether it ran now or was replayed from cache.
@@ -392,7 +396,7 @@ function silverStanceTable(silver) {
 }
 
 module.exports = {
-    core, SILVER_FILE, BENCHMARK_FILE, WORK_DIRECTORY, SILVER_MODELS, MODEL,
+    core, SILVER_FILE, BENCHMARK_FILE, WORK_DIRECTORY, CACHE_DIRECTORY, REPEATS_DIRECTORY, SILVER_MODELS, MODEL,
     readArgument, requireApiKey, silverConfig, loadThread, threadChars, makeModelCallChat, makeMeter, runStages,
     fixedCandidates, fixedAxes, oneAxisOfAllCandidates, fixedStances, noStances, noSummary,
     stancesOfResult, summaryMarkers, agreementOf, companions, consolidationAgreement, scoringAgreement,

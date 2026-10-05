@@ -397,7 +397,7 @@ async function main() {
     const keys = Object.keys(SINGLE_CALL_CHOICES).filter(key => (choiceKey === null ? force || benchmark.results[key] === undefined : key === choiceKey));
     if (keys.length === 0) throw new Error('every choice already has a result; pass --force to measure again');
     const ledger = { spentUsd: 0, capUsd: Number(lib.readArgument('budget') ?? DEFAULT_BUDGET_USD) };
-    const modelCallChat = lib.makeModelCallChat({ apiKey: lib.requireApiKey(), ledger });
+    const modelCallChat = lib.makeModelCallChat({ apiKey: lib.requireApiKey(), ledger, cacheDirectory: lib.CACHE_DIRECTORY });
     const thread = await lib.loadThread(silver.threadId);
     if (thread.comments.length !== silver.comments || lib.threadChars(thread) !== silver.chars) {
         throw new Error(`the thread snapshot (${thread.comments.length} comments) is not the one the reference was built on (${silver.comments} comments)`);

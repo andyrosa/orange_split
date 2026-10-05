@@ -7,6 +7,8 @@
 //        node scripts/benchmark.js --all              every listed choice without a result yet
 //        node scripts/benchmark.js --embed            only copy data/silver-benchmark.json into the page
 //        [--force] measure again a choice that has a result  [--budget=<usd>] [--concurrency=<calls>] [--key=sk-or-...]
+//        [--repeats=<n>] also send each selected choice's identical request n more times; a choice that has a
+//                        result keeps its first run unless --force is given
 // Agreement is the harmonic mean of precision and recall against the reference:
 //   extraction     precision: of the candidates both silver models place, the share they match to one silver
 //                  axis. recall: the share of the people on silver axes whose axis got a matched candidate.
@@ -17,7 +19,10 @@
 //   summary        precision: of the cited sides both silver models judge alike, the share judged faithful
 //                  to the evidence. recall: the share of the featured axes (cited by both silver summaries)
 //                  the summary cites.
-// Each result also holds what the role's calls cost and how long they took. Results go to
+// Each result also holds what the role's calls cost and how long they took. Two runs of one choice can differ
+// by several points, so a choice can be run several times: its result then holds every run's grade in runs,
+// its agreement, precision, and recall are the means, and its cost and latency stay those of the first run.
+// Results go to
 // data/silver-benchmark.json and into the SILVER_BENCHMARK constant of the page.
 const fs = require('node:fs');
 const { execFileSync } = require('node:child_process');
@@ -36,6 +41,7 @@ const README_END = '<!-- silver-benchmark:end -->';
 const README_TABLES_PATTERN = new RegExp(`${README_START}[\\s\\S]*${README_END}`);
 const PRECISION_DIGITS = 4;
 const FAILURE_MESSAGE_CHARS = 300;
+const NO_REPEATS = 0;
 
 function roleChoices(role) {
     return { extraction: core.VOLUME_MODELS, consolidation: core.CONSOLIDATION_MODELS, scoring: core.VOLUME_MODELS, summary: core.SUMMARY_MODELS }[role];
@@ -128,6 +134,32 @@ async function benchmarkChoice({ role, choiceKey, silver, thread, modelCallChat,
     return outcome;
 }
 
+// Sends the choice's identical request `repeats` more times and returns the result with every run's grade
+// in runs, the first run first, and the means as its agreement, precision, and recall. Each repeat keeps
+// its model calls in its own directory, so the request is answered anew and a rerun of the repeat is free.
+// A repeat whose output stays invalid counts as a run with no agreement.
+async function withRepeats({ first, role, choiceKey, repeats, silver, thread, apiKey, ledger, concurrency }) {
+    if (first.failed) return first;
+    const gradeOf = ({ agreement, precision, recall }) => ({ agreement, precision, recall });
+    const runs = [first.runs ? first.runs[0] : gradeOf(first)];
+    for (let repeat = 1; repeat <= repeats; repeat += 1) {
+        const label = `${role} ${choiceKey} repeat ${repeat}`;
+        const modelCallChat = lib.makeModelCallChat({ apiKey, ledger, cacheDirectory: path.join(lib.REPEATS_DIRECTORY, `${role}-${choiceKey}-run${repeat}`) });
+        let grade;
+        try {
+            const result = await lib.runStages({ thread, config: { ...core.roleConfig(role, choiceKey), concurrency }, handlers: handlersFor(role, silver), modelCallChat, label });
+            grade = await GRADERS[role]({ result, silver, thread, judgeCallChat: modelCallChat });
+        } catch (error) {
+            if (!(error instanceof core.InvalidResponseError || error instanceof core.TruncationError)) throw error;
+            grade = { agreement: 0, precision: 0, recall: 0 };
+        }
+        runs.push(gradeOf(grade));
+        console.log(`${label}: agreement ${(grade.agreement * 100).toFixed(1)}%`);
+    }
+    const mean = field => rounded(runs.reduce((sum, run) => sum + run[field], 0) / runs.length);
+    return { ...first, agreement: mean('agreement'), precision: mean('precision'), recall: mean('recall'), runs };
+}
+
 function readBenchmark(silver) {
     const header = { threadId: silver.threadId, title: silver.title, comments: silver.comments, chars: silver.chars, authors: silver.authors,
         silverModels: silver.models.map(model => `${model.name} (${model.effort})`), silverBuiltAt: silver.builtAt,
@@ -165,10 +197,11 @@ function writeReadmeTables() {
                 const cells = page.pickerCells(role, key);
                 const result = page.benchmarkResult(role, key);
                 const graded = result !== undefined && !result.failed;
-                return `| ${cells.model} | ${cells.effort} | ${cells.cost} | ${cells.latency} | ${cells.agreement} | ${graded ? percent(result.precision) : ''} | ${graded ? percent(result.recall) : ''} |`;
+                const runCount = graded ? (result.runs ? result.runs.length : 1) : '';
+                return `| ${cells.model} | ${cells.effort} | ${cells.cost} | ${cells.latency} | ${cells.agreement} | ${graded ? percent(result.precision) : ''} | ${graded ? percent(result.recall) : ''} | ${runCount} |`;
             });
-        return [`### ${role[0].toUpperCase()}${role.slice(1)}`, '', `| Model | Reasoning effort | Cost / ${page.PICKER_COMMENTS} comments | Latency / ${page.PICKER_COMMENTS} comments | Agreement with silver | Precision | Recall |`,
-            '| --- | --- | ---: | ---: | ---: | ---: | ---: |', ...rows].join('\n');
+        return [`### ${role[0].toUpperCase()}${role.slice(1)}`, '', `| Model | Reasoning effort | Cost / ${page.PICKER_COMMENTS} comments | Latency / ${page.PICKER_COMMENTS} comments | Agreement with silver | Precision | Recall | Runs |`,
+            '| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |', ...rows].join('\n');
     });
     const readme = fs.readFileSync(README_PATH, 'utf8');
     if (!README_TABLES_PATTERN.test(readme)) throw new Error(`${README_PATH} has no ${README_START} and ${README_END} markers`);
@@ -194,8 +227,11 @@ async function main() {
         .filter(([key]) => force || choiceKey !== null || benchmark.results[taskRole][key] === undefined)
         .map(([key]) => ({ role: taskRole, choiceKey: key })));
     if (tasks.length === 0) throw new Error(choiceKey === null ? 'every listed choice already has a result; pass --force to measure again' : `no role lists the choice ${choiceKey}`);
+    const repeats = Number(lib.readArgument('repeats') ?? NO_REPEATS);
+    if (!Number.isInteger(repeats) || repeats < 0) throw new Error('--repeats must be a whole number of runs');
     const ledger = { spentUsd: 0, capUsd: Number(lib.readArgument('budget') ?? DEFAULT_BUDGET_USD) };
-    const modelCallChat = lib.makeModelCallChat({ apiKey: lib.requireApiKey(), ledger });
+    const apiKey = lib.requireApiKey();
+    const modelCallChat = lib.makeModelCallChat({ apiKey, ledger, cacheDirectory: lib.CACHE_DIRECTORY });
     const thread = await lib.loadThread(silver.threadId);
     if (thread.comments.length !== silver.comments || lib.threadChars(thread) !== silver.chars) {
         throw new Error(`the thread snapshot (${thread.comments.length} comments) is not the one the reference was built on (${silver.comments} comments)`);
@@ -204,7 +240,9 @@ async function main() {
     // Choices run one after another per role and the roles run side by side; each result is saved as it arrives.
     await Promise.all(ROLES.map(async taskRole => {
         for (const task of tasks.filter(item => item.role === taskRole)) {
-            benchmark.results[task.role][task.choiceKey] = await benchmarkChoice({ ...task, silver, thread, modelCallChat, concurrency });
+            const existing = benchmark.results[task.role][task.choiceKey];
+            const first = repeats > 0 && existing !== undefined && !force ? existing : await benchmarkChoice({ ...task, silver, thread, modelCallChat, concurrency });
+            benchmark.results[task.role][task.choiceKey] = repeats > 0 ? await withRepeats({ ...task, first, repeats, silver, thread, apiKey, ledger, concurrency }) : first;
             writeBenchmark(benchmark);
         }
     }));

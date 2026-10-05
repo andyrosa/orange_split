@@ -120,7 +120,7 @@ async function main() {
     const concurrency = Number(lib.readArgument('concurrency') ?? DEFAULT_CONCURRENCY);
     const ledger = { spentUsd: 0, capUsd };
     const meter = lib.makeMeter();
-    const modelCallChat = meter.wrap(lib.makeModelCallChat({ apiKey: lib.requireApiKey(), ledger }));
+    const modelCallChat = meter.wrap(lib.makeModelCallChat({ apiKey: lib.requireApiKey(), ledger, cacheDirectory: lib.CACHE_DIRECTORY }));
     const thread = await lib.loadThread(threadId);
     const run = (silverModel, label, handlers) => lib.runStages({ thread, config: { ...lib.silverConfig(silverModel), concurrency }, handlers, modelCallChat, label });
 
