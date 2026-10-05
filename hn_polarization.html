@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-sH1HYSeThJfJujm/2gp2UsrQihvSJX4qO/zithphD6U=' 'sha256-0/rP7D0++BnSoPH4bKWNiUQZxh1kVQFl9RQ65A7xzUo='; style-src 'sha256-ykxbkCuA8bV8aejMJYghrqSVuGRLEwY4aEyyXRWCIxs='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-leImsMLTD/LLfFEHRKIK7RzXymh8mG9WaneBETpYsxI=' 'sha256-0/rP7D0++BnSoPH4bKWNiUQZxh1kVQFl9RQ65A7xzUo='; style-src 'sha256-ykxbkCuA8bV8aejMJYghrqSVuGRLEwY4aEyyXRWCIxs='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
 <title>Orange Split - For and Against on Hacker News</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EOS%3C/text%3E%3C/svg%3E">
 <style>
@@ -576,8 +576,8 @@ function choiceLabel(role, key) {
     const figures = pickerFigures(role, key);
     if (figures.failed) return `${modelDisplayName(choice)}: its ${role} output failed validation on the benchmark thread.`;
     if (figures.agreement === null) return `${modelDisplayName(choice)}: ${choice.note || 'not measured'}.`;
-    const runsText = figures.runs === 1 ? 'one run' : `mean of ${figures.runs} runs, ${percentText(figures.lowestAgreement)} to ${percentText(figures.highestAgreement)}`;
-    return `${modelDisplayName(choice)}: agreement with silver ${percentText(figures.agreement)} (${runsText}; precision ${percentText(figures.precision)}, recall ${percentText(figures.recall)}); about ${pickerUsdText(role, figures.usd)} and ${formatDuration(figures.seconds)} per ${PICKER_COMMENTS} comments.`;
+    const runsText = figures.runs === 1 ? 'n=1' : `${percentText(figures.lowestAgreement)}-${percentText(figures.highestAgreement)} n=${figures.runs}`;
+    return `${modelDisplayName(choice)}: agreement with silver ${percentText(figures.agreement)} (${runsText}); precision ${percentText(figures.precision)}, recall ${percentText(figures.recall)}; about ${pickerUsdText(role, figures.usd)} and ${formatDuration(figures.seconds)} per ${PICKER_COMMENTS} comments.`;
 }
 
 // Applies per-stage fields (model, sampling, reasoning, maxTokens) to every stage.
