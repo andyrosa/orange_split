@@ -24,7 +24,6 @@ const { core, MODEL } = lib;
 const RESULT_FILE = path.join(lib.REPO_ROOT, 'data', 'single-call-benchmark.json');
 const DEFAULT_BUDGET_USD = 10;
 const SINGLE_CALL_STAGE = 'singleCall';
-const FAILURE_MESSAGE_CHARS = 300;
 // One extraction batch holds the whole thread, so the request's axes are the candidates of one batch.
 const WHOLE_THREAD_BATCH_CHARS = Number.MAX_SAFE_INTEGER;
 
@@ -171,15 +170,6 @@ function spent(calls) {
         promptTokens: sum(calls.map(call => call.promptTokens)), completionTokens: sum(calls.map(call => call.completionTokens)) };
 }
 
-function failure(error) {
-    return { agreement: 0, precision: 0, recall: 0, failed: error.message.slice(0, FAILURE_MESSAGE_CHARS) };
-}
-
-// A response that stays invalid or truncated is a result. Any other error (network, spending cap) stops the run.
-function isOutputFailure(error) {
-    return error instanceof core.InvalidResponseError || error instanceof core.TruncationError;
-}
-
 function runLine(label, run) {
     const figures = run.failed
         ? `FAILED: ${run.failed}`
@@ -198,8 +188,7 @@ async function runChoice({ choiceKey, silver, thread, modelCallChat, label }) {
     try {
         single = await requestSingleCall({ choice, thread, modelCallChat: meteredCallChat });
     } catch (error) {
-        if (!isOutputFailure(error)) throw error;
-        const failed = { ...failure(error), ...spent(callsOf(SINGLE_CALL_STAGE)) };
+        const failed = { ...lib.failedGrade(error), ...spent(callsOf(SINGLE_CALL_STAGE)) };
         return { oneCall: failed, twoCalls: failed };
     }
     const config = pipelineConfig(choice, thread);
@@ -210,8 +199,7 @@ async function runChoice({ choiceKey, silver, thread, modelCallChat, label }) {
     try {
         twoCalls = { ...returned, ...lib.gradeWholeRun(await run('twoCalls', true), silver), ...spent(meter.calls) };
     } catch (error) {
-        if (!isOutputFailure(error)) throw error;
-        twoCalls = { ...failure(error), ...spent(meter.calls) };
+        twoCalls = { ...lib.failedGrade(error), ...spent(meter.calls) };
     }
     return { oneCall, twoCalls };
 }

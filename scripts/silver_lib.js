@@ -4,10 +4,9 @@
 // responses, so a stage is always measured on the same inputs.
 const fs = require('node:fs');
 const path = require('node:path');
-const { loadCore } = require('./load_core');
+const { loadCore, readArgument, requireApiKey, makeFileStore } = require('./load_core');
 
 const core = loadCore();
-const KEY_ENV_NAME = 'OPENROUTER_API_KEY';
 const REPO_ROOT = path.join(__dirname, '..');
 const SILVER_FILE = path.join(REPO_ROOT, 'data', 'silver.json');
 const BENCHMARK_FILE = path.join(REPO_ROOT, 'data', 'silver-benchmark.json');
@@ -30,22 +29,12 @@ const SILVER_MAX_TOKENS = Object.freeze({ Extract: 64000, Consolidate: 128000, S
 const JUDGE_MAX_TOKENS = 64000;
 // Decimal places of the shares and seconds stored in results.
 const PRECISION_DIGITS = 4;
+// The longest error message a result stores.
+const FAILURE_MESSAGE_CHARS = 300;
 
 // A stage handler is MODEL (send every call of the stage to the configured model) or a function that returns
 // the fixed response JSON for the call, or MODEL to send that one call to the configured model.
 const MODEL = Symbol('model');
-
-function readArgument(name) {
-    const prefix = `--${name}=`;
-    const found = process.argv.find(argument => argument.startsWith(prefix));
-    return found ? found.slice(prefix.length) : null;
-}
-
-function requireApiKey() {
-    const apiKey = readArgument('key') || process.env[KEY_ENV_NAME];
-    if (!apiKey) throw new Error(`pass --key=... or set ${KEY_ENV_NAME}`);
-    return apiKey;
-}
 
 function silverConfig(silverModel) {
     const config = {};
@@ -56,24 +45,6 @@ function silverConfig(silverModel) {
         config[`maxTokens${suffix}`] = maxTokens;
     }
     return config;
-}
-
-function makeFileStore(directory) {
-    fs.mkdirSync(directory, { recursive: true });
-    const pathFor = key => path.join(directory, key + '.json');
-    return {
-        get(key) {
-            try {
-                return JSON.parse(fs.readFileSync(pathFor(key), 'utf8'));
-            } catch (error) {
-                if (error.code === 'ENOENT') return undefined;
-                throw error;
-            }
-        },
-        set(key, value) {
-            fs.writeFileSync(pathFor(key), JSON.stringify(value), 'utf8');
-        },
-    };
 }
 
 // The thread snapshot the reference was built on. A later fetch can differ (edited or deleted comments), so
@@ -372,6 +343,13 @@ function runSpread(runs, field) {
     return { mean: rounded(values.reduce((sum, value) => sum + value, 0) / values.length), lowest: Math.min(...values), highest: Math.max(...values), runs: values.length };
 }
 
+// A response that stays invalid or truncated after the pipeline's own splitting and repair has no usable output,
+// which is a result graded 0. Any other error (network, spending cap) is rethrown and stops the measurement.
+function failedGrade(error) {
+    if (!(error instanceof core.InvalidResponseError || error instanceof core.TruncationError)) throw error;
+    return { agreement: 0, precision: 0, recall: 0, failed: error.message.slice(0, FAILURE_MESSAGE_CHARS) };
+}
+
 // The mean, lowest, and highest of each field over runs, keyed by field.
 function runSummary(runs, fields) {
     return Object.fromEntries(fields.map(field => [field, runSpread(runs, field)]));
@@ -576,10 +554,10 @@ function silverStanceTable(silver) {
 
 module.exports = {
     core, REPO_ROOT, SILVER_FILE, BENCHMARK_FILE, WORK_DIRECTORY, CACHE_DIRECTORY, SILVER_MODELS, MODEL,
-    readArgument, requireApiKey, silverConfig, loadThread, readThreadSnapshot, checkSilverSnapshot, readKeyList, readStoredResults, threadChars,
+    readArgument, requireApiKey, silverConfig, loadThread, checkSilverSnapshot, readKeyList, readStoredResults, threadChars,
     makeModelCallChat, runCallChat, readRepeats, makeMeter, runStages,
     fixedCandidates, fixedAxes, oneAxisOfAllCandidates, fixedStances, noStances, noSummary,
-    stancesOfResult, summaryMarkers, agreementOf, companions, consolidationAgreement, scoringAgreement, runSpread, runSummary, rounded, percent,
+    stancesOfResult, summaryMarkers, agreementOf, companions, consolidationAgreement, scoringAgreement, runSpread, runSummary, rounded, percent, failedGrade, FAILURE_MESSAGE_CHARS,
     gradeStancesAgainst, wholeRunShape, gradeWholeRun, runLatencySeconds,
     matchCandidates, checkSummary, readSilver, silverStanceTable,
 };

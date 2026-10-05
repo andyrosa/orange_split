@@ -39,7 +39,6 @@ const README_PATH = path.join(__dirname, '..', 'README.md');
 const README_START = '<!-- silver-benchmark:start -->';
 const README_END = '<!-- silver-benchmark:end -->';
 const README_TABLES_PATTERN = new RegExp(`${README_START}[\\s\\S]*${README_END}`);
-const FAILURE_MESSAGE_CHARS = 300;
 
 function roleChoices(role) {
     return { extraction: core.VOLUME_MODELS, consolidation: core.CONSOLIDATION_MODELS, scoring: core.VOLUME_MODELS, summary: core.SUMMARY_MODELS }[role];
@@ -82,7 +81,7 @@ const GRADERS = {
         // The pipeline keeps the comparisons when the summary fails. A summary whose output stayed invalid is a
         // result; a call that got no output (refused request, network error) is not.
         if (!result.synthesis && !result.synthesisFailure) throw new Error(`summary call failed: ${result.synthesisError}`);
-        if (!result.synthesis) return { agreement: 0, precision: 0, recall: 0, failed: result.synthesisError.slice(0, FAILURE_MESSAGE_CHARS) };
+        if (!result.synthesis) return { agreement: 0, precision: 0, recall: 0, failed: result.synthesisError.slice(0, lib.FAILURE_MESSAGE_CHARS) };
         const commentsById = core.indexCommentsById(thread.comments);
         const evidenceContent = core.buildSynthesisMessages(thread.title, result.rows, commentsById)[1].content;
         const verdicts = [...(await lib.checkSummary({ modelCallChat: judgeCallChat, title: thread.title, evidenceContent, synthesis: result.synthesis })).values()];
@@ -107,21 +106,21 @@ function handlersFor(role, silver) {
     }[role];
 }
 
+// One run of a choice in a role, graded.
+async function gradeChoice({ role, choiceKey, silver, thread, modelCallChat, judgeCallChat, concurrency, label }) {
+    try {
+        const result = await lib.runStages({ thread, config: { ...core.roleConfig(role, choiceKey), concurrency }, handlers: handlersFor(role, silver), modelCallChat, label });
+        return await GRADERS[role]({ result, silver, thread, judgeCallChat });
+    } catch (error) {
+        return lib.failedGrade(error);
+    }
+}
+
 async function benchmarkChoice({ role, choiceKey, silver, thread, modelCallChat, concurrency }) {
     const label = `${role} ${choiceKey}`;
     const meter = lib.makeMeter();
     const judgeMeter = lib.makeMeter();
-    let grade;
-    try {
-        const result = await lib.runStages({ thread, config: { ...core.roleConfig(role, choiceKey), concurrency }, handlers: handlersFor(role, silver),
-            modelCallChat: meter.wrap(modelCallChat), label });
-        grade = await GRADERS[role]({ result, silver, thread, judgeCallChat: judgeMeter.wrap(modelCallChat) });
-    } catch (error) {
-        // A choice whose output stays invalid or truncated after the pipeline's own splitting and repair has
-        // no usable output, which is a result. Any other error (network, spending cap) stops the benchmark.
-        if (!(error instanceof core.InvalidResponseError || error instanceof core.TruncationError)) throw error;
-        grade = { agreement: 0, precision: 0, recall: 0, failed: error.message.slice(0, FAILURE_MESSAGE_CHARS) };
-    }
+    const grade = await gradeChoice({ role, choiceKey, silver, thread, modelCallChat: meter.wrap(modelCallChat), judgeCallChat: judgeMeter.wrap(modelCallChat), concurrency, label });
     const judgeUsd = judgeMeter.calls.reduce((sum, call) => sum + call.usd, 0);
     const outcome = { ...grade, ...measured(meter, role), judgeUsd, measuredAt: new Date().toISOString() };
     console.log(`${label}: agreement ${lib.percent(outcome.agreement)} (precision ${lib.percent(outcome.precision)}, recall ${lib.percent(outcome.recall)}), $${outcome.usd.toFixed(4)}, ${outcome.calls} calls, mean ${outcome.meanCallSeconds} s${outcome.failed ? `, FAILED: ${outcome.failed}` : ''}`);
@@ -139,14 +138,7 @@ async function withRepeats({ first, role, choiceKey, repeats, silver, thread, ap
     for (let repeat = 1; repeat <= repeats; repeat += 1) {
         const label = `${role} ${choiceKey} repeat ${repeat}`;
         const modelCallChat = lib.runCallChat({ apiKey, ledger, name: `${role}-${choiceKey}`, runNumber: repeat + 1, firstCacheDirectory: lib.CACHE_DIRECTORY });
-        let grade;
-        try {
-            const result = await lib.runStages({ thread, config: { ...core.roleConfig(role, choiceKey), concurrency }, handlers: handlersFor(role, silver), modelCallChat, label });
-            grade = await GRADERS[role]({ result, silver, thread, judgeCallChat: modelCallChat });
-        } catch (error) {
-            if (!(error instanceof core.InvalidResponseError || error instanceof core.TruncationError)) throw error;
-            grade = { agreement: 0, precision: 0, recall: 0 };
-        }
+        const grade = await gradeChoice({ role, choiceKey, silver, thread, modelCallChat, judgeCallChat: modelCallChat, concurrency, label });
         runs.push(gradeOf(grade));
         console.log(`${label}: agreement ${lib.percent(grade.agreement)}`);
     }

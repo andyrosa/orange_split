@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-28fv7cJ8x8KBy6BSYKhiut5yKJ16UVXZ66XfvVGJYd0=' 'sha256-0/rP7D0++BnSoPH4bKWNiUQZxh1kVQFl9RQ65A7xzUo='; style-src 'sha256-ykxbkCuA8bV8aejMJYghrqSVuGRLEwY4aEyyXRWCIxs='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-zwx1DvtzYq7Wrdxuw83jTeH3yYaiRYQ3s/2FIJ7kSW0=' 'sha256-ATcudThpY05heB/cMt44Mx2MpkdFZTvnjVjspzB9DCo='; style-src 'sha256-e0ulQ5qs0KalSlvMuYBU4BFD7AVnOTjLvOkuoTX/K2g='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
 <title>Orange Split - For and Against on Hacker News</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EOS%3C/text%3E%3C/svg%3E">
 <style>
@@ -74,8 +74,7 @@ input[type="range"] { width: 8rem; vertical-align: middle; }
 .model-cell { display: flex; align-items: center; min-width: 0; padding: 0 0.55rem; }
 .model-cell:first-child { padding-left: 0; }
 .model-cell + .model-cell { border-left: 1px solid #ddd; }
-.model-grid .metric { text-align: right; font-variant-numeric: tabular-nums; }
-.model-grid .metric { justify-content: flex-end; }
+.model-grid .metric { text-align: right; font-variant-numeric: tabular-nums; justify-content: flex-end; }
 .model-trigger { position: relative; max-width: 100%; margin: 0; padding: 0.5rem 2.2rem 0.5rem 0.75rem; border: 1px solid #c5ced8; border-radius: 6px; background: #fafcfe; color: #234c74; font: 600 14px/20px system-ui, sans-serif; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 .model-trigger:hover, .model-trigger[aria-expanded="true"] { background: #eaf3fc; border-color: #477cac; }
 .model-trigger::after { content: "v"; position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); }
@@ -281,26 +280,12 @@ const CONSTANTS = Object.freeze({
 // temperature; Claude Fable 5.1 accepts a reasoning effort but neither temperature nor seed.
 // null omits the field from the request.
 //
-// Every figure a picker shows and every forecast comes from one benchmark. scripts/silver.js builds the silver
-// reference for one thread: what the two strongest models, one from OpenAI and one from Anthropic, agree on
-// at each stage, with no human annotation. scripts/benchmark.js then runs each choice in each of its roles on
-// that thread, with every other stage fixed to the reference, and records the choice's agreement with the
-// reference, what its calls cost, and how long they took. Two runs of one choice can differ by several
-// points, so a choice can be run several times (--repeats); its agreement is then the mean of its runs.
-// Adding a model is one entry below and one run of scripts/benchmark.js --choice=<key>.
+// Every picker figure and forecast comes from the benchmark of scripts/benchmark.js against the silver reference;
+// README.md, "Silver reference and benchmark", describes it. Adding a model is one entry below and one run of
+// scripts/benchmark.js --choice=<key>.
 const SAMPLING_SEED = 12345;
-// The contenders for a role's default are the choices whose stage costs at most a quarter of the default Max
-// cost for a thread of PICKER_COMMENTS comments. Each contender near the top was run three times, and one
-// whose mean agreement with silver is more than 5 points below the best mean is out; 5 points is the
-// smallest gap three runs can show. Agreement cannot choose among the contenders left, so each pair was run
-// three times through the whole pipeline (scripts/pipeline_runs.js) on threads 22866284 and 44163063.
-// GPT-6.1 Sol low consolidation with GPT-5.6 Luna low scoring is the default: its whole runs agree with
-// silver better than those of Claude Sonnet 5.5 with the same scoring, with no overlap between the two sets
-// of runs, it leaves as many axes outside "too few" on the large thread, and it costs the same. GPT-6 Luna low scoring leaves fewer
-// axes outside "too few" in every pair. Extraction has one contender that is both best and cheapest. The
-// summary scores do not separate the choices (all but one reach 100%), so its default is the fastest of
-// those. The picks are fixed here, from the benchmark of 2026-10-04, so that a later benchmark run does not
-// change a default without an edit.
+// The defaults and the evidence for them: README.md, "Choosing the defaults". They are fixed here so that a later
+// benchmark run does not change a default without an edit.
 const DEFAULT_EXTRACTION_KEY = 'luna6Low';
 const DEFAULT_SCORING_KEY = 'lunaLow';
 const DEFAULT_CONSOLIDATION_KEY = 'sol61Low';
@@ -1042,14 +1027,6 @@ function storyDate(story) {
     return formatLocalDateTime(story.createdAt);
 }
 
-function storyDetails(story) {
-    return `(${story.numComments} comments, ${storyDate(story)}, ${story.id})`;
-}
-
-function storyLabel(story) {
-    return `${story.title} ${storyDetails(story)}`;
-}
-
 // Newest first; undated stories last.
 function sortStoriesNewestFirst(stories) {
     return stories.slice().sort((left, right) => (right.createdAt || '').localeCompare(left.createdAt || ''));
@@ -1440,10 +1417,6 @@ function buildScoreUserMessage(batch, commentsById, snippetChars) {
     return { role: 'user', content: 'Comments:\n\n' + batch.map(comment => formatCommentForScore(comment, commentsById, snippetChars)).join('\n\n') };
 }
 
-function buildScoreMessages(title, presentedAxes, batch, commentsById, swapPoles, snippetChars) {
-    return [buildScoreSystemMessage(title, presentedAxes, swapPoles), buildScoreUserMessage(batch, commentsById, snippetChars)];
-}
-
 // ---------------------------------------------------------------------------
 // Response parsing
 // ---------------------------------------------------------------------------
@@ -1825,7 +1798,7 @@ function authorCounts(stances) {
 function withAuthorCounts(row, commentsById) {
     const agreed = new Map();
     for (const stance of [STANCE_A, STANCE_B, STANCE_M]) {
-        for (const id of row[`commentIds${stance}`]) agreed.set(`${id}|${row.axisId}`, stance);
+        for (const id of row[`commentIds${stance}`]) agreed.set(stanceKey(id, row.axisId), stance);
     }
     const stances = aggregateByAuthor(agreed, commentsById).get(row.axisId) || new Map();
     const evidenceIds = { A: [], B: [], M: [], C: [] };
@@ -1925,8 +1898,8 @@ function orientRows(rows) {
             ...(row.evidenceIds ? { evidenceIds: { ...row.evidenceIds, A: row.evidenceIds.B, B: row.evidenceIds.A } } : {}),
             unverifiedComments: (row.unverifiedComments || []).map(comment => ({
                 ...comment,
-                pass1: comment.pass1 === null ? null : flipStance(comment.pass1),
-                pass2: comment.pass2 === null ? null : flipStance(comment.pass2),
+                pass1: flipStance(comment.pass1),
+                pass2: flipStance(comment.pass2),
             })),
         }
         : row));
@@ -2898,14 +2871,19 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
         }), cfg.concurrency);
     }
 
+    // The run's statistics; scoring holds the comparison of the two scoring passes.
+    function runStats(scoring) {
+        return { comments: comments.length, authors: new Set(comments.map(comment => comment.author)).size,
+            cachedCalls, cachedCost, cacheWriteFailures, axesBelowFloor, ...scoring };
+    }
+
     function emptyResult(message) {
         warnings.push(message);
         if (cacheWriteFailures > 0) warnings.push(`${cacheWriteFailures} cache writes failed; a new run or reload may repeat those paid calls`);
         report('done', 1, 1);
         return { rows: [], axes: [], candidates: [], unverifiedAxes: [], synthesis: null, synthesisError: null,
             cost, calls: callCount, warnings, ...(articleMode ? { article, comments } : {}), emptyReason: message,
-            stats: { comments: comments.length, authors: new Set(comments.map(c => c.author)).size,
-                cachedCalls, cachedCost, cacheWriteFailures, axesBelowFloor, agreedStances: 0, classifiedPairs: 0, reviewedPairs: 0, conflictingStances: 0, singlePassStances: 0 } };
+            stats: runStats({ agreedStances: 0, classifiedPairs: 0, reviewedPairs: 0, conflictingStances: 0, singlePassStances: 0 }) };
     }
     if (articleMode) {
         report('prepare', 0, 1);
@@ -3087,36 +3065,19 @@ async function runPipeline({ thread, callChat, onProgress, signal, config }) {
         cost,
         calls: callCount,
         warnings,
-        stats: {
-            comments: comments.length,
-            authors: new Set(comments.map(comment => comment.author)).size,
-            cachedCalls,
-            cachedCost,
-            cacheWriteFailures,
-            axesBelowFloor,
-            ...passComparison,
-            agreedStances: agreed.size,
-        },
+        stats: runStats({ ...passComparison, agreedStances: agreed.size }),
     };
 }
 
+// The names the Node scripts use (scripts/load_core.js). The page shares this block's global scope.
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        CONSTANTS, DEFAULT_CONFIG, VOLUME_MODELS, CONSOLIDATION_MODELS, SUMMARY_MODELS, DEFAULT_EXTRACTION_KEY, DEFAULT_SCORING_KEY, DEFAULT_CONSOLIDATION_KEY, DEFAULT_SUMMARY_KEY, buildRunConfig, roleConfig, modelDisplayName, ROLE_CHOICES, SILVER_BENCHMARK, benchmarkResult, forecastFigures, stageForecast, estimateRun, PICKER_COMMENTS, pickerFigures, PICKER_COLUMNS, pickerCells, choiceLabel,
-        roleChoice, ALL_UNCACHED, uncachedFractions, applyToAllStages, stepMinComments,
-        isArticle, isArticleId, createArticleSource, sourceFromSnapshot, parseArticlePreparation, buildArticlePrepareMessages, parseAxisReview, parseSynthesisReview, estimateSourceRun, ARTICLE_MAX_CHARS,
-        stripHtml, flattenThread, makeExtractBatches, makeScoreBatches, seededShuffle,
-        selectCommentShare, threadShare, indexCommentsById, largestShareWithinBudget, parseFrontPage, parseCurrentCommentCount, formatLocalDateTime, storyDate, storyDetails, storyLabel, sortStoriesNewestFirst, storySearchUrl, isThreadId, fetchThreadItem, fetchCurrentCommentCount, fetchStories, fetchFrontPageStories,
-        buildExtractMessages, buildConsolidateMessages, buildScoreMessages,
-        SYNTHESIS_SCHEMA, buildSynthesisMessages, parseSynthesisResponse, synthesisTextParts,
-        parseExtractResponse, parseConsolidateResponse, parseScoreResponse, MIN_AXIS_PEOPLE, axisPeople, axesBelowFloorText,
-        parseStanceKey, flipStance,
-        mergePasses, comparePasses, collectUnverifiedComments, aggregateByAuthor, computeRows, withAuthorCounts, orientRows, rankRows, wilsonInterval, wilsonLowerBound, minorityLowerBound, rowGroup, ROW_GROUPS, CONSENSUS_SHARE, SPLIT_SHARE, groupSynthesisSections, proportionShares,
-        axisMetaText, formatDuration, formatElapsed, formatClockDuration, formatProgress, formatRunCost, formatRunSummary,
-        runPool, callOpenRouter, makeOpenRouterCallChat, listedModelIds, modelPriceTable, fetchModelPriceTable, requestAllowance, BudgetReservationError, makeBudgetedCallChat, runPipeline, TruncationError, InvalidResponseError, CostUnavailableError,
-        requestCacheKey, parseCacheExport, cacheImportDecision, newerCacheDates, formatCacheImport, makeCachedCallChat, probeCache, formatCacheProbe, formatNextRun,
-        makePkceVerifier, pkceChallenge, openRouterKeyLabel, openRouterAuthUrl, exchangeOpenRouterCode,
-        runResultCacheKey, makeRunPageUrl, parseRunPageUrl,
+        CONSTANTS, DEFAULT_CONFIG, VOLUME_MODELS, CONSOLIDATION_MODELS, SUMMARY_MODELS, ROLE_CHOICES, MIN_AXIS_PEOPLE, PICKER_COMMENTS,
+        roleChoice, roleConfig, buildRunConfig, applyToAllStages, modelDisplayName, benchmarkResult, pickerCells,
+        isThreadId, fetchThreadItem, flattenThread, threadShare, createArticleSource, indexCommentsById, makeExtractBatches,
+        buildExtractMessages, buildSynthesisMessages, synthesisTextParts, parseScoreResponse, parseStanceKey, flipStance, axisPeople,
+        axisMetaText, formatElapsed, formatProgress, formatRunCost, formatRunSummary,
+        makeOpenRouterCallChat, fetchModelPriceTable, makeBudgetedCallChat, makeCachedCallChat, runPipeline, InvalidResponseError, TruncationError,
     };
 }
 </script>
@@ -3336,7 +3297,6 @@ const elements = {
     run: document.getElementById('run'),
     runHint: document.getElementById('run-hint'),
     cancel: document.getElementById('cancel'),
-    storageInfo: document.getElementById('storage-info'),
     cachedCallCount: document.getElementById('cached-call-count'),
     cachedResultsToggle: document.getElementById('cached-results-toggle'),
     cachedResultsList: document.getElementById('cached-results-list'),
@@ -3423,22 +3383,21 @@ function keyAvailable() {
     return currentApiKey() !== null || elements.apiKey.value.trim() !== '';
 }
 
-// The run as the page would start it now: DEFAULT_CONFIG, then the two model choices, then the Max cost box.
+// The run as the page would start it now: DEFAULT_CONFIG, then the four model choices, then the Max cost box.
 function selectedRunConfig() {
     return { ...buildRunConfig(selectedModelKeys()), budgetUsd: maxCostInBox() };
+}
+
+// A run's selection: the thread or article id, its snapshot time, and the current share, models, and Max cost.
+function runSelectionOf(articleId, snapshot) {
+    return { article: String(articleId), snapshot, share: sharePercent(), ...selectedModelKeys(), budget: maxCostInBox() };
 }
 
 function selectedRunUrlParameters() {
     if (loadedThread === null || loadedSnapshotAt === null) {
         return null;
     }
-    return {
-        article: String(loadedThread.id),
-        snapshot: loadedSnapshotAt,
-        share: sharePercent(),
-        ...selectedModelKeys(),
-        budget: maxCostInBox(),
-    };
+    return runSelectionOf(loadedThread.id, loadedSnapshotAt);
 }
 
 // How a run writes its selection into the address bar. A run the user started with the Run button gets
@@ -3526,10 +3485,6 @@ function storedThread(threadId) {
         flattenedThreads.set(threadId, sourceFromSnapshot(snapshot));
     }
     return flattenedThreads.get(threadId);
-}
-
-function invalidateResultCache() {
-    probeMemo.clear();
 }
 
 // Refreshes what the stores drive: the storage line, the thread buttons, the estimate.
@@ -3648,7 +3603,7 @@ function runHintText() {
 }
 
 function refreshRunButton() {
-    elements.run.disabled = activeController !== null || importActive || loadedThread === null || (!isArticle(loadedThread) && selectedComments().length === 0)
+    elements.run.disabled = pageBusy() || loadedThread === null || (!isArticle(loadedThread) && selectedComments().length === 0)
         || (!keyAvailable() && !runIsFullyCached());
     elements.runHint.textContent = runHintText();
 }
@@ -3668,6 +3623,11 @@ function setRunning() {
         button.disabled = isBusy;
     }
     refreshRunButton();
+}
+
+// A run or a cache import is in progress, so the controls that start either one wait.
+function pageBusy() {
+    return activeController !== null || importActive;
 }
 
 function setImporting(active) {
@@ -3753,11 +3713,11 @@ function renderCachedResults() {
     }
 }
 
-function cachedSnapshotDateRange(records) {
-    if (records.length === 0) {
+function cachedSnapshotDateRange(fetchTimes) {
+    if (fetchTimes.length === 0) {
         return '';
     }
-    const times = records.map(record => record.fetchedAt ? new Date(record.fetchedAt).getTime() : NaN);
+    const times = fetchTimes.map(fetchedAt => fetchedAt ? new Date(fetchedAt).getTime() : NaN);
     if (times.some(time => !Number.isFinite(time))) {
         return ' (snapshot date range unavailable)';
     }
@@ -3774,8 +3734,8 @@ function cachedSnapshotDateRange(records) {
 // The stored snapshots (threads and pasted articles) are not listed; the storage line shows only their
 // fetch-time range. They remain stored for reopening summaries and for loading threads without refetching.
 function renderCachedDateRange() {
-    const records = snapshotStore.keys().map(key => ({ fetchedAt: snapshotStore.get(key.slice(CONSTANTS.THREAD_KEY_PREFIX.length)).fetchedAt }));
-    elements.cachedDateRange.textContent = cachedSnapshotDateRange(records);
+    const fetchTimes = snapshotStore.keys().map(key => snapshotStore.get(key.slice(CONSTANTS.THREAD_KEY_PREFIX.length)).fetchedAt);
+    elements.cachedDateRange.textContent = cachedSnapshotDateRange(fetchTimes);
 }
 
 function refreshStorageInfo() {
@@ -3786,7 +3746,7 @@ function refreshStorageInfo() {
     elements.cachedResultsToggle.textContent = counted(storedResults, 'summary', 'summaries');
     renderCachedDateRange();
     renderCachedResults();
-    elements.exportCache.disabled = activeController !== null || importActive || cachedCalls + storedThreads + storedResults === 0;
+    elements.exportCache.disabled = pageBusy() || cachedCalls + storedThreads + storedResults === 0;
     elements.deleteCached.hidden = cachedCalls === 0 && storedThreads === 0 && storedResults === 0;
 }
 
@@ -3842,7 +3802,7 @@ async function importCacheFile(file) {
         const payload = parseCacheExport(await file.text());
         const counts = await importCacheEntries(payload.entries);
         flattenedThreads.clear();
-        invalidateResultCache();
+        probeMemo.clear();
         await afterStoreChange();
         setStatus(formatCacheImport(counts, file.name));
     } finally {
@@ -3851,7 +3811,7 @@ async function importCacheFile(file) {
 }
 
 // Cheap enough to run on every keystroke in the thread box: existence checks only.
-// Load appears while the box denotes a thread other than the loaded one; Refresh while the loaded thread is stored.
+// Load appears while the box denotes a thread other than the loaded one; Refetch while the loaded thread is stored.
 function refreshThreadButtons() {
     const threadId = threadIdInBox();
     elements.refreshThread.hidden = loadedThread === null || isArticle(loadedThread) || !snapshotStore.has(String(loadedThread.id));
@@ -3915,6 +3875,16 @@ function closeModelOptions(picker, { restoreFocus = false } = {}) {
     }
 }
 
+// Closes every other picker, then opens this one with focus on the option at focusOffset (-1 is the last).
+function openModelOptions(picker, focusOffset) {
+    for (const other of modelPickers) {
+        if (other !== picker) closeModelOptions(other);
+    }
+    picker.options.hidden = false;
+    picker.button.setAttribute('aria-expanded', 'true');
+    focusModelOption(picker, focusOffset);
+}
+
 function modelOptionButtons(picker) {
     return [...picker.options.querySelectorAll('.model-option')];
 }
@@ -3973,27 +3943,13 @@ function initializeModelPicker(picker) {
     picker.options.replaceChildren(picker.header, ...options, makeElement('p', { className: 'model-comparison-method', text: PICKER_METHOD_TEXT }));
     syncModelPicker(picker);
     picker.button.addEventListener('click', () => {
-        const opening = picker.options.hidden;
-        for (const other of modelPickers) {
-            if (other !== picker) {
-                closeModelOptions(other);
-            }
-        }
-        picker.options.hidden = !opening;
-        picker.button.setAttribute('aria-expanded', String(opening));
-        if (opening) {
-            focusModelOption(picker, 0);
-        }
+        if (picker.options.hidden) openModelOptions(picker, 0);
+        else closeModelOptions(picker);
     });
     picker.button.addEventListener('keydown', event => {
         if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
             event.preventDefault();
-            for (const other of modelPickers) {
-                if (other !== picker) closeModelOptions(other);
-            }
-            picker.options.hidden = false;
-            picker.button.setAttribute('aria-expanded', 'true');
-            focusModelOption(picker, event.key === 'ArrowDown' ? 0 : -1);
+            openModelOptions(picker, event.key === 'ArrowDown' ? 0 : -1);
         } else if (event.key === 'Escape') {
             closeModelOptions(picker);
         }
@@ -4041,7 +3997,7 @@ function storiesAboveMinComments(stories) {
     return stories.filter(story => story.numComments >= minimum);
 }
 
-// The thread id the box currently denotes: a typed id, or the id behind a picked or loaded title.
+// The thread id typed in the box, or null.
 function threadIdInBox() {
     const text = elements.threadId.value.trim();
     return isThreadId(text) ? text : null;
@@ -4071,16 +4027,6 @@ function frontPageLabel() {
     return frontPageLimit === 60 ? `${HEADER_HOME_PAGE} +1` : HEADER_HOME_PAGE;
 }
 
-function storyResultSelection(storyId, fetchedAt) {
-    return {
-        article: String(storyId),
-        snapshot: fetchedAt,
-        share: sharePercent(),
-        ...selectedModelKeys(),
-        budget: maxCostInBox(),
-    };
-}
-
 function setStoryStatus(element, kind, text) {
     element.className = `story-status ${kind}`;
     element.textContent = text;
@@ -4096,7 +4042,7 @@ async function markCachedRows(rows) {
             continue;
         }
         const snapshot = snapshotStore.get(String(story.id));
-        const saved = resultStore.get(runResultCacheKey(storyResultSelection(story.id, snapshot.fetchedAt)));
+        const saved = resultStore.get(runResultCacheKey(runSelectionOf(story.id, snapshot.fetchedAt)));
         if (saved !== null && saved.version === RESULT_CACHE_VERSION) {
             item.classList.add('preprocessed');
             setStoryStatus(status, 'ready', 'opens from a saved result');
@@ -4247,7 +4193,7 @@ function refreshList() {
 }
 
 function selectStoryScope(scope, { focus = true, toggle = false } = {}) {
-    if (activeController !== null || importActive) return;
+    if (pageBusy()) return;
     frontPageLimit = toggle && scope === 'front' && storyScope === 'front' && !articleModeSelected && frontPageLimit === 30 ? 60 : 30;
     if (articleModeSelected) { resetLoadedSource(); updateEstimate(); }
     storyScope = scope;
@@ -4334,7 +4280,6 @@ function renderThreadInfo(thread, snapshot, stored, currentCommentCount, current
     elements.threadInfo.replaceChildren(...parts);
 }
 
-// Loads the thread from the stored copy or from the API, then shows its size and the estimate.
 // The results describe one thread; loading any thread, including a refresh of the same one, removes them.
 function clearResults() {
     elements.results.replaceChildren();
@@ -4342,8 +4287,9 @@ function clearResults() {
     displayedSelectionKey = null;
 }
 
+// Loads the thread from the stored copy or from the API, then shows its size and the estimate.
 async function loadThreadFromPage(threadId, { share, cachedResult, cachedComments, runSelection } = {}) {
-    if (activeController !== null || importActive) return;
+    if (pageBusy()) return;
     if (isArticleId(threadId)) return loadArticleFromPage(threadId, { cachedResult, cachedComments, runSelection });
     showArticleMode(false);
     const isCurrent = sourceLoadLatest.start();
@@ -4517,21 +4463,24 @@ function renderEvidenceGroup(sideClass, label, commentIds, commentsById) {
     const group = makeElement('section', { className: `evidence-group ${sideClass}` });
     group.dataset.evidenceKind = sideClass;
     const people = new Set(commentIds.map(id => commentsById.get(id)?.author).filter(Boolean)).size;
-    group.appendChild(makeElement('h3', { text: `${label} — ${people} ${articleMode ? 'attributed ' + (people === 1 ? 'voice' : 'voices') : people === 1 ? 'person' : 'people'}, ${commentIds.length} verified ${articleMode ? (commentIds.length === 1 ? 'passage' : 'passages') : commentIds.length === 1 ? 'comment' : 'comments'}` }));
+    const peopleText = articleMode ? counted(people, 'attributed voice') : counted(people, 'person', 'people');
+    group.appendChild(makeElement('h3', { text: `${label} — ${peopleText}, ${counted(commentIds.length, articleMode ? 'verified passage' : 'verified comment')}` }));
     for (const commentId of commentIds) {
-        const comment = commentsById.get(commentId);
-        const article = makeElement('article', { className: 'evidence-comment' });
-        const header = makeElement('header');
-        const link = makeElement('a', { text: comment === undefined || !comment.author ? `comment ${commentId}` : `${comment.author} · comment ${commentId}` });
-        link.href = CONSTANTS.HN_ITEM_PAGE_URL + commentId;
-        link.target = '_blank';
-        link.rel = 'noopener';
-        header.appendChild(comment?.sourceKind === 'article' ? articleEvidenceLink(comment) : link);
-        article.appendChild(header);
-        article.appendChild(makeElement('p', { text: comment === undefined ? 'Comment text is unavailable in this cached result.' : comment.text }));
-        group.appendChild(article);
+        group.appendChild(renderEvidenceComment(commentId, commentsById, ''));
     }
     return group;
+}
+
+// One comment of an evidence group: its link, the given note after the link, and its text.
+function renderEvidenceComment(commentId, commentsById, note) {
+    const comment = commentsById.get(commentId);
+    const article = makeElement('article', { className: 'evidence-comment' });
+    const header = makeElement('header');
+    header.appendChild(commentLink(commentId, commentsById));
+    if (note !== '') header.appendChild(document.createTextNode(note));
+    article.appendChild(header);
+    article.appendChild(makeElement('p', { text: comment === undefined ? 'Comment text is unavailable in this cached result.' : comment.text }));
+    return article;
 }
 
 function stanceLabel(stance) {
@@ -4559,14 +4508,7 @@ function renderUnverifiedEvidence(comments, commentsById) {
     group.dataset.evidenceKind = 'unverified';
     group.appendChild(makeElement('h3', { text: `Unverified (${comments.length})` }));
     for (const item of comments) {
-        const comment = commentsById.get(item.commentId);
-        const article = makeElement('article', { className: 'evidence-comment' });
-        const header = makeElement('header');
-        header.appendChild(commentLink(item.commentId, commentsById));
-        header.appendChild(document.createTextNode(` · pass 1: ${stanceLabel(item.pass1)}; pass 2: ${stanceLabel(item.pass2)}`));
-        article.appendChild(header);
-        article.appendChild(makeElement('p', { text: comment === undefined ? 'Comment text is unavailable in this cached result.' : comment.text }));
-        group.appendChild(article);
+        group.appendChild(renderEvidenceComment(item.commentId, commentsById, ` · pass 1: ${stanceLabel(item.pass1)}; pass 2: ${stanceLabel(item.pass2)}`));
     }
     return group;
 }
@@ -4605,7 +4547,7 @@ function renderUnverifiedAxes(axes, commentsById) {
         block.appendChild(makeElement('p', { text: axis.statementA }));
         block.appendChild(makeElement('p', { text: axis.statementB }));
         const comments = axis.unverifiedComments || [];
-        block.appendChild(makeElement('p', { className: 'label', text: `0 verified comments; ${comments.length} unverified ${comments.length === 1 ? 'comment' : 'comments'} - failed blind review` }));
+        block.appendChild(makeElement('p', { className: 'label', text: `0 verified comments; ${counted(comments.length, 'unverified comment')} - failed blind review` }));
         if (comments.length > 0) {
             const list = makeElement('ul');
             for (const item of comments) {
@@ -4618,7 +4560,7 @@ function renderUnverifiedAxes(axes, commentsById) {
         }
         return block;
     }));
-    elements.unverifiedAxes.querySelector('summary').textContent = `${axes.length} unverified ${axes.length === 1 ? 'axis' : 'axes'}`;
+    elements.unverifiedAxes.querySelector('summary').textContent = counted(axes.length, 'unverified axis', 'unverified axes');
     elements.unverifiedAxes.hidden = axes.length === 0;
 }
 
@@ -4913,7 +4855,7 @@ async function runFromPage({ urlWrite = RUN_URL_WRITE.none, runSelection } = {})
         activeController = null;
         setRunning();
         if (calledModel) {
-            invalidateResultCache();
+            probeMemo.clear();
         }
         afterStoreChange();
     }
@@ -4950,7 +4892,7 @@ elements.deleteCached.addEventListener('click', async () => {
         return;
     }
     flattenedThreads.clear();
-    invalidateResultCache();
+    probeMemo.clear();
     afterStoreChange();
     setStatus(`Deleted from this browser: ${removedCalls} cached model calls, ${removedSnapshots} threads, and ${removedResults} completed results. The OpenRouter key is kept.`);
 });
@@ -4993,7 +4935,7 @@ function resetLoadedSource() {
     clearResults();
 }
 function selectArticleMode() {
-    if (activeController !== null || importActive) return;
+    if (pageBusy()) return;
     resetLoadedSource();
     showArticleMode(true);
     loadArticleDraft();
@@ -5009,7 +4951,7 @@ function setArticleSource(source, capturedAt) {
     document.title = `${source.title} - Orange Split`;
 }
 function loadArticleDraft() {
-    if (!articleModeSelected || activeController !== null || importActive) return;
+    if (!articleModeSelected || pageBusy()) return;
     const text = elements.articleText.value;
     if (!text.trim()) {
         resetLoadedSource();
@@ -5178,7 +5120,7 @@ elements.refreshThread.addEventListener('click', async () => {
         return;
     }
     flattenedThreads.delete(threadId);
-    invalidateResultCache();
+    probeMemo.clear();
     loadThreadFromPage(threadId);
 });
 elements.maxCost.value = DEFAULT_MAX_COST_USD;

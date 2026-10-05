@@ -10,21 +10,13 @@
 // --cache-dir stores each finished model call as <dir>/<key>.json and reuses it on later runs.
 // Config flags apply in the order given in buildConfig; later flags override earlier ones.
 const fs = require('node:fs');
-const path = require('node:path');
-const { loadCore } = require('./load_core');
+const { loadCore, readArgument, requireApiKey, makeFileStore } = require('./load_core');
 
 const core = loadCore();
-const KEY_ENV_NAME = 'OPENROUTER_API_KEY';
 const DEFAULT_SHARE_PERCENT = 100;
 const RANK_DIGITS = 3;
 // Statements 2 and 3 of a row line up under statement 1, which follows "#", the rank, and a space.
 const STATEMENT_INDENT = ' '.repeat('#'.length + RANK_DIGITS + ' '.length);
-
-function readArgument(name) {
-    const prefix = `--${name}=`;
-    const found = process.argv.find(argument => argument.startsWith(prefix));
-    return found ? found.slice(prefix.length) : null;
-}
 
 // Config overrides, applied in this order so that later flags win: config file, role choices (each
 // touching only its own stages), one model for every stage, one sampling setting for every stage,
@@ -62,24 +54,6 @@ function buildConfig() {
         config.budgetUsd = Number(budget);
     }
     return config;
-}
-
-function makeFileStore(directory) {
-    fs.mkdirSync(directory, { recursive: true });
-    const pathFor = key => path.join(directory, key + '.json');
-    return {
-        get(key) {
-            try {
-                return JSON.parse(fs.readFileSync(pathFor(key), 'utf8'));
-            } catch (error) {
-                if (error.code === 'ENOENT') return undefined;
-                throw error;
-            }
-        },
-        set(key, value) {
-            fs.writeFileSync(pathFor(key), JSON.stringify(value), 'utf8');
-        },
-    };
 }
 
 // Reads the thread from threadFile when it exists, otherwise fetches it (and saves it when threadFile is given).
@@ -134,10 +108,7 @@ async function main() {
     if (!articleFile && (!threadId || !core.isThreadId(threadId))) {
         throw new Error('pass --thread=<numeric Hacker News item id> or --article-file=<plain text file>');
     }
-    const apiKey = readArgument('key') || process.env[KEY_ENV_NAME];
-    if (!apiKey) {
-        throw new Error(`pass --key=... or set ${KEY_ENV_NAME}`);
-    }
+    const apiKey = requireApiKey();
     const config = buildConfig();
     const fullThread = articleFile
         ? core.createArticleSource(fs.readFileSync(articleFile, 'utf8'), readArgument('title') || '')
@@ -173,8 +144,7 @@ async function main() {
     if (result.synthesisError) process.exitCode = 1;
 }
 
-module.exports = { buildConfig };
-if (require.main === module) main().catch(error => {
+main().catch(error => {
     process.stderr.write(`ERROR: ${error.message}\n`);
     process.exitCode = 1;
 });

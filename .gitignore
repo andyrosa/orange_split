@@ -3,7 +3,6 @@
 /.playwright-mcp/
 /.claude/
 /outputs/
-/hn-split-cache-*.json
 /orange-split-cache-*.json
 .env
 .env.*
