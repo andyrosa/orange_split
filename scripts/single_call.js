@@ -1,16 +1,13 @@
 // Measures how well one model does when one request replaces the extraction, consolidation, and scoring
 // stages of the page pipeline. The request holds the whole thread and returns the axes and, for each comment,
-// its stance on each axis it addresses. The summary stage is not part of the request. Each result is graded
-// against the silver reference (data/silver.json, built by scripts/silver.js) and, with --reference, against
-// one multi-stage run, and written to data/single-call-benchmark.json.
-// Usage: node scripts/single_call.js --choice=<key>            one choice of SINGLE_CALL_CHOICES
-//        node scripts/single_call.js --all                     every choice without a result yet
-//        node scripts/single_call.js --pipeline-result=<file>  grade a result file of scripts/run_node.js --out
-//                                                              the same way; nothing is called or written
-//        [--reference=<file>] also grade against that result file of scripts/run_node.js --out, a multi-stage
-//                             run on the reference thread; a changed reference measures every choice again
-//        [--force] measure again a choice that has a result  [--budget=<usd>] [--key=sk-or-...]
-// Each choice is measured in two variants:
+// its stance on each axis it addresses. The summary stage is not part of the request. Each run is graded
+// against the silver reference (data/silver.json, built by scripts/silver.js) as scripts/silver_lib.js grades a
+// whole run, and the runs are written to data/single-call-benchmark.json.
+// Usage: node scripts/single_call.js --choice=<key>[,<key>...]   choices of SINGLE_CALL_CHOICES
+//        node scripts/single_call.js --all                       every choice
+//        [--repeats=<n>] n more runs of each choice, each with its own call cache  [--budget=<usd>] [--key=sk-or-...]
+// Run 1 replays the shared call cache, so measuring a choice again costs only its repeats.
+// Each run measures two variants:
 //   oneCall   the request alone: every stance it returns counts.
 //   twoCalls  the request plus one scoring call, which is the pipeline's second scoring pass (axes shuffled,
 //             statements swapped) over the whole thread in one request. Only the stances both calls give
@@ -19,31 +16,14 @@
 // extraction, consolidation, and the first scoring pass, so the rows are the rows the page would show. The
 // pipeline's floor applies: an axis on whose two statements the request put fewer than MIN_AXIS_PEOPLE people
 // is dropped.
-// Grading against a reference, which is silver or a multi-stage run. A reference has axes, stances, and
-// disputed cells: for silver, the cells its two models do not agree on; for a multi-stage run, the cells only
-// one of its scoring passes gave a stance or its passes gave different stances. A run axis's comments are
-// those with a counted stance on it; a reference axis's comments are those with a reference stance on it. The
-// similarity of a run axis and a reference axis is the number of comments on both over the number on either,
-// leaving out the run comments on the reference axis's disputed cells. A run axis and a reference axis are
-// paired when each is the other's most similar axis and they share at least MIN_SHARED_COMMENTS comments.
-// Similarity is used, not the bare count that scripts/silver.js pairs the two silver models' axes by, because
-// one comment has stances on several axes, so a large axis shares comments with many small ones. The run's
-// stances on a paired axis are then graded as the scoring role is graded: precision is the share of the
-// stances given on undisputed cells that equal the reference stance, recall is the share of all reference
-// stances given, and agreement is their harmonic mean, the F1 score. A reference stance on an unpaired
-// reference axis counts as not given, and a stance on an unpaired run axis is not graded, so the result also
-// states how many axes were paired.
 const fs = require('node:fs');
 const path = require('node:path');
 const lib = require('./silver_lib');
 
 const { core, MODEL } = lib;
-const REPO_ROOT = path.join(__dirname, '..');
-const RESULT_FILE = path.join(REPO_ROOT, 'data', 'single-call-benchmark.json');
+const RESULT_FILE = path.join(lib.REPO_ROOT, 'data', 'single-call-benchmark.json');
 const DEFAULT_BUDGET_USD = 10;
 const SINGLE_CALL_STAGE = 'singleCall';
-const MIN_SHARED_COMMENTS = 2;
-const PRECISION_DIGITS = 4;
 const FAILURE_MESSAGE_CHARS = 300;
 // One extraction batch holds the whole thread, so the request's axes are the candidates of one batch.
 const WHOLE_THREAD_BATCH_CHARS = Number.MAX_SAFE_INTEGER;
@@ -129,10 +109,6 @@ const SINGLE_CALL_SCHEMA = {
     },
 };
 
-function rounded(value) {
-    return Number(value.toFixed(PRECISION_DIGITS));
-}
-
 // The request's output: axes numbered from 1 in the order given, and a Map("commentId|axisId" -> stance).
 // The stance list has the scoring schema's shape, so the pipeline's own parser reads it.
 function parseSingleCall(json, thread) {
@@ -188,79 +164,10 @@ function handlersOf(single, secondPassByModel) {
     };
 }
 
-// Pairs the run's axes with the reference's axes and grades the run's stances on the paired axes.
-// run = { axes: [{ id }], agreed: Map("commentId|axisId" -> stance) }.
-function gradeRun(run, reference) {
-    const table = lib.silverStanceTable(reference);
-    const runComments = new Map(run.axes.map(axis => [axis.id, new Map()]));
-    for (const [key, stance] of run.agreed) {
-        const { commentId, axisId } = core.parseStanceKey(key);
-        if (!runComments.has(axisId)) throw new Error(`stance on comment ${commentId} names axis ${axisId}, which the run does not list`);
-        runComments.get(axisId).set(commentId, stance);
-    }
-    const commentsByAxis = cells => {
-        const sets = new Map(reference.axes.map(axis => [axis.id, new Set()]));
-        for (const [commentId, axisId] of cells) sets.get(axisId).add(commentId);
-        return sets;
-    };
-    const referenceComments = commentsByAxis(reference.stances);
-    const disputedComments = commentsByAxis(reference.disputedCells);
-    // The comments the two axes share, and that count over the count of comments on either axis. A run comment
-    // on a disputed cell of the reference axis is on neither side of that division.
-    const overlap = (runAxis, referenceAxis) => {
-        const onReference = referenceComments.get(referenceAxis.id);
-        const disputed = disputedComments.get(referenceAxis.id);
-        let sharedComments = 0;
-        let eitherComments = onReference.size;
-        for (const commentId of runComments.get(runAxis.id).keys()) {
-            if (onReference.has(commentId)) sharedComments += 1;
-            else if (!disputed.has(commentId)) eitherComments += 1;
-        }
-        return { sharedComments, similarity: eitherComments === 0 ? 0 : sharedComments / eitherComments };
-    };
-    const bestMatch = (others, similarityTo) => others.reduce((best, other) => (similarityTo(other) > (best ? similarityTo(best) : 0) ? other : best), null);
-    const translated = new Map();
-    const pairs = [];
-    for (const runAxis of run.axes) {
-        const referenceAxis = bestMatch(reference.axes, other => overlap(runAxis, other).similarity);
-        if (referenceAxis === null || bestMatch(run.axes, other => overlap(other, referenceAxis).similarity) !== runAxis) continue;
-        const { sharedComments, similarity } = overlap(runAxis, referenceAxis);
-        if (sharedComments < MIN_SHARED_COMMENTS) continue;
-        // The run's statements can be in the opposite order: the order under which more stances equal the
-        // reference stances is taken. A middle stance equals itself under both orders.
-        let equalAsGiven = 0;
-        let equalSwapped = 0;
-        for (const [commentId, stance] of runComments.get(runAxis.id)) {
-            const referenceStance = table.stances.get(`${commentId}|${referenceAxis.id}`);
-            if (referenceStance === undefined) continue;
-            if (referenceStance === stance) equalAsGiven += 1;
-            if (referenceStance === core.flipStance(stance)) equalSwapped += 1;
-        }
-        const swapped = equalSwapped > equalAsGiven;
-        for (const [commentId, stance] of runComments.get(runAxis.id)) {
-            translated.set(`${commentId}|${referenceAxis.id}`, swapped ? core.flipStance(stance) : stance);
-        }
-        pairs.push({ runAxisId: runAxis.id, referenceAxisId: referenceAxis.id, sharedComments, similarity: rounded(similarity), swapped });
-    }
-    const { precision, recall, given, correct } = lib.scoringAgreement(translated, table);
-    const pairedReferenceAxes = new Set(pairs.map(pair => pair.referenceAxisId));
-    const people = reference.rows.reduce((sum, row) => sum + row.people, 0);
-    const pairedPeople = reference.rows.filter(row => pairedReferenceAxes.has(row.axisId)).reduce((sum, row) => sum + row.people, 0);
-    return { agreement: rounded(lib.agreementOf(precision, recall)), precision: rounded(precision), recall: rounded(recall), given, correct,
-        referenceStances: reference.stances.length, axes: run.axes.length, pairedAxes: pairs.length, referenceAxes: reference.axes.length,
-        pairedPeopleShare: rounded(people === 0 ? 0 : pairedPeople / people), pairs };
-}
-
-// Grades a pipeline result: its scored axes and the stances both of its scoring passes gave.
-function gradeResult(result, reference) {
-    const { agreed } = lib.stancesOfResult(result);
-    return { ...gradeRun({ axes: result.axes, agreed }, reference), stances: agreed.size, rows: result.rows.length, axesBelowFloor: result.stats.axesBelowFloor };
-}
-
 // The dollars, seconds, and count of the given metered calls. The calls of a variant run one after another.
 function spent(calls) {
     const sum = values => values.reduce((total, value) => total + value, 0);
-    return { usd: sum(calls.map(call => call.usd)), seconds: rounded(sum(calls.map(call => call.seconds ?? 0))), calls: calls.length,
+    return { usd: sum(calls.map(call => call.usd)), seconds: lib.rounded(sum(calls.map(call => call.seconds ?? 0))), calls: calls.length,
         promptTokens: sum(calls.map(call => call.promptTokens)), completionTokens: sum(calls.map(call => call.completionTokens)) };
 }
 
@@ -277,140 +184,101 @@ function percent(share) {
     return `${(share * 100).toFixed(1)}%`;
 }
 
-// One grade as text. referenceName is "silver" or "multi-stage".
-function gradeText(grade, referenceName) {
-    return `F1 against ${referenceName} ${percent(grade.agreement)} (precision ${percent(grade.precision)}, recall ${percent(grade.recall)}), `
-        + `${grade.pairedAxes} of ${grade.referenceAxes} ${referenceName} axes paired`;
+function runLine(label, run) {
+    const figures = run.failed
+        ? `FAILED: ${run.failed}`
+        : `${run.axes} axes, ${run.rowsWithEnoughPeople} outside "too few", ${run.stances} stances; F1 against silver ${percent(run.agreement)} `
+            + `(precision ${percent(run.precision)}, recall ${percent(run.recall)}), ${run.pairedAxes} of ${run.referenceAxes} silver axes paired`;
+    return `${label}: ${figures}; $${run.usd.toFixed(4)}, ${run.seconds} s, ${run.calls} calls`;
 }
 
-function variantLine(label, variant) {
-    const multiStagePart = variant.multiStage ? `; ${gradeText(variant.multiStage, 'multi-stage')}` : '';
-    const figures = variant.failed
-        ? `FAILED: ${variant.failed}`
-        : `${variant.axes} axes, ${variant.axesBelowFloor} more below the floor, ${variant.stances} stances; ${gradeText(variant, 'silver')}${multiStagePart}`;
-    const cost = variant.usd === undefined ? '' : `; $${variant.usd.toFixed(4)}, ${variant.seconds} s, ${variant.calls} calls`;
-    return `${label}: ${figures}${cost}`;
-}
-
-// A result file of scripts/run_node.js --out, which must hold the reference thread.
-function readPipelineResult(file, silver) {
-    const result = JSON.parse(fs.readFileSync(file, 'utf8'));
-    if (String(result.threadId) !== String(silver.threadId) || result.stats.comments !== silver.comments) {
-        throw new Error(`${file} holds thread ${result.threadId} with ${result.stats.comments} comments, not the reference thread ${silver.threadId} with ${silver.comments} comments`);
-    }
-    return result;
-}
-
-// A multi-stage result in the shape of the silver reference: its scored axes, the stances both of its
-// scoring passes gave, as disputed cells those only one pass gave or the passes gave differently, and the
-// people on each row.
-function referenceOfResult(result) {
-    const { agreed, unsure } = lib.stancesOfResult(result);
-    const cell = key => {
-        const { commentId, axisId } = core.parseStanceKey(key);
-        return [commentId, axisId];
-    };
-    return { axes: result.axes, stances: [...agreed].map(([key, stance]) => [...cell(key), stance]), disputedCells: [...unsure].map(cell),
-        rows: result.rows.map(row => ({ axisId: row.axisId, people: row.authors })) };
-}
-
-// The multi-stage reference of --reference: the shape results are graded against, and what the results file
-// states about the run, its own grade against silver included.
-function readMultiStage(file, silver) {
-    const result = readPipelineResult(file, silver);
-    const reference = referenceOfResult(result);
-    const roleChoices = result.roleChoices ?? null;
-    const models = roleChoices === null ? null
-        : Object.fromEntries(Object.entries(roleChoices).map(([role, key]) => [role, key === null ? null : core.modelDisplayName(core.roleChoice(role, key))]));
-    return { reference, description: { file: path.relative(REPO_ROOT, path.resolve(file)).split(path.sep).join('/'), roleChoices, models,
-        axes: reference.axes.length, stances: reference.stances.length, usd: result.cost, seconds: result.elapsedSeconds, calls: result.calls,
-        silver: gradeResult(result, silver) } };
-}
-
-// A pipeline result graded against silver and, when a multi-stage reference is given, against that too.
-function gradeBoth(result, silver, multiStage) {
-    const multiStagePart = multiStage === null ? {} : { multiStage: gradeRun({ axes: result.axes, agreed: lib.stancesOfResult(result).agreed }, multiStage.reference) };
-    return { ...gradeResult(result, silver), ...multiStagePart };
-}
-
-async function measureChoice({ choiceKey, silver, multiStage, thread, modelCallChat }) {
+// One run of a choice: the request, then both variants through the pipeline, graded against silver.
+async function runChoice({ choiceKey, silver, thread, modelCallChat, label }) {
     const choice = SINGLE_CALL_CHOICES[choiceKey];
     const meter = lib.makeMeter();
     const meteredCallChat = meter.wrap(modelCallChat);
     const callsOf = stage => meter.calls.filter(call => call.stage === stage);
-    const outcome = { name: choice.name, effort: choice.effort, model: choice.model };
     let single;
     try {
         single = await requestSingleCall({ choice, thread, modelCallChat: meteredCallChat });
     } catch (error) {
         if (!isOutputFailure(error)) throw error;
-        outcome.oneCall = { ...failure(error), ...spent(callsOf(SINGLE_CALL_STAGE)) };
-        outcome.twoCalls = outcome.oneCall;
+        const failed = { ...failure(error), ...spent(callsOf(SINGLE_CALL_STAGE)) };
+        return { oneCall: failed, twoCalls: failed };
     }
-    if (single !== undefined) {
-        Object.assign(outcome, { axesReturned: single.axes.length, stancesReturned: single.stances.size, warnings: single.warnings.length });
-        const config = pipelineConfig(choice, thread);
-        const run = (variant, secondPassByModel) => lib.runStages({ thread, config, handlers: handlersOf(single, secondPassByModel), modelCallChat: meteredCallChat, label: `${choiceKey} ${variant}` });
-        outcome.oneCall = { ...gradeBoth(await run('oneCall', false), silver, multiStage), ...spent(callsOf(SINGLE_CALL_STAGE)) };
-        try {
-            outcome.twoCalls = { ...gradeBoth(await run('twoCalls', true), silver, multiStage), ...spent(meter.calls) };
-        } catch (error) {
-            if (!isOutputFailure(error)) throw error;
-            outcome.twoCalls = { ...failure(error), ...spent(meter.calls) };
-        }
+    const config = pipelineConfig(choice, thread);
+    const run = (variant, secondPassByModel) => lib.runStages({ thread, config, handlers: handlersOf(single, secondPassByModel), modelCallChat: meteredCallChat, label: `${label} ${variant}` });
+    const returned = { axesReturned: single.axes.length, stancesReturned: single.stances.size, warnings: single.warnings.length };
+    const oneCall = { ...returned, ...lib.gradeWholeRun(await run('oneCall', false), silver), ...spent(callsOf(SINGLE_CALL_STAGE)) };
+    let twoCalls;
+    try {
+        twoCalls = { ...returned, ...lib.gradeWholeRun(await run('twoCalls', true), silver), ...spent(meter.calls) };
+    } catch (error) {
+        if (!isOutputFailure(error)) throw error;
+        twoCalls = { ...failure(error), ...spent(meter.calls) };
     }
-    outcome.measuredAt = new Date().toISOString();
-    console.log(variantLine(`${choiceKey} oneCall`, outcome.oneCall));
-    console.log(variantLine(`${choiceKey} twoCalls`, outcome.twoCalls));
-    return outcome;
+    return { oneCall, twoCalls };
 }
 
-function readResults(silver, multiStage) {
-    const header = { threadId: silver.threadId, title: silver.title, comments: silver.comments, chars: silver.chars, silverBuiltAt: silver.builtAt,
-        multiStage: multiStage === null ? null : multiStage.description };
+// The runs of one variant and, over them, the mean, lowest, and highest of each figure. A failed run counts as
+// F1 0 and has no shape.
+const SPREAD_FIELDS = Object.freeze(['agreement', 'precision', 'recall', 'axes', 'rowsWithEnoughPeople', 'stances', 'usd', 'seconds']);
+function variantSummary(runs) {
+    return { runs, ...Object.fromEntries(SPREAD_FIELDS.map(field => [field, lib.runSpread(runs, field)])) };
+}
+
+// Run 1 replays the shared cache; each repeat has its own cache, so its requests are answered anew.
+async function measureChoice({ choiceKey, repeats, silver, thread, apiKey, ledger }) {
+    const choice = SINGLE_CALL_CHOICES[choiceKey];
+    const runs = [];
+    for (let runNumber = 1; runNumber <= 1 + repeats; runNumber += 1) {
+        const modelCallChat = runNumber === 1
+            ? lib.makeModelCallChat({ apiKey, ledger, cacheDirectory: lib.CACHE_DIRECTORY })
+            : lib.repeatCallChat({ apiKey, ledger, name: `single-${choiceKey}`, repeat: runNumber - 1 });
+        const label = `${choiceKey} run ${runNumber}`;
+        const result = await runChoice({ choiceKey, silver, thread, modelCallChat, label });
+        console.log(runLine(`${label} oneCall`, result.oneCall));
+        console.log(runLine(`${label} twoCalls`, result.twoCalls));
+        runs.push(result);
+    }
+    return { name: choice.name, effort: choice.effort, model: choice.model, oneCall: variantSummary(runs.map(run => run.oneCall)),
+        twoCalls: variantSummary(runs.map(run => run.twoCalls)), measuredAt: new Date().toISOString() };
+}
+
+function readResults(silver) {
+    const header = { threadId: silver.threadId, title: silver.title, comments: silver.comments, chars: silver.chars, silverBuiltAt: silver.builtAt };
     const stored = fs.existsSync(RESULT_FILE) ? JSON.parse(fs.readFileSync(RESULT_FILE, 'utf8')) : null;
-    // Results graded against another build of silver or another multi-stage reference do not compare with new ones.
-    const comparable = stored !== null && stored.silverBuiltAt === silver.builtAt && JSON.stringify(stored.multiStage ?? null) === JSON.stringify(header.multiStage);
-    return { ...header, results: comparable ? stored.results : {} };
-}
-
-function gradePipelineResultFile(file, silver, multiStage) {
-    const result = readPipelineResult(file, silver);
-    console.log(variantLine(file, gradeBoth(result, silver, multiStage)));
-    console.log(`the run cost $${result.cost.toFixed(4)} and took ${result.elapsedSeconds} s in ${result.calls} calls, its summary call included`);
+    // Results graded against another build of silver, or stored before each variant kept its runs, do not
+    // compare with new ones.
+    const comparable = stored !== null && stored.silverBuiltAt === silver.builtAt;
+    const results = comparable ? Object.fromEntries(Object.entries(stored.results).filter(([key, result]) => Array.isArray(result.oneCall?.runs))) : {};
+    return { ...header, results };
 }
 
 async function main() {
     const silver = lib.readSilver();
-    const referenceFile = lib.readArgument('reference');
-    const multiStage = referenceFile === null ? null : readMultiStage(referenceFile, silver);
-    const pipelineResultFile = lib.readArgument('pipeline-result');
-    if (pipelineResultFile !== null) {
-        gradePipelineResultFile(pipelineResultFile, silver, multiStage);
-        return;
-    }
-    const choiceKey = lib.readArgument('choice');
-    const force = process.argv.includes('--force');
-    if (!process.argv.includes('--all') && choiceKey === null) throw new Error('pass --choice=<key>, or --all, or --pipeline-result=<file>');
-    if (choiceKey !== null && SINGLE_CALL_CHOICES[choiceKey] === undefined) throw new Error(`--choice must be one of ${Object.keys(SINGLE_CALL_CHOICES).join(', ')}`);
-    const benchmark = readResults(silver, multiStage);
-    const keys = Object.keys(SINGLE_CALL_CHOICES).filter(key => (choiceKey === null ? force || benchmark.results[key] === undefined : key === choiceKey));
-    if (keys.length === 0) throw new Error('every choice already has a result; pass --force to measure again');
+    const choiceList = lib.readArgument('choice');
+    const keys = process.argv.includes('--all') ? Object.keys(SINGLE_CALL_CHOICES) : choiceList === null ? [] : choiceList.split(',');
+    if (keys.length === 0) throw new Error('pass --choice=<key>[,<key>...] or --all');
+    const unknown = keys.filter(key => SINGLE_CALL_CHOICES[key] === undefined);
+    if (unknown.length > 0) throw new Error(`unknown choice ${unknown.join(', ')}; the choices are ${Object.keys(SINGLE_CALL_CHOICES).join(', ')}`);
+    const repeats = lib.readRepeats();
+    const benchmark = readResults(silver);
     const ledger = { spentUsd: 0, capUsd: Number(lib.readArgument('budget') ?? DEFAULT_BUDGET_USD) };
-    const modelCallChat = lib.makeModelCallChat({ apiKey: lib.requireApiKey(), ledger, cacheDirectory: lib.CACHE_DIRECTORY });
+    const apiKey = lib.requireApiKey();
     const thread = await lib.loadThread(silver.threadId);
     if (thread.comments.length !== silver.comments || lib.threadChars(thread) !== silver.chars) {
         throw new Error(`the thread snapshot (${thread.comments.length} comments) is not the one the reference was built on (${silver.comments} comments)`);
     }
     // The choices run side by side; each result is saved as it arrives.
     await Promise.all(keys.map(async key => {
-        benchmark.results[key] = await measureChoice({ choiceKey: key, silver, multiStage, thread, modelCallChat });
+        benchmark.results[key] = await measureChoice({ choiceKey: key, repeats, silver, thread, apiKey, ledger });
         fs.writeFileSync(RESULT_FILE, JSON.stringify(benchmark, null, 1) + '\n', 'utf8');
     }));
     console.log(`wrote ${RESULT_FILE}; $${ledger.spentUsd.toFixed(2)} spent in this run`);
 }
 
-module.exports = { SINGLE_CALL_CHOICES, SINGLE_CALL_SCHEMA, parseSingleCall, pipelineConfig, handlersOf, gradeRun, gradeResult, referenceOfResult };
+module.exports = { SINGLE_CALL_CHOICES, SINGLE_CALL_SCHEMA, parseSingleCall, pipelineConfig, handlersOf };
 if (require.main === module) main().catch(error => {
     process.stderr.write(`ERROR: ${error.message}\n`);
     process.exitCode = 1;

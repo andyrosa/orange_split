@@ -1,0 +1,954 @@
+{
+ "silverThreadId": 22866284,
+ "silverBuiltAt": "2026-10-04T20:30:05.702Z",
+ "results": {
+  "defaults-22866284": {
+   "config": "defaults",
+   "threadId": 22866284,
+   "keys": {
+    "extraction": "luna6Low",
+    "consolidation": "sonnet55",
+    "scoring": "lunaLow",
+    "summary": "sol6Low"
+   },
+   "models": {
+    "extraction": "GPT-6 Luna (low)",
+    "consolidation": "Claude Sonnet 5.5 (adaptive)",
+    "scoring": "GPT-5.6 Luna (low)",
+    "summary": "GPT-6 Sol (low)"
+   },
+   "runs": [
+    {
+     "axes": 8,
+     "axesBelowFloor": 0,
+     "rowsWithEnoughPeople": 4,
+     "rows": 8,
+     "stances": 211,
+     "agreement": 0.3671,
+     "precision": 0.4621,
+     "recall": 0.3045,
+     "usd": 0.11739754000000002,
+     "seconds": null,
+     "calls": 53,
+     "cachedCalls": 53,
+     "summaryFailed": false
+    },
+    {
+     "axes": 8,
+     "axesBelowFloor": 0,
+     "rowsWithEnoughPeople": 5,
+     "rows": 8,
+     "stances": 213,
+     "agreement": 0.4098,
+     "precision": 0.5137,
+     "recall": 0.3409,
+     "usd": 0.11419580500000001,
+     "seconds": 42.891,
+     "calls": 53,
+     "cachedCalls": 0,
+     "summaryFailed": false
+    },
+    {
+     "axes": 6,
+     "axesBelowFloor": 0,
+     "rowsWithEnoughPeople": 4,
+     "rows": 6,
+     "stances": 169,
+     "agreement": 0.3389,
+     "precision": 0.4357,
+     "recall": 0.2773,
+     "usd": 0.10541194,
+     "seconds": 37.632,
+     "calls": 53,
+     "cachedCalls": 0,
+     "summaryFailed": false
+    }
+   ],
+   "axes": {
+    "mean": 7.3333,
+    "lowest": 6,
+    "highest": 8,
+    "runs": 3
+   },
+   "rowsWithEnoughPeople": {
+    "mean": 4.3333,
+    "lowest": 4,
+    "highest": 5,
+    "runs": 3
+   },
+   "stances": {
+    "mean": 197.6667,
+    "lowest": 169,
+    "highest": 213,
+    "runs": 3
+   },
+   "agreement": {
+    "mean": 0.3719,
+    "lowest": 0.3389,
+    "highest": 0.4098,
+    "runs": 3
+   },
+   "precision": {
+    "mean": 0.4705,
+    "lowest": 0.4357,
+    "highest": 0.5137,
+    "runs": 3
+   },
+   "recall": {
+    "mean": 0.3076,
+    "lowest": 0.2773,
+    "highest": 0.3409,
+    "runs": 3
+   },
+   "usd": {
+    "mean": 0.1123,
+    "lowest": 0.10541194,
+    "highest": 0.11739754000000002,
+    "runs": 3
+   },
+   "seconds": {
+    "mean": 40.2615,
+    "lowest": 37.632,
+    "highest": 42.891,
+    "runs": 2
+   },
+   "measuredAt": "2026-10-05T04:01:03.450Z"
+  },
+  "sonnet55Luna6-22866284": {
+   "config": "sonnet55Luna6",
+   "threadId": 22866284,
+   "keys": {
+    "extraction": "luna6Low",
+    "consolidation": "sonnet55",
+    "scoring": "luna6Low",
+    "summary": "sol6Low"
+   },
+   "models": {
+    "extraction": "GPT-6 Luna (low)",
+    "consolidation": "Claude Sonnet 5.5 (adaptive)",
+    "scoring": "GPT-6 Luna (low)",
+    "summary": "GPT-6 Sol (low)"
+   },
+   "runs": [
+    {
+     "axes": 8,
+     "axesBelowFloor": 0,
+     "rowsWithEnoughPeople": 2,
+     "rows": 8,
+     "stances": 183,
+     "agreement": 0.3743,
+     "precision": 0.5246,
+     "recall": 0.2909,
+     "usd": 0.07157434,
+     "seconds": null,
+     "calls": 53,
+     "cachedCalls": 53,
+     "summaryFailed": false
+    },
+    {
+     "axes": 7,
+     "axesBelowFloor": 0,
+     "rowsWithEnoughPeople": 1,
+     "rows": 7,
+     "stances": 137,
+     "agreement": 0.3333,
+     "precision": 0.4828,
+     "recall": 0.2545,
+     "usd": 0.06907203,
+     "seconds": 34.106,
+     "calls": 53,
+     "cachedCalls": 0,
+     "summaryFailed": false
+    },
+    {
+     "axes": 10,
+     "axesBelowFloor": 0,
+     "rowsWithEnoughPeople": 4,
+     "rows": 10,
+     "stances": 160,
+     "agreement": 0.4244,
+     "precision": 0.5887,
+     "recall": 0.3318,
+     "usd": 0.07304169,
+     "seconds": 39.673,
+     "calls": 53,
+     "cachedCalls": 0,
+     "summaryFailed": false
+    }
+   ],
+   "axes": {
+    "mean": 8.3333,
+    "lowest": 7,
+    "highest": 10,
+    "runs": 3
+   },
+   "rowsWithEnoughPeople": {
+    "mean": 2.3333,
+    "lowest": 1,
+    "highest": 4,
+    "runs": 3
+   },
+   "stances": {
+    "mean": 160,
+    "lowest": 137,
+    "highest": 183,
+    "runs": 3
+   },
+   "agreement": {
+    "mean": 0.3773,
+    "lowest": 0.3333,
+    "highest": 0.4244,
+    "runs": 3
+   },
+   "precision": {
+    "mean": 0.532,
+    "lowest": 0.4828,
+    "highest": 0.5887,
+    "runs": 3
+   },
+   "recall": {
+    "mean": 0.2924,
+    "lowest": 0.2545,
+    "highest": 0.3318,
+    "runs": 3
+   },
+   "usd": {
+    "mean": 0.0712,
+    "lowest": 0.06907203,
+    "highest": 0.07304169,
+    "runs": 3
+   },
+   "seconds": {
+    "mean": 36.8895,
+    "lowest": 34.106,
+    "highest": 39.673,
+    "runs": 2
+   },
+   "measuredAt": "2026-10-05T04:00:52.540Z"
+  },
+  "sol61Luna56-22866284": {
+   "config": "sol61Luna56",
+   "threadId": 22866284,
+   "keys": {
+    "extraction": "luna6Low",
+    "consolidation": "sol61Low",
+    "scoring": "lunaLow",
+    "summary": "sol6Low"
+   },
+   "models": {
+    "extraction": "GPT-6 Luna (low)",
+    "consolidation": "GPT-6.1 Sol (low)",
+    "scoring": "GPT-5.6 Luna (low)",
+    "summary": "GPT-6 Sol (low)"
+   },
+   "runs": [
+    {
+     "axes": 15,
+     "axesBelowFloor": 0,
+     "rowsWithEnoughPeople": 5,
+     "rows": 15,
+     "stances": 185,
+     "agreement": 0.4205,
+     "precision": 0.5606,
+     "recall": 0.3364,
+     "usd": 0.11278461999999999,
+     "seconds": null,
+     "calls": 53,
+     "cachedCalls": 53,
+     "summaryFailed": false
+    },
+    {
+     "axes": 11,
+     "axesBelowFloor": 0,
+     "rowsWithEnoughPeople": 2,
+     "rows": 11,
+     "stances": 166,
+     "agreement": 0.4903,
+     "precision": 0.6331,
+     "recall": 0.4,
+     "usd": 0.11833694,
+     "seconds": 65.457,
+     "calls": 53,
+     "cachedCalls": 0,
+     "summaryFailed": false
+    },
+    {
+     "axes": 12,
+     "axesBelowFloor": 0,
+     "rowsWithEnoughPeople": 4,
+     "rows": 12,
+     "stances": 179,
+     "agreement": 0.4157,
+     "precision": 0.5441,
+     "recall": 0.3364,
+     "usd": 0.11554114,
+     "seconds": 56.024,
+     "calls": 53,
+     "cachedCalls": 0,
+     "summaryFailed": false
+    }
+   ],
+   "axes": {
+    "mean": 12.6667,
+    "lowest": 11,
+    "highest": 15,
+    "runs": 3
+   },
+   "rowsWithEnoughPeople": {
+    "mean": 3.6667,
+    "lowest": 2,
+    "highest": 5,
+    "runs": 3
+   },
+   "stances": {
+    "mean": 176.6667,
+    "lowest": 166,
+    "highest": 185,
+    "runs": 3
+   },
+   "agreement": {
+    "mean": 0.4422,
+    "lowest": 0.4157,
+    "highest": 0.4903,
+    "runs": 3
+   },
+   "precision": {
+    "mean": 0.5793,
+    "lowest": 0.5441,
+    "highest": 0.6331,
+    "runs": 3
+   },
+   "recall": {
+    "mean": 0.3576,
+    "lowest": 0.3364,
+    "highest": 0.4,
+    "runs": 3
+   },
+   "usd": {
+    "mean": 0.1156,
+    "lowest": 0.11278461999999999,
+    "highest": 0.11833694,
+    "runs": 3
+   },
+   "seconds": {
+    "mean": 60.7405,
+    "lowest": 56.024,
+    "highest": 65.457,
+    "runs": 2
+   },
+   "measuredAt": "2026-10-05T04:01:47.472Z"
+  },
+  "sol61Luna6-22866284": {
+   "config": "sol61Luna6",
+   "threadId": 22866284,
+   "keys": {
+    "extraction": "luna6Low",
+    "consolidation": "sol61Low",
+    "scoring": "luna6Low",
+    "summary": "sol6Low"
+   },
+   "models": {
+    "extraction": "GPT-6 Luna (low)",
+    "consolidation": "GPT-6.1 Sol (low)",
+    "scoring": "GPT-6 Luna (low)",
+    "summary": "GPT-6 Sol (low)"
+   },
+   "runs": [
+    {
+     "axes": 15,
+     "axesBelowFloor": 0,
+     "rowsWithEnoughPeople": 3,
+     "rows": 15,
+     "stances": 135,
+     "agreement": 0.4321,
+     "precision": 0.6731,
+     "recall": 0.3182,
+     "usd": 0.07146123000000001,
+     "seconds": null,
+     "calls": 53,
+     "cachedCalls": 53,
+     "summaryFailed": false
+    },
+    {
+     "axes": 9,
+     "axesBelowFloor": 0,
+     "rowsWithEnoughPeople": 2,
+     "rows": 9,
+     "stances": 118,
+     "agreement": 0.3746,
+     "precision": 0.6211,
+     "recall": 0.2682,
+     "usd": 0.06469926,
+     "seconds": 58.645,
+     "calls": 53,
+     "cachedCalls": 0,
+     "summaryFailed": false
+    },
+    {
+     "axes": 8,
+     "axesBelowFloor": 0,
+     "rowsWithEnoughPeople": 1,
+     "rows": 8,
+     "stances": 116,
+     "agreement": 0.3478,
+     "precision": 0.6582,
+     "recall": 0.2364,
+     "usd": 0.06173084,
+     "seconds": 62.762,
+     "calls": 53,
+     "cachedCalls": 0,
+     "summaryFailed": false
+    }
+   ],
+   "axes": {
+    "mean": 10.6667,
+    "lowest": 8,
+    "highest": 15,
+    "runs": 3
+   },
+   "rowsWithEnoughPeople": {
+    "mean": 2,
+    "lowest": 1,
+    "highest": 3,
+    "runs": 3
+   },
+   "stances": {
+    "mean": 123,
+    "lowest": 116,
+    "highest": 135,
+    "runs": 3
+   },
+   "agreement": {
+    "mean": 0.3848,
+    "lowest": 0.3478,
+    "highest": 0.4321,
+    "runs": 3
+   },
+   "precision": {
+    "mean": 0.6508,
+    "lowest": 0.6211,
+    "highest": 0.6731,
+    "runs": 3
+   },
+   "recall": {
+    "mean": 0.2743,
+    "lowest": 0.2364,
+    "highest": 0.3182,
+    "runs": 3
+   },
+   "usd": {
+    "mean": 0.066,
+    "lowest": 0.06173084,
+    "highest": 0.07146123000000001,
+    "runs": 3
+   },
+   "seconds": {
+    "mean": 60.7035,
+    "lowest": 58.645,
+    "highest": 62.762,
+    "runs": 2
+   },
+   "measuredAt": "2026-10-05T04:01:39.519Z"
+  },
+  "best-22866284": {
+   "config": "best",
+   "threadId": 22866284,
+   "keys": {
+    "extraction": "luna6Low",
+    "consolidation": "sonnet55",
+    "scoring": "opus55",
+    "summary": "sol6Low"
+   },
+   "models": {
+    "extraction": "GPT-6 Luna (low)",
+    "consolidation": "Claude Sonnet 5.5 (adaptive)",
+    "scoring": "Claude Opus 5.5 (adaptive)",
+    "summary": "GPT-6 Sol (low)"
+   },
+   "runs": [
+    {
+     "axes": 8,
+     "axesBelowFloor": 0,
+     "rowsWithEnoughPeople": 2,
+     "rows": 8,
+     "stances": 161,
+     "agreement": 0.4593,
+     "precision": 0.6371,
+     "recall": 0.3591,
+     "usd": 1.08267394,
+     "seconds": null,
+     "calls": 53,
+     "cachedCalls": 53,
+     "summaryFailed": false
+    },
+    {
+     "axes": 7,
+     "axesBelowFloor": 0,
+     "rowsWithEnoughPeople": 3,
+     "rows": 7,
+     "stances": 168,
+     "agreement": 0.4123,
+     "precision": 0.5324,
+     "recall": 0.3364,
+     "usd": 0.96118694,
+     "seconds": 39.277,
+     "calls": 53,
+     "cachedCalls": 0,
+     "summaryFailed": false
+    },
+    {
+     "axes": 7,
+     "axesBelowFloor": 0,
+     "rowsWithEnoughPeople": 4,
+     "rows": 7,
+     "stances": 160,
+     "agreement": 0.4138,
+     "precision": 0.5625,
+     "recall": 0.3273,
+     "usd": 1.0582480400000003,
+     "seconds": 34.995,
+     "calls": 53,
+     "cachedCalls": 0,
+     "summaryFailed": false
+    }
+   ],
+   "axes": {
+    "mean": 7.3333,
+    "lowest": 7,
+    "highest": 8,
+    "runs": 3
+   },
+   "rowsWithEnoughPeople": {
+    "mean": 3,
+    "lowest": 2,
+    "highest": 4,
+    "runs": 3
+   },
+   "stances": {
+    "mean": 163,
+    "lowest": 160,
+    "highest": 168,
+    "runs": 3
+   },
+   "agreement": {
+    "mean": 0.4285,
+    "lowest": 0.4123,
+    "highest": 0.4593,
+    "runs": 3
+   },
+   "precision": {
+    "mean": 0.5773,
+    "lowest": 0.5324,
+    "highest": 0.6371,
+    "runs": 3
+   },
+   "recall": {
+    "mean": 0.3409,
+    "lowest": 0.3273,
+    "highest": 0.3591,
+    "runs": 3
+   },
+   "usd": {
+    "mean": 1.034,
+    "lowest": 0.96118694,
+    "highest": 1.08267394,
+    "runs": 3
+   },
+   "seconds": {
+    "mean": 37.136,
+    "lowest": 34.995,
+    "highest": 39.277,
+    "runs": 2
+   },
+   "measuredAt": "2026-10-05T04:00:49.370Z"
+  },
+  "defaults-44163063": {
+   "config": "defaults",
+   "threadId": 44163063,
+   "keys": {
+    "extraction": "luna6Low",
+    "consolidation": "sonnet55",
+    "scoring": "lunaLow",
+    "summary": "sol6Low"
+   },
+   "models": {
+    "extraction": "GPT-6 Luna (low)",
+    "consolidation": "Claude Sonnet 5.5 (adaptive)",
+    "scoring": "GPT-5.6 Luna (low)",
+    "summary": "GPT-6 Sol (low)"
+   },
+   "runs": [
+    {
+     "axes": 63,
+     "axesBelowFloor": 0,
+     "rowsWithEnoughPeople": 41,
+     "rows": 63,
+     "stances": 2249,
+     "agreement": null,
+     "precision": null,
+     "recall": null,
+     "usd": 0.9772924399999995,
+     "seconds": null,
+     "calls": 403,
+     "cachedCalls": 403,
+     "summaryFailed": false
+    },
+    {
+     "axes": 64,
+     "axesBelowFloor": 0,
+     "rowsWithEnoughPeople": 34,
+     "rows": 64,
+     "stances": 2275,
+     "agreement": null,
+     "precision": null,
+     "recall": null,
+     "usd": 0.9797794450000001,
+     "seconds": 277.0902,
+     "calls": 403,
+     "cachedCalls": 403,
+     "summaryFailed": false
+    },
+    {
+     "axes": 64,
+     "axesBelowFloor": 0,
+     "rowsWithEnoughPeople": 31,
+     "rows": 64,
+     "stances": 2224,
+     "agreement": null,
+     "precision": null,
+     "recall": null,
+     "usd": 0.9285140599999998,
+     "seconds": 244.9051,
+     "calls": 403,
+     "cachedCalls": 131,
+     "summaryFailed": false
+    }
+   ],
+   "axes": {
+    "mean": 63.6667,
+    "lowest": 63,
+    "highest": 64,
+    "runs": 3
+   },
+   "rowsWithEnoughPeople": {
+    "mean": 35.3333,
+    "lowest": 31,
+    "highest": 41,
+    "runs": 3
+   },
+   "stances": {
+    "mean": 2249.3333,
+    "lowest": 2224,
+    "highest": 2275,
+    "runs": 3
+   },
+   "agreement": null,
+   "precision": null,
+   "recall": null,
+   "usd": {
+    "mean": 0.9619,
+    "lowest": 0.9285140599999998,
+    "highest": 0.9797794450000001,
+    "runs": 3
+   },
+   "seconds": {
+    "mean": 260.9977,
+    "lowest": 244.9051,
+    "highest": 277.0902,
+    "runs": 2
+   },
+   "measuredAt": "2026-10-05T04:16:05.184Z"
+  },
+  "sonnet55Luna6-44163063": {
+   "config": "sonnet55Luna6",
+   "threadId": 44163063,
+   "keys": {
+    "extraction": "luna6Low",
+    "consolidation": "sonnet55",
+    "scoring": "luna6Low",
+    "summary": "sol6Low"
+   },
+   "models": {
+    "extraction": "GPT-6 Luna (low)",
+    "consolidation": "Claude Sonnet 5.5 (adaptive)",
+    "scoring": "GPT-6 Luna (low)",
+    "summary": "GPT-6 Sol (low)"
+   },
+   "runs": [
+    {
+     "axes": 63,
+     "axesBelowFloor": 0,
+     "rowsWithEnoughPeople": 29,
+     "rows": 63,
+     "stances": 1976,
+     "agreement": null,
+     "precision": null,
+     "recall": null,
+     "usd": 0.6033372200000005,
+     "seconds": null,
+     "calls": 403,
+     "cachedCalls": 403,
+     "summaryFailed": false
+    },
+    {
+     "axes": 63,
+     "axesBelowFloor": 0,
+     "rowsWithEnoughPeople": 29,
+     "rows": 63,
+     "stances": 1851,
+     "agreement": null,
+     "precision": null,
+     "recall": null,
+     "usd": 0.5625711699999998,
+     "seconds": 224.6314,
+     "calls": 403,
+     "cachedCalls": 403,
+     "summaryFailed": false
+    },
+    {
+     "axes": 88,
+     "axesBelowFloor": 0,
+     "rowsWithEnoughPeople": 29,
+     "rows": 87,
+     "stances": 1832,
+     "agreement": null,
+     "precision": null,
+     "recall": null,
+     "usd": 0.6115395699999999,
+     "seconds": 257.0087,
+     "calls": 403,
+     "cachedCalls": 131,
+     "summaryFailed": false
+    }
+   ],
+   "axes": {
+    "mean": 71.3333,
+    "lowest": 63,
+    "highest": 88,
+    "runs": 3
+   },
+   "rowsWithEnoughPeople": {
+    "mean": 29,
+    "lowest": 29,
+    "highest": 29,
+    "runs": 3
+   },
+   "stances": {
+    "mean": 1886.3333,
+    "lowest": 1832,
+    "highest": 1976,
+    "runs": 3
+   },
+   "agreement": null,
+   "precision": null,
+   "recall": null,
+   "usd": {
+    "mean": 0.5925,
+    "lowest": 0.5625711699999998,
+    "highest": 0.6115395699999999,
+    "runs": 3
+   },
+   "seconds": {
+    "mean": 240.82,
+    "lowest": 224.6314,
+    "highest": 257.0087,
+    "runs": 2
+   },
+   "measuredAt": "2026-10-05T04:15:50.431Z"
+  },
+  "sol61Luna56-44163063": {
+   "config": "sol61Luna56",
+   "threadId": 44163063,
+   "keys": {
+    "extraction": "luna6Low",
+    "consolidation": "sol61Low",
+    "scoring": "lunaLow",
+    "summary": "sol6Low"
+   },
+   "models": {
+    "extraction": "GPT-6 Luna (low)",
+    "consolidation": "GPT-6.1 Sol (low)",
+    "scoring": "GPT-5.6 Luna (low)",
+    "summary": "GPT-6 Sol (low)"
+   },
+   "runs": [
+    {
+     "axes": 77,
+     "axesBelowFloor": 0,
+     "rowsWithEnoughPeople": 34,
+     "rows": 77,
+     "stances": 2011,
+     "agreement": null,
+     "precision": null,
+     "recall": null,
+     "usd": 0.8756510000000003,
+     "seconds": null,
+     "calls": 403,
+     "cachedCalls": 403,
+     "summaryFailed": false
+    },
+    {
+     "axes": 84,
+     "axesBelowFloor": 0,
+     "rowsWithEnoughPeople": 34,
+     "rows": 84,
+     "stances": 2133,
+     "agreement": null,
+     "precision": null,
+     "recall": null,
+     "usd": 0.8846700749999997,
+     "seconds": 241.6515,
+     "calls": 403,
+     "cachedCalls": 403,
+     "summaryFailed": false
+    },
+    {
+     "axes": 83,
+     "axesBelowFloor": 0,
+     "rowsWithEnoughPeople": 34,
+     "rows": 83,
+     "stances": 2096,
+     "agreement": null,
+     "precision": null,
+     "recall": null,
+     "usd": 0.8371749200000003,
+     "seconds": 234.5612,
+     "calls": 403,
+     "cachedCalls": 131,
+     "summaryFailed": false
+    }
+   ],
+   "axes": {
+    "mean": 81.3333,
+    "lowest": 77,
+    "highest": 84,
+    "runs": 3
+   },
+   "rowsWithEnoughPeople": {
+    "mean": 34,
+    "lowest": 34,
+    "highest": 34,
+    "runs": 3
+   },
+   "stances": {
+    "mean": 2080,
+    "lowest": 2011,
+    "highest": 2133,
+    "runs": 3
+   },
+   "agreement": null,
+   "precision": null,
+   "recall": null,
+   "usd": {
+    "mean": 0.8658,
+    "lowest": 0.8371749200000003,
+    "highest": 0.8846700749999997,
+    "runs": 3
+   },
+   "seconds": {
+    "mean": 238.1064,
+    "lowest": 234.5612,
+    "highest": 241.6515,
+    "runs": 2
+   },
+   "measuredAt": "2026-10-05T04:15:30.176Z"
+  },
+  "sol61Luna6-44163063": {
+   "config": "sol61Luna6",
+   "threadId": 44163063,
+   "keys": {
+    "extraction": "luna6Low",
+    "consolidation": "sol61Low",
+    "scoring": "luna6Low",
+    "summary": "sol6Low"
+   },
+   "models": {
+    "extraction": "GPT-6 Luna (low)",
+    "consolidation": "GPT-6.1 Sol (low)",
+    "scoring": "GPT-6 Luna (low)",
+    "summary": "GPT-6 Sol (low)"
+   },
+   "runs": [
+    {
+     "axes": 77,
+     "axesBelowFloor": 0,
+     "rowsWithEnoughPeople": 25,
+     "rows": 76,
+     "stances": 1594,
+     "agreement": null,
+     "precision": null,
+     "recall": null,
+     "usd": 0.49319840000000015,
+     "seconds": null,
+     "calls": 403,
+     "cachedCalls": 403,
+     "summaryFailed": false
+    },
+    {
+     "axes": 80,
+     "axesBelowFloor": 0,
+     "rowsWithEnoughPeople": 30,
+     "rows": 79,
+     "stances": 1689,
+     "agreement": null,
+     "precision": null,
+     "recall": null,
+     "usd": 0.4590633600000003,
+     "seconds": 197.0717,
+     "calls": 403,
+     "cachedCalls": 403,
+     "summaryFailed": false
+    },
+    {
+     "axes": 64,
+     "axesBelowFloor": 0,
+     "rowsWithEnoughPeople": 31,
+     "rows": 64,
+     "stances": 1565,
+     "agreement": null,
+     "precision": null,
+     "recall": null,
+     "usd": 0.44426146000000016,
+     "seconds": 182.8456,
+     "calls": 403,
+     "cachedCalls": 397,
+     "summaryFailed": false
+    }
+   ],
+   "axes": {
+    "mean": 73.6667,
+    "lowest": 64,
+    "highest": 80,
+    "runs": 3
+   },
+   "rowsWithEnoughPeople": {
+    "mean": 28.6667,
+    "lowest": 25,
+    "highest": 31,
+    "runs": 3
+   },
+   "stances": {
+    "mean": 1616,
+    "lowest": 1565,
+    "highest": 1689,
+    "runs": 3
+   },
+   "agreement": null,
+   "precision": null,
+   "recall": null,
+   "usd": {
+    "mean": 0.4655,
+    "lowest": 0.44426146000000016,
+    "highest": 0.49319840000000015,
+    "runs": 3
+   },
+   "seconds": {
+    "mean": 189.9586,
+    "lowest": 182.8456,
+    "highest": 197.0717,
+    "runs": 2
+   },
+   "measuredAt": "2026-10-05T04:12:17.346Z"
+  }
+ }
+}

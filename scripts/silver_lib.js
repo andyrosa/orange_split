@@ -1,6 +1,7 @@
-// Shared by scripts/silver.js (builds the silver reference) and scripts/benchmark.js (grades model choices
-// against it). Both run the page's own pipeline (runPipeline) and replace the stages that are not under
-// test with fixed responses, so a stage is always measured on the same inputs.
+// Shared by scripts/silver.js (builds the silver reference), scripts/benchmark.js (grades model choices
+// against it), scripts/single_call.js, and scripts/pipeline_runs.js (grade whole runs against it). All run the
+// page's own pipeline (runPipeline); the first two replace the stages that are not under test with fixed
+// responses, so a stage is always measured on the same inputs.
 const fs = require('node:fs');
 const path = require('node:path');
 const { loadCore } = require('./load_core');
@@ -27,6 +28,8 @@ const SILVER_MODELS = Object.freeze([
 // Output ceilings of the silver models by stage suffix. Reasoning tokens count against the ceiling.
 const SILVER_MAX_TOKENS = Object.freeze({ Extract: 64000, Consolidate: 128000, Score: 64000, Synthesize: 32000 });
 const JUDGE_MAX_TOKENS = 64000;
+// Decimal places of the shares and seconds stored in results.
+const PRECISION_DIGITS = 4;
 
 // A stage handler is MODEL (send every call of the stage to the configured model) or a function that returns
 // the fixed response JSON for the call, or MODEL to send that one call to the configured model.
@@ -115,6 +118,21 @@ function makeModelCallChat({ apiKey, ledger, cacheDirectory }) {
         }
     }
     return core.makeCachedCallChat(timed, makeFileStore(cacheDirectory));
+}
+
+// The call path of one repeat of a measurement: repeat 1 is the second run. Each repeat keeps its model calls
+// in its own directory under REPEATS_DIRECTORY, so an identical request is answered anew and a rerun of the
+// repeat is free. name identifies the measurement, such as "consolidation-sonnet55".
+function repeatCallChat({ apiKey, ledger, name, repeat }) {
+    if (!Number.isInteger(repeat) || repeat < 1) throw new Error(`repeat must be a whole number from 1, not ${repeat}`);
+    return makeModelCallChat({ apiKey, ledger, cacheDirectory: path.join(REPEATS_DIRECTORY, `${name}-run${repeat}`) });
+}
+
+// The number of runs a measurement has after `repeats` more: --repeats=<n> on the command line, 0 when absent.
+function readRepeats() {
+    const repeats = Number(readArgument('repeats') ?? 0);
+    if (!Number.isInteger(repeats) || repeats < 0) throw new Error('--repeats must be a whole number of runs');
+    return repeats;
 }
 
 // Collects what each model call cost and how long it took, whether it ran now or was replayed from cache.
@@ -313,6 +331,138 @@ function scoringAgreement(modelAgreed, silver) {
     return { agreement: agreementOf(precision, recall), precision, recall, given, correct };
 }
 
+// The mean, lowest, and highest of one numeric field over runs; a run whose field is null is left out, and
+// null is returned when every run's field is null.
+function runSpread(runs, field) {
+    const values = runs.map(run => run[field]).filter(value => value !== null && value !== undefined);
+    if (values.some(value => !Number.isFinite(value))) throw new Error(`a run's ${field} is not a number`);
+    if (values.length === 0) return null;
+    return { mean: rounded(values.reduce((sum, value) => sum + value, 0) / values.length), lowest: Math.min(...values), highest: Math.max(...values), runs: values.length };
+}
+
+function rounded(value) {
+    return Number(value.toFixed(PRECISION_DIGITS));
+}
+
+// Whole runs --------------------------------------------------------------------
+// A whole run is the output of every stage of one configuration, as a pipeline result. It is graded against a
+// reference, which is silver or another whole run. A reference has axes, stances, and disputed cells: for
+// silver, the cells its two models do not agree on; for a whole run, the cells only one of its scoring passes
+// gave a stance or its passes gave different stances. A run axis's comments are those with a counted stance on
+// it; a reference axis's comments are those with a reference stance on it. The similarity of a run axis and a
+// reference axis is the number of comments on both over the number on either, leaving out the run comments on
+// the reference axis's disputed cells. A run axis and a reference axis are paired when each is the other's
+// most similar axis and they share at least MIN_SHARED_COMMENTS comments. Similarity is used, not the bare
+// count that scripts/silver.js pairs the two silver models' axes by, because one comment has stances on several
+// axes, so a large axis shares comments with many small ones. The run's stances on a paired axis are then
+// graded as the scoring role is graded: precision is the share of the stances given on undisputed cells that
+// equal the reference stance, recall is the share of all reference stances given, and agreement is their
+// harmonic mean, the F1 score. A reference stance on an unpaired reference axis counts as not given, and a
+// stance on an unpaired run axis is not graded, so the grade also states how many axes were paired.
+const MIN_SHARED_COMMENTS = 2;
+
+// Pairs the run's axes with the reference's axes and grades the run's stances on the paired axes.
+// run = { axes: [{ id }], agreed: Map("commentId|axisId" -> stance) }.
+function gradeStancesAgainst(run, reference) {
+    const table = silverStanceTable(reference);
+    const runComments = new Map(run.axes.map(axis => [axis.id, new Map()]));
+    for (const [key, stance] of run.agreed) {
+        const { commentId, axisId } = core.parseStanceKey(key);
+        if (!runComments.has(axisId)) throw new Error(`stance on comment ${commentId} names axis ${axisId}, which the run does not list`);
+        runComments.get(axisId).set(commentId, stance);
+    }
+    const commentsByAxis = cells => {
+        const sets = new Map(reference.axes.map(axis => [axis.id, new Set()]));
+        for (const [commentId, axisId] of cells) sets.get(axisId).add(commentId);
+        return sets;
+    };
+    const referenceComments = commentsByAxis(reference.stances);
+    const disputedComments = commentsByAxis(reference.disputedCells);
+    // The comments the two axes share, and that count over the count of comments on either axis. A run comment
+    // on a disputed cell of the reference axis is on neither side of that division.
+    const overlap = (runAxis, referenceAxis) => {
+        const onReference = referenceComments.get(referenceAxis.id);
+        const disputed = disputedComments.get(referenceAxis.id);
+        let sharedComments = 0;
+        let eitherComments = onReference.size;
+        for (const commentId of runComments.get(runAxis.id).keys()) {
+            if (onReference.has(commentId)) sharedComments += 1;
+            else if (!disputed.has(commentId)) eitherComments += 1;
+        }
+        return { sharedComments, similarity: eitherComments === 0 ? 0 : sharedComments / eitherComments };
+    };
+    const bestMatch = (others, similarityTo) => others.reduce((best, other) => (similarityTo(other) > (best ? similarityTo(best) : 0) ? other : best), null);
+    const translated = new Map();
+    const pairs = [];
+    for (const runAxis of run.axes) {
+        const referenceAxis = bestMatch(reference.axes, other => overlap(runAxis, other).similarity);
+        if (referenceAxis === null || bestMatch(run.axes, other => overlap(other, referenceAxis).similarity) !== runAxis) continue;
+        const { sharedComments, similarity } = overlap(runAxis, referenceAxis);
+        if (sharedComments < MIN_SHARED_COMMENTS) continue;
+        // The run's statements can be in the opposite order: the order under which more stances equal the
+        // reference stances is taken. A middle stance equals itself under both orders.
+        let equalAsGiven = 0;
+        let equalSwapped = 0;
+        for (const [commentId, stance] of runComments.get(runAxis.id)) {
+            const referenceStance = table.stances.get(`${commentId}|${referenceAxis.id}`);
+            if (referenceStance === undefined) continue;
+            if (referenceStance === stance) equalAsGiven += 1;
+            if (referenceStance === core.flipStance(stance)) equalSwapped += 1;
+        }
+        const swapped = equalSwapped > equalAsGiven;
+        for (const [commentId, stance] of runComments.get(runAxis.id)) {
+            translated.set(`${commentId}|${referenceAxis.id}`, swapped ? core.flipStance(stance) : stance);
+        }
+        pairs.push({ runAxisId: runAxis.id, referenceAxisId: referenceAxis.id, sharedComments, similarity: rounded(similarity), swapped });
+    }
+    const { precision, recall, given, correct } = scoringAgreement(translated, table);
+    const pairedReferenceAxes = new Set(pairs.map(pair => pair.referenceAxisId));
+    const people = reference.rows.reduce((sum, row) => sum + row.people, 0);
+    const pairedPeople = reference.rows.filter(row => pairedReferenceAxes.has(row.axisId)).reduce((sum, row) => sum + row.people, 0);
+    return { agreement: rounded(agreementOf(precision, recall)), precision: rounded(precision), recall: rounded(recall), given, correct,
+        referenceStances: reference.stances.length, axes: run.axes.length, pairedAxes: pairs.length, referenceAxes: reference.axes.length,
+        pairedPeopleShare: rounded(people === 0 ? 0 : pairedPeople / people), pairs };
+}
+
+// What a whole run shows the reader, which needs no reference: its scored axes, the axes left out below the
+// floor, the counted stances, and the rows outside "too few", the ones with enough people behind a count.
+function wholeRunShape(result) {
+    return { axes: result.axes.length, axesBelowFloor: result.stats.axesBelowFloor, stances: result.stats.agreedStances,
+        rows: result.rows.length, rowsWithEnoughPeople: result.rows.filter(row => row.group !== 'tooFew').length };
+}
+
+// A whole run graded against a reference, with its shape.
+function gradeWholeRun(result, reference) {
+    const { agreed } = stancesOfResult(result);
+    return { ...gradeStancesAgainst({ axes: result.axes, agreed }, reference), ...wholeRunShape(result) };
+}
+
+// A whole run in the shape of the silver reference, so that another run can be graded against it: its scored
+// axes, the stances both of its scoring passes gave, as disputed cells those only one pass gave or the passes
+// gave differently, and the people on each row.
+function referenceOfWholeRun(result) {
+    const { agreed, unsure } = stancesOfResult(result);
+    const cell = key => {
+        const { commentId, axisId } = core.parseStanceKey(key);
+        return [commentId, axisId];
+    };
+    return { axes: result.axes, stances: [...agreed].map(([key, stance]) => [...cell(key), stance]), disputedCells: [...unsure].map(cell),
+        rows: result.rows.map(row => ({ axisId: row.axisId, people: row.authors })) };
+}
+
+// The latency of a run's calls, by stage, as the page forecasts it: a stage takes at least its slowest call,
+// and its calls run up to `concurrency` at once. null when a call has no recorded time, as calls made by
+// scripts/run_node.js do not.
+function runLatencySeconds(calls, concurrency) {
+    if (calls.some(call => call.seconds === null)) return null;
+    let total = 0;
+    for (const stage of new Set(calls.map(call => call.stage))) {
+        const seconds = calls.filter(call => call.stage === stage).map(call => call.seconds);
+        total += Math.max(Math.max(...seconds), seconds.reduce((sum, value) => sum + value, 0) / concurrency);
+    }
+    return rounded(total);
+}
+
 // Judges ---------------------------------------------------------------------
 
 const MATCH_SYSTEM_PROMPT = `You match candidate axes to reference axes. Both come from one Hacker News thread. The submission title is: "{title}".
@@ -396,9 +546,10 @@ function silverStanceTable(silver) {
 }
 
 module.exports = {
-    core, SILVER_FILE, BENCHMARK_FILE, WORK_DIRECTORY, CACHE_DIRECTORY, REPEATS_DIRECTORY, SILVER_MODELS, MODEL,
-    readArgument, requireApiKey, silverConfig, loadThread, threadChars, makeModelCallChat, makeMeter, runStages,
+    core, REPO_ROOT, SILVER_FILE, BENCHMARK_FILE, WORK_DIRECTORY, CACHE_DIRECTORY, REPEATS_DIRECTORY, SILVER_MODELS, MODEL,
+    readArgument, requireApiKey, silverConfig, loadThread, threadChars, makeModelCallChat, repeatCallChat, readRepeats, makeMeter, runStages,
     fixedCandidates, fixedAxes, oneAxisOfAllCandidates, fixedStances, noStances, noSummary,
-    stancesOfResult, summaryMarkers, agreementOf, companions, consolidationAgreement, scoringAgreement,
+    stancesOfResult, summaryMarkers, agreementOf, companions, consolidationAgreement, scoringAgreement, runSpread, rounded,
+    gradeStancesAgainst, wholeRunShape, gradeWholeRun, referenceOfWholeRun, runLatencySeconds,
     matchCandidates, checkSummary, readSilver, silverStanceTable,
 };

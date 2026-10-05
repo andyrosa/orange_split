@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-leImsMLTD/LLfFEHRKIK7RzXymh8mG9WaneBETpYsxI=' 'sha256-0/rP7D0++BnSoPH4bKWNiUQZxh1kVQFl9RQ65A7xzUo='; style-src 'sha256-ykxbkCuA8bV8aejMJYghrqSVuGRLEwY4aEyyXRWCIxs='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-28fv7cJ8x8KBy6BSYKhiut5yKJ16UVXZ66XfvVGJYd0=' 'sha256-0/rP7D0++BnSoPH4bKWNiUQZxh1kVQFl9RQ65A7xzUo='; style-src 'sha256-ykxbkCuA8bV8aejMJYghrqSVuGRLEwY4aEyyXRWCIxs='; connect-src https://openrouter.ai https://hn.algolia.com https://hacker-news.firebaseio.com; img-src data:; base-uri 'none'; form-action 'none'">
 <title>Orange Split - For and Against on Hacker News</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23ff6600%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-family=%27sans-serif%27 font-weight=%27bold%27 font-size=%2714%27 text-anchor=%27middle%27 fill=%27white%27%3EOS%3C/text%3E%3C/svg%3E">
 <style>
@@ -293,15 +293,17 @@ const SAMPLING_SEED = 12345;
 // cost for a thread of PICKER_COMMENTS comments. Each contender near the top was run three times, and one
 // whose mean agreement with silver is more than 5 points below the best mean is out; 5 points is the
 // smallest gap three runs can show. Agreement cannot choose among the contenders left, so each pair was run
-// through the whole pipeline on threads 22866284 and 44163063, and the default is the one that left more
-// axes outside "too few": Claude Sonnet 5.5 over GPT-6.1 Sol low, which keeps more and narrower axes, and
-// GPT-5.6 Luna low over GPT-6 Luna low, which finds about 9 points fewer of the silver stances. Extraction
-// has one contender that is both best and cheapest. The summary scores do not separate the choices (all but
-// one reach 100%), so its default is the fastest of those. The picks are fixed here, from the benchmark of
-// 2026-10-04, so that a later benchmark run does not change a default without an edit.
+// three times through the whole pipeline (scripts/pipeline_runs.js) on threads 22866284 and 44163063.
+// GPT-6.1 Sol low consolidation with GPT-5.6 Luna low scoring is the default: its whole runs agree with
+// silver better than those of Claude Sonnet 5.5 with the same scoring, with no overlap between the two sets
+// of runs, it leaves as many axes outside "too few" on the large thread, and it costs the same. GPT-6 Luna low scoring leaves fewer
+// axes outside "too few" in every pair. Extraction has one contender that is both best and cheapest. The
+// summary scores do not separate the choices (all but one reach 100%), so its default is the fastest of
+// those. The picks are fixed here, from the benchmark of 2026-10-04, so that a later benchmark run does not
+// change a default without an edit.
 const DEFAULT_EXTRACTION_KEY = 'luna6Low';
 const DEFAULT_SCORING_KEY = 'lunaLow';
-const DEFAULT_CONSOLIDATION_KEY = 'sonnet55';
+const DEFAULT_CONSOLIDATION_KEY = 'sol61Low';
 const DEFAULT_SUMMARY_KEY = 'sol6Low';
 
 // The sampling profiles the providers accept.

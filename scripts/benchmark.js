@@ -41,7 +41,6 @@ const README_END = '<!-- silver-benchmark:end -->';
 const README_TABLES_PATTERN = new RegExp(`${README_START}[\\s\\S]*${README_END}`);
 const PRECISION_DIGITS = 4;
 const FAILURE_MESSAGE_CHARS = 300;
-const NO_REPEATS = 0;
 
 function roleChoices(role) {
     return { extraction: core.VOLUME_MODELS, consolidation: core.CONSOLIDATION_MODELS, scoring: core.VOLUME_MODELS, summary: core.SUMMARY_MODELS }[role];
@@ -144,7 +143,7 @@ async function withRepeats({ first, role, choiceKey, repeats, silver, thread, ap
     const runs = [first.runs ? first.runs[0] : gradeOf(first)];
     for (let repeat = 1; repeat <= repeats; repeat += 1) {
         const label = `${role} ${choiceKey} repeat ${repeat}`;
-        const modelCallChat = lib.makeModelCallChat({ apiKey, ledger, cacheDirectory: path.join(lib.REPEATS_DIRECTORY, `${role}-${choiceKey}-run${repeat}`) });
+        const modelCallChat = lib.repeatCallChat({ apiKey, ledger, name: `${role}-${choiceKey}`, repeat });
         let grade;
         try {
             const result = await lib.runStages({ thread, config: { ...core.roleConfig(role, choiceKey), concurrency }, handlers: handlersFor(role, silver), modelCallChat, label });
@@ -156,7 +155,7 @@ async function withRepeats({ first, role, choiceKey, repeats, silver, thread, ap
         runs.push(gradeOf(grade));
         console.log(`${label}: agreement ${(grade.agreement * 100).toFixed(1)}%`);
     }
-    const mean = field => rounded(runs.reduce((sum, run) => sum + run[field], 0) / runs.length);
+    const mean = field => lib.runSpread(runs, field).mean;
     return { ...first, agreement: mean('agreement'), precision: mean('precision'), recall: mean('recall'), runs };
 }
 
@@ -227,8 +226,7 @@ async function main() {
         .filter(([key]) => force || choiceKey !== null || benchmark.results[taskRole][key] === undefined)
         .map(([key]) => ({ role: taskRole, choiceKey: key })));
     if (tasks.length === 0) throw new Error(choiceKey === null ? 'every listed choice already has a result; pass --force to measure again' : `no role lists the choice ${choiceKey}`);
-    const repeats = Number(lib.readArgument('repeats') ?? NO_REPEATS);
-    if (!Number.isInteger(repeats) || repeats < 0) throw new Error('--repeats must be a whole number of runs');
+    const repeats = lib.readRepeats();
     const ledger = { spentUsd: 0, capUsd: Number(lib.readArgument('budget') ?? DEFAULT_BUDGET_USD) };
     const apiKey = lib.requireApiKey();
     const modelCallChat = lib.makeModelCallChat({ apiKey, ledger, cacheDirectory: lib.CACHE_DIRECTORY });
