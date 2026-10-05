@@ -128,6 +128,25 @@
     "completionTokens": 10730,
     "judgeUsd": 0.1270427,
     "measuredAt": "2026-10-04T21:07:50.750Z"
+   },
+   "opus55": {
+    "agreement": 0.9146,
+    "precision": 1,
+    "recall": 0.8427,
+    "candidates": 67,
+    "matched": 60,
+    "unmatched": 0,
+    "disputed": 7,
+    "axesFound": 28,
+    "usd": 0.459426,
+    "calls": 17,
+    "failedCalls": 0,
+    "meanCallSeconds": 5.9159,
+    "maxCallSeconds": 8.037,
+    "promptTokens": 73074,
+    "completionTokens": 7396,
+    "judgeUsd": 0.1835885,
+    "measuredAt": "2026-10-05T02:53:15.626Z"
    }
   },
   "consolidation": {
@@ -444,6 +463,24 @@
     "completionTokens": 30124,
     "judgeUsd": 0,
     "measuredAt": "2026-10-04T20:44:23.222Z"
+   },
+   "opus55": {
+    "agreement": 0.9531,
+    "precision": 0.9854,
+    "recall": 0.9227,
+    "given": 206,
+    "correct": 203,
+    "silverStances": 220,
+    "axes": 32,
+    "usd": 1.4229440000000002,
+    "calls": 34,
+    "failedCalls": 0,
+    "meanCallSeconds": 6.8788,
+    "maxCallSeconds": 12.795,
+    "promptTokens": 255126,
+    "completionTokens": 18492,
+    "judgeUsd": 0,
+    "measuredAt": "2026-10-05T02:53:29.530Z"
    }
   },
   "summary": {

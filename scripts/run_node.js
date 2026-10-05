@@ -165,7 +165,9 @@ async function main() {
 
     const outPath = readArgument('out');
     if (outPath) {
-        fs.writeFileSync(outPath, JSON.stringify({ threadId, title: thread.title, url: thread.url, elapsedSeconds, ...result }, null, 2), 'utf8');
+        // The role choices given on the command line, null for a role without one; other config flags can override them.
+        const roleChoices = Object.fromEntries(Object.keys(core.ROLE_CHOICES).map(role => [role, readArgument(role)]));
+        fs.writeFileSync(outPath, JSON.stringify({ threadId, title: thread.title, url: thread.url, roleChoices, elapsedSeconds, ...result }, null, 2), 'utf8');
         process.stderr.write(`wrote ${outPath}\n`);
     }
     if (result.synthesisError) process.exitCode = 1;

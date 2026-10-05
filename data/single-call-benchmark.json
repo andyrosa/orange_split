@@ -1,0 +1,1200 @@
+{
+ "threadId": 22866284,
+ "title": "The Wolfram Physics Project",
+ "comments": 323,
+ "chars": 165268,
+ "silverBuiltAt": "2026-10-04T20:30:05.702Z",
+ "multiStage": {
+  "file": "data/best-multi-stage.json",
+  "roleChoices": {
+   "extraction": "luna6Low",
+   "consolidation": "sonnet55",
+   "scoring": "opus55",
+   "summary": "sol6Low"
+  },
+  "models": {
+   "extraction": "GPT-6 Luna (low)",
+   "consolidation": "Claude Sonnet 5.5 (adaptive)",
+   "scoring": "Claude Opus 5.5 (adaptive)",
+   "summary": "GPT-6 Sol (low)"
+  },
+  "axes": 8,
+  "stances": 161,
+  "usd": 1.0826739400000003,
+  "seconds": 37,
+  "calls": 53,
+  "silver": {
+   "agreement": 0.4593,
+   "precision": 0.6371,
+   "recall": 0.3591,
+   "given": 124,
+   "correct": 79,
+   "referenceStances": 220,
+   "axes": 8,
+   "pairedAxes": 8,
+   "referenceAxes": 32,
+   "pairedPeopleShare": 0.3989,
+   "pairs": [
+    {
+     "runAxisId": 1,
+     "referenceAxisId": 1,
+     "sharedComments": 18,
+     "similarity": 0.6429,
+     "swapped": false
+    },
+    {
+     "runAxisId": 2,
+     "referenceAxisId": 4,
+     "sharedComments": 12,
+     "similarity": 0.8571,
+     "swapped": false
+    },
+    {
+     "runAxisId": 3,
+     "referenceAxisId": 21,
+     "sharedComments": 8,
+     "similarity": 0.7273,
+     "swapped": false
+    },
+    {
+     "runAxisId": 4,
+     "referenceAxisId": 2,
+     "sharedComments": 13,
+     "similarity": 0.65,
+     "swapped": true
+    },
+    {
+     "runAxisId": 5,
+     "referenceAxisId": 22,
+     "sharedComments": 6,
+     "similarity": 0.6667,
+     "swapped": true
+    },
+    {
+     "runAxisId": 6,
+     "referenceAxisId": 7,
+     "sharedComments": 11,
+     "similarity": 0.5789,
+     "swapped": false
+    },
+    {
+     "runAxisId": 7,
+     "referenceAxisId": 10,
+     "sharedComments": 8,
+     "similarity": 0.2667,
+     "swapped": false
+    },
+    {
+     "runAxisId": 8,
+     "referenceAxisId": 13,
+     "sharedComments": 3,
+     "similarity": 0.6,
+     "swapped": true
+    }
+   ],
+   "stances": 161,
+   "rows": 8,
+   "axesBelowFloor": 0
+  }
+ },
+ "results": {
+  "opus55Low": {
+   "name": "Claude Opus 5.5",
+   "effort": "low",
+   "model": "anthropic/claude-opus-5.5",
+   "axesReturned": 4,
+   "stancesReturned": 70,
+   "warnings": 1,
+   "oneCall": {
+    "agreement": 0.25,
+    "precision": 0.6538,
+    "recall": 0.1545,
+    "given": 52,
+    "correct": 34,
+    "referenceStances": 220,
+    "axes": 4,
+    "pairedAxes": 4,
+    "referenceAxes": 32,
+    "pairedPeopleShare": 0.2528,
+    "pairs": [
+     {
+      "runAxisId": 1,
+      "referenceAxisId": 1,
+      "sharedComments": 14,
+      "similarity": 0.5,
+      "swapped": false
+     },
+     {
+      "runAxisId": 2,
+      "referenceAxisId": 5,
+      "sharedComments": 5,
+      "similarity": 0.3846,
+      "swapped": false
+     },
+     {
+      "runAxisId": 3,
+      "referenceAxisId": 7,
+      "sharedComments": 8,
+      "similarity": 0.5333,
+      "swapped": false
+     },
+     {
+      "runAxisId": 4,
+      "referenceAxisId": 2,
+      "sharedComments": 7,
+      "similarity": 0.4375,
+      "swapped": true
+     }
+    ],
+    "stances": 70,
+    "rows": 4,
+    "axesBelowFloor": 0,
+    "multiStage": {
+     "agreement": 0.5351,
+     "precision": 0.9104,
+     "recall": 0.3789,
+     "given": 67,
+     "correct": 61,
+     "referenceStances": 161,
+     "axes": 4,
+     "pairedAxes": 4,
+     "referenceAxes": 8,
+     "pairedPeopleShare": 0.6855,
+     "pairs": [
+      {
+       "runAxisId": 1,
+       "referenceAxisId": 1,
+       "sharedComments": 20,
+       "similarity": 0.5405,
+       "swapped": false
+      },
+      {
+       "runAxisId": 2,
+       "referenceAxisId": 7,
+       "sharedComments": 16,
+       "similarity": 0.4848,
+       "swapped": false
+      },
+      {
+       "runAxisId": 3,
+       "referenceAxisId": 6,
+       "sharedComments": 15,
+       "similarity": 0.625,
+       "swapped": false
+      },
+      {
+       "runAxisId": 4,
+       "referenceAxisId": 4,
+       "sharedComments": 10,
+       "similarity": 0.3846,
+       "swapped": false
+      }
+     ]
+    },
+    "usd": 0.251605,
+    "seconds": 16.895,
+    "calls": 1,
+    "promptTokens": 52998,
+    "completionTokens": 1904
+   },
+   "twoCalls": {
+    "agreement": 0.2331,
+    "precision": 0.6739,
+    "recall": 0.1409,
+    "given": 46,
+    "correct": 31,
+    "referenceStances": 220,
+    "axes": 4,
+    "pairedAxes": 4,
+    "referenceAxes": 32,
+    "pairedPeopleShare": 0.2528,
+    "pairs": [
+     {
+      "runAxisId": 1,
+      "referenceAxisId": 1,
+      "sharedComments": 11,
+      "similarity": 0.4231,
+      "swapped": false
+     },
+     {
+      "runAxisId": 2,
+      "referenceAxisId": 5,
+      "sharedComments": 5,
+      "similarity": 0.4167,
+      "swapped": false
+     },
+     {
+      "runAxisId": 3,
+      "referenceAxisId": 7,
+      "sharedComments": 8,
+      "similarity": 0.5333,
+      "swapped": false
+     },
+     {
+      "runAxisId": 4,
+      "referenceAxisId": 2,
+      "sharedComments": 7,
+      "similarity": 0.4375,
+      "swapped": true
+     }
+    ],
+    "stances": 60,
+    "rows": 4,
+    "axesBelowFloor": 0,
+    "multiStage": {
+     "agreement": 0.484,
+     "precision": 0.9138,
+     "recall": 0.3292,
+     "given": 58,
+     "correct": 53,
+     "referenceStances": 161,
+     "axes": 4,
+     "pairedAxes": 4,
+     "referenceAxes": 8,
+     "pairedPeopleShare": 0.6855,
+     "pairs": [
+      {
+       "runAxisId": 1,
+       "referenceAxisId": 1,
+       "sharedComments": 15,
+       "similarity": 0.4167,
+       "swapped": false
+      },
+      {
+       "runAxisId": 2,
+       "referenceAxisId": 7,
+       "sharedComments": 15,
+       "similarity": 0.4545,
+       "swapped": false
+      },
+      {
+       "runAxisId": 3,
+       "referenceAxisId": 6,
+       "sharedComments": 15,
+       "similarity": 0.625,
+       "swapped": false
+      },
+      {
+       "runAxisId": 4,
+       "referenceAxisId": 4,
+       "sharedComments": 8,
+       "similarity": 0.3077,
+       "swapped": false
+      }
+     ]
+    },
+    "usd": 0.584487,
+    "seconds": 32.472,
+    "calls": 2,
+    "promptTokens": 126111,
+    "completionTokens": 3869
+   },
+   "measuredAt": "2026-10-05T02:58:04.911Z"
+  },
+  "sol61Low": {
+   "name": "GPT-6.1 Sol",
+   "effort": "low",
+   "model": "openai/gpt-6.1-sol",
+   "axesReturned": 5,
+   "stancesReturned": 191,
+   "warnings": 0,
+   "oneCall": {
+    "agreement": 0.3261,
+    "precision": 0.4054,
+    "recall": 0.2727,
+    "given": 148,
+    "correct": 60,
+    "referenceStances": 220,
+    "axes": 5,
+    "pairedAxes": 5,
+    "referenceAxes": 32,
+    "pairedPeopleShare": 0.2865,
+    "pairs": [
+     {
+      "runAxisId": 1,
+      "referenceAxisId": 1,
+      "sharedComments": 22,
+      "similarity": 0.449,
+      "swapped": false
+     },
+     {
+      "runAxisId": 2,
+      "referenceAxisId": 2,
+      "sharedComments": 15,
+      "similarity": 0.625,
+      "swapped": false
+     },
+     {
+      "runAxisId": 3,
+      "referenceAxisId": 10,
+      "sharedComments": 9,
+      "similarity": 0.2368,
+      "swapped": false
+     },
+     {
+      "runAxisId": 4,
+      "referenceAxisId": 7,
+      "sharedComments": 10,
+      "similarity": 0.4348,
+      "swapped": false
+     },
+     {
+      "runAxisId": 5,
+      "referenceAxisId": 12,
+      "sharedComments": 7,
+      "similarity": 0.4118,
+      "swapped": false
+     }
+    ],
+    "stances": 191,
+    "rows": 5,
+    "axesBelowFloor": 0,
+    "multiStage": {
+     "agreement": 0.6478,
+     "precision": 0.6561,
+     "recall": 0.6398,
+     "given": 157,
+     "correct": 103,
+     "referenceStances": 161,
+     "axes": 5,
+     "pairedAxes": 4,
+     "referenceAxes": 8,
+     "pairedPeopleShare": 0.6855,
+     "pairs": [
+      {
+       "runAxisId": 1,
+       "referenceAxisId": 1,
+       "sharedComments": 31,
+       "similarity": 0.5082,
+       "swapped": false
+      },
+      {
+       "runAxisId": 2,
+       "referenceAxisId": 4,
+       "sharedComments": 25,
+       "similarity": 0.6944,
+       "swapped": true
+      },
+      {
+       "runAxisId": 3,
+       "referenceAxisId": 7,
+       "sharedComments": 27,
+       "similarity": 0.6585,
+       "swapped": false
+      },
+      {
+       "runAxisId": 4,
+       "referenceAxisId": 6,
+       "sharedComments": 23,
+       "similarity": 0.8519,
+       "swapped": false
+      }
+     ]
+    },
+    "usd": 0.1181985,
+    "seconds": 41.639,
+    "calls": 1,
+    "promptTokens": 35460,
+    "completionTokens": 2955
+   },
+   "twoCalls": {
+    "agreement": 0.3432,
+    "precision": 0.6265,
+    "recall": 0.2364,
+    "given": 83,
+    "correct": 52,
+    "referenceStances": 220,
+    "axes": 5,
+    "pairedAxes": 5,
+    "referenceAxes": 32,
+    "pairedPeopleShare": 0.2865,
+    "pairs": [
+     {
+      "runAxisId": 1,
+      "referenceAxisId": 1,
+      "sharedComments": 18,
+      "similarity": 0.6207,
+      "swapped": false
+     },
+     {
+      "runAxisId": 2,
+      "referenceAxisId": 2,
+      "sharedComments": 13,
+      "similarity": 0.65,
+      "swapped": false
+     },
+     {
+      "runAxisId": 3,
+      "referenceAxisId": 5,
+      "sharedComments": 5,
+      "similarity": 0.2632,
+      "swapped": false
+     },
+     {
+      "runAxisId": 4,
+      "referenceAxisId": 7,
+      "sharedComments": 9,
+      "similarity": 0.5294,
+      "swapped": false
+     },
+     {
+      "runAxisId": 5,
+      "referenceAxisId": 12,
+      "sharedComments": 7,
+      "similarity": 0.875,
+      "swapped": false
+     }
+    ],
+    "stances": 112,
+    "rows": 5,
+    "axesBelowFloor": 0,
+    "multiStage": {
+     "agreement": 0.6388,
+     "precision": 0.8235,
+     "recall": 0.5217,
+     "given": 102,
+     "correct": 84,
+     "referenceStances": 161,
+     "axes": 5,
+     "pairedAxes": 5,
+     "referenceAxes": 8,
+     "pairedPeopleShare": 0.8065,
+     "pairs": [
+      {
+       "runAxisId": 1,
+       "referenceAxisId": 1,
+       "sharedComments": 24,
+       "similarity": 0.6,
+       "swapped": false
+      },
+      {
+       "runAxisId": 2,
+       "referenceAxisId": 4,
+       "sharedComments": 19,
+       "similarity": 0.6552,
+       "swapped": true
+      },
+      {
+       "runAxisId": 3,
+       "referenceAxisId": 7,
+       "sharedComments": 20,
+       "similarity": 0.5882,
+       "swapped": false
+      },
+      {
+       "runAxisId": 4,
+       "referenceAxisId": 6,
+       "sharedComments": 19,
+       "similarity": 0.7917,
+       "swapped": false
+      },
+      {
+       "runAxisId": 5,
+       "referenceAxisId": 3,
+       "sharedComments": 4,
+       "similarity": 0.1905,
+       "swapped": false
+      }
+     ]
+    },
+    "usd": 0.2592695,
+    "seconds": 69.023,
+    "calls": 2,
+    "promptTokens": 84281,
+    "completionTokens": 4857
+   },
+   "measuredAt": "2026-10-05T02:58:04.916Z"
+  },
+  "fableLow": {
+   "name": "Claude Fable 5.1",
+   "effort": "low",
+   "model": "anthropic/claude-fable-5.1",
+   "axesReturned": 5,
+   "stancesReturned": 169,
+   "warnings": 0,
+   "oneCall": {
+    "agreement": 0.3559,
+    "precision": 0.4701,
+    "recall": 0.2864,
+    "given": 134,
+    "correct": 63,
+    "referenceStances": 220,
+    "axes": 5,
+    "pairedAxes": 5,
+    "referenceAxes": 32,
+    "pairedPeopleShare": 0.3539,
+    "pairs": [
+     {
+      "runAxisId": 1,
+      "referenceAxisId": 1,
+      "sharedComments": 20,
+      "similarity": 0.3448,
+      "swapped": false
+     },
+     {
+      "runAxisId": 2,
+      "referenceAxisId": 3,
+      "sharedComments": 14,
+      "similarity": 0.3415,
+      "swapped": false
+     },
+     {
+      "runAxisId": 3,
+      "referenceAxisId": 7,
+      "sharedComments": 11,
+      "similarity": 0.6111,
+      "swapped": true
+     },
+     {
+      "runAxisId": 4,
+      "referenceAxisId": 15,
+      "sharedComments": 9,
+      "similarity": 1,
+      "swapped": true
+     },
+     {
+      "runAxisId": 5,
+      "referenceAxisId": 2,
+      "sharedComments": 14,
+      "similarity": 0.7778,
+      "swapped": true
+     }
+    ],
+    "stances": 169,
+    "rows": 5,
+    "axesBelowFloor": 0,
+    "multiStage": {
+     "agreement": 0.5902,
+     "precision": 0.625,
+     "recall": 0.559,
+     "given": 144,
+     "correct": 90,
+     "referenceStances": 161,
+     "axes": 5,
+     "pairedAxes": 4,
+     "referenceAxes": 8,
+     "pairedPeopleShare": 0.6855,
+     "pairs": [
+      {
+       "runAxisId": 1,
+       "referenceAxisId": 1,
+       "sharedComments": 30,
+       "similarity": 0.4478,
+       "swapped": false
+      },
+      {
+       "runAxisId": 2,
+       "referenceAxisId": 7,
+       "sharedComments": 23,
+       "similarity": 0.5349,
+       "swapped": false
+      },
+      {
+       "runAxisId": 3,
+       "referenceAxisId": 6,
+       "sharedComments": 21,
+       "similarity": 0.8077,
+       "swapped": true
+      },
+      {
+       "runAxisId": 5,
+       "referenceAxisId": 4,
+       "sharedComments": 20,
+       "similarity": 0.7143,
+       "swapped": false
+      }
+     ]
+    },
+    "usd": 0.9235625,
+    "seconds": 93.072,
+    "calls": 1,
+    "promptTokens": 52998,
+    "completionTokens": 7795
+   },
+   "twoCalls": {
+    "agreement": 0.3671,
+    "precision": 0.6042,
+    "recall": 0.2636,
+    "given": 96,
+    "correct": 58,
+    "referenceStances": 220,
+    "axes": 5,
+    "pairedAxes": 5,
+    "referenceAxes": 32,
+    "pairedPeopleShare": 0.3539,
+    "pairs": [
+     {
+      "runAxisId": 1,
+      "referenceAxisId": 1,
+      "sharedComments": 17,
+      "similarity": 0.4857,
+      "swapped": false
+     },
+     {
+      "runAxisId": 2,
+      "referenceAxisId": 3,
+      "sharedComments": 12,
+      "similarity": 0.3429,
+      "swapped": false
+     },
+     {
+      "runAxisId": 3,
+      "referenceAxisId": 7,
+      "sharedComments": 11,
+      "similarity": 0.6471,
+      "swapped": true
+     },
+     {
+      "runAxisId": 4,
+      "referenceAxisId": 15,
+      "sharedComments": 9,
+      "similarity": 1,
+      "swapped": true
+     },
+     {
+      "runAxisId": 5,
+      "referenceAxisId": 2,
+      "sharedComments": 12,
+      "similarity": 0.7059,
+      "swapped": true
+     }
+    ],
+    "stances": 121,
+    "rows": 5,
+    "axesBelowFloor": 0,
+    "multiStage": {
+     "agreement": 0.616,
+     "precision": 0.7941,
+     "recall": 0.5031,
+     "given": 102,
+     "correct": 81,
+     "referenceStances": 161,
+     "axes": 5,
+     "pairedAxes": 4,
+     "referenceAxes": 8,
+     "pairedPeopleShare": 0.6855,
+     "pairs": [
+      {
+       "runAxisId": 1,
+       "referenceAxisId": 1,
+       "sharedComments": 25,
+       "similarity": 0.5682,
+       "swapped": false
+      },
+      {
+       "runAxisId": 2,
+       "referenceAxisId": 7,
+       "sharedComments": 20,
+       "similarity": 0.5263,
+       "swapped": false
+      },
+      {
+       "runAxisId": 3,
+       "referenceAxisId": 6,
+       "sharedComments": 20,
+       "similarity": 0.8,
+       "swapped": true
+      },
+      {
+       "runAxisId": 5,
+       "referenceAxisId": 4,
+       "sharedComments": 16,
+       "similarity": 0.5714,
+       "swapped": false
+      }
+     ]
+    },
+    "usd": 2.0834675,
+    "seconds": 189.098,
+    "calls": 2,
+    "promptTokens": 126251,
+    "completionTokens": 16279
+   },
+   "measuredAt": "2026-10-05T02:58:04.918Z"
+  },
+  "sol61High": {
+   "name": "GPT-6.1 Sol",
+   "effort": "high",
+   "model": "openai/gpt-6.1-sol",
+   "axesReturned": 9,
+   "stancesReturned": 275,
+   "warnings": 0,
+   "oneCall": {
+    "agreement": 0.4908,
+    "precision": 0.4954,
+    "recall": 0.4864,
+    "given": 216,
+    "correct": 107,
+    "referenceStances": 220,
+    "axes": 9,
+    "pairedAxes": 9,
+    "referenceAxes": 32,
+    "pairedPeopleShare": 0.4944,
+    "pairs": [
+     {
+      "runAxisId": 1,
+      "referenceAxisId": 1,
+      "sharedComments": 22,
+      "similarity": 0.4,
+      "swapped": false
+     },
+     {
+      "runAxisId": 2,
+      "referenceAxisId": 2,
+      "sharedComments": 15,
+      "similarity": 0.6818,
+      "swapped": false
+     },
+     {
+      "runAxisId": 3,
+      "referenceAxisId": 21,
+      "sharedComments": 8,
+      "similarity": 0.8889,
+      "swapped": false
+     },
+     {
+      "runAxisId": 4,
+      "referenceAxisId": 7,
+      "sharedComments": 10,
+      "similarity": 0.4348,
+      "swapped": true
+     },
+     {
+      "runAxisId": 5,
+      "referenceAxisId": 3,
+      "sharedComments": 20,
+      "similarity": 0.6452,
+      "swapped": false
+     },
+     {
+      "runAxisId": 6,
+      "referenceAxisId": 10,
+      "sharedComments": 10,
+      "similarity": 0.2273,
+      "swapped": false
+     },
+     {
+      "runAxisId": 7,
+      "referenceAxisId": 15,
+      "sharedComments": 9,
+      "similarity": 0.9,
+      "swapped": true
+     },
+     {
+      "runAxisId": 8,
+      "referenceAxisId": 12,
+      "sharedComments": 8,
+      "similarity": 0.8,
+      "swapped": false
+     },
+     {
+      "runAxisId": 9,
+      "referenceAxisId": 20,
+      "sharedComments": 7,
+      "similarity": 0.5,
+      "swapped": true
+     }
+    ],
+    "stances": 275,
+    "rows": 9,
+    "axesBelowFloor": 0,
+    "multiStage": {
+     "agreement": 0.6531,
+     "precision": 0.6154,
+     "recall": 0.6957,
+     "given": 182,
+     "correct": 112,
+     "referenceStances": 161,
+     "axes": 9,
+     "pairedAxes": 5,
+     "referenceAxes": 8,
+     "pairedPeopleShare": 0.8065,
+     "pairs": [
+      {
+       "runAxisId": 1,
+       "referenceAxisId": 1,
+       "sharedComments": 31,
+       "similarity": 0.4493,
+       "swapped": false
+      },
+      {
+       "runAxisId": 2,
+       "referenceAxisId": 4,
+       "sharedComments": 23,
+       "similarity": 0.6571,
+       "swapped": true
+      },
+      {
+       "runAxisId": 3,
+       "referenceAxisId": 3,
+       "sharedComments": 13,
+       "similarity": 0.7222,
+       "swapped": false
+      },
+      {
+       "runAxisId": 4,
+       "referenceAxisId": 6,
+       "sharedComments": 23,
+       "similarity": 0.8519,
+       "swapped": true
+      },
+      {
+       "runAxisId": 6,
+       "referenceAxisId": 7,
+       "sharedComments": 24,
+       "similarity": 0.4706,
+       "swapped": false
+      }
+     ]
+    },
+    "usd": 0.2567285,
+    "seconds": 361.087,
+    "calls": 1,
+    "promptTokens": 35460,
+    "completionTokens": 16808
+   },
+   "twoCalls": {
+    "agreement": 0.5469,
+    "precision": 0.6667,
+    "recall": 0.4636,
+    "given": 153,
+    "correct": 102,
+    "referenceStances": 220,
+    "axes": 9,
+    "pairedAxes": 9,
+    "referenceAxes": 32,
+    "pairedPeopleShare": 0.4888,
+    "pairs": [
+     {
+      "runAxisId": 1,
+      "referenceAxisId": 1,
+      "sharedComments": 22,
+      "similarity": 0.6111,
+      "swapped": false
+     },
+     {
+      "runAxisId": 2,
+      "referenceAxisId": 2,
+      "sharedComments": 14,
+      "similarity": 0.8235,
+      "swapped": false
+     },
+     {
+      "runAxisId": 3,
+      "referenceAxisId": 21,
+      "sharedComments": 8,
+      "similarity": 0.8889,
+      "swapped": false
+     },
+     {
+      "runAxisId": 4,
+      "referenceAxisId": 7,
+      "sharedComments": 9,
+      "similarity": 0.4737,
+      "swapped": true
+     },
+     {
+      "runAxisId": 5,
+      "referenceAxisId": 3,
+      "sharedComments": 19,
+      "similarity": 0.76,
+      "swapped": false
+     },
+     {
+      "runAxisId": 6,
+      "referenceAxisId": 10,
+      "sharedComments": 10,
+      "similarity": 0.3571,
+      "swapped": false
+     },
+     {
+      "runAxisId": 7,
+      "referenceAxisId": 15,
+      "sharedComments": 7,
+      "similarity": 0.7778,
+      "swapped": true
+     },
+     {
+      "runAxisId": 8,
+      "referenceAxisId": 12,
+      "sharedComments": 8,
+      "similarity": 1,
+      "swapped": false
+     },
+     {
+      "runAxisId": 9,
+      "referenceAxisId": 16,
+      "sharedComments": 5,
+      "similarity": 0.5,
+      "swapped": false
+     }
+    ],
+    "stances": 204,
+    "rows": 9,
+    "axesBelowFloor": 0,
+    "multiStage": {
+     "agreement": 0.6758,
+     "precision": 0.75,
+     "recall": 0.6149,
+     "given": 132,
+     "correct": 99,
+     "referenceStances": 161,
+     "axes": 9,
+     "pairedAxes": 5,
+     "referenceAxes": 8,
+     "pairedPeopleShare": 0.8065,
+     "pairs": [
+      {
+       "runAxisId": 1,
+       "referenceAxisId": 1,
+       "sharedComments": 27,
+       "similarity": 0.5192,
+       "swapped": false
+      },
+      {
+       "runAxisId": 2,
+       "referenceAxisId": 4,
+       "sharedComments": 20,
+       "similarity": 0.6452,
+       "swapped": true
+      },
+      {
+       "runAxisId": 3,
+       "referenceAxisId": 3,
+       "sharedComments": 13,
+       "similarity": 0.7222,
+       "swapped": false
+      },
+      {
+       "runAxisId": 4,
+       "referenceAxisId": 6,
+       "sharedComments": 20,
+       "similarity": 0.8,
+       "swapped": true
+      },
+      {
+       "runAxisId": 6,
+       "referenceAxisId": 7,
+       "sharedComments": 20,
+       "similarity": 0.5263,
+       "swapped": false
+      }
+     ]
+    },
+    "usd": 0.514212,
+    "seconds": 656.825,
+    "calls": 2,
+    "promptTokens": 84470,
+    "completionTokens": 30304
+   },
+   "measuredAt": "2026-10-05T02:58:04.920Z"
+  },
+  "opus55High": {
+   "name": "Claude Opus 5.5",
+   "effort": "high",
+   "model": "anthropic/claude-opus-5.5",
+   "axesReturned": 5,
+   "stancesReturned": 122,
+   "warnings": 0,
+   "oneCall": {
+    "agreement": 0.3269,
+    "precision": 0.5543,
+    "recall": 0.2318,
+    "given": 92,
+    "correct": 51,
+    "referenceStances": 220,
+    "axes": 5,
+    "pairedAxes": 5,
+    "referenceAxes": 32,
+    "pairedPeopleShare": 0.2865,
+    "pairs": [
+     {
+      "runAxisId": 1,
+      "referenceAxisId": 1,
+      "sharedComments": 21,
+      "similarity": 0.525,
+      "swapped": false
+     },
+     {
+      "runAxisId": 2,
+      "referenceAxisId": 5,
+      "sharedComments": 5,
+      "similarity": 0.2941,
+      "swapped": false
+     },
+     {
+      "runAxisId": 3,
+      "referenceAxisId": 7,
+      "sharedComments": 9,
+      "similarity": 0.5,
+      "swapped": false
+     },
+     {
+      "runAxisId": 4,
+      "referenceAxisId": 2,
+      "sharedComments": 9,
+      "similarity": 0.5,
+      "swapped": true
+     },
+     {
+      "runAxisId": 5,
+      "referenceAxisId": 15,
+      "sharedComments": 8,
+      "similarity": 0.8,
+      "swapped": true
+     }
+    ],
+    "stances": 122,
+    "rows": 5,
+    "axesBelowFloor": 0,
+    "multiStage": {
+     "agreement": 0.6136,
+     "precision": 0.7864,
+     "recall": 0.5031,
+     "given": 103,
+     "correct": 81,
+     "referenceStances": 161,
+     "axes": 5,
+     "pairedAxes": 4,
+     "referenceAxes": 8,
+     "pairedPeopleShare": 0.6855,
+     "pairs": [
+      {
+       "runAxisId": 1,
+       "referenceAxisId": 1,
+       "sharedComments": 29,
+       "similarity": 0.6042,
+       "swapped": false
+      },
+      {
+       "runAxisId": 2,
+       "referenceAxisId": 7,
+       "sharedComments": 18,
+       "similarity": 0.5143,
+       "swapped": false
+      },
+      {
+       "runAxisId": 3,
+       "referenceAxisId": 6,
+       "sharedComments": 19,
+       "similarity": 0.76,
+       "swapped": false
+      },
+      {
+       "runAxisId": 4,
+       "referenceAxisId": 4,
+       "sharedComments": 15,
+       "similarity": 0.5357,
+       "swapped": false
+      }
+     ]
+    },
+    "usd": 0.324265,
+    "seconds": 44.116,
+    "calls": 1,
+    "promptTokens": 52998,
+    "completionTokens": 5537
+   },
+   "twoCalls": {
+    "agreement": 0.3289,
+    "precision": 0.6282,
+    "recall": 0.2227,
+    "given": 78,
+    "correct": 49,
+    "referenceStances": 220,
+    "axes": 5,
+    "pairedAxes": 5,
+    "referenceAxes": 32,
+    "pairedPeopleShare": 0.2865,
+    "pairs": [
+     {
+      "runAxisId": 1,
+      "referenceAxisId": 1,
+      "sharedComments": 19,
+      "similarity": 0.5938,
+      "swapped": false
+     },
+     {
+      "runAxisId": 2,
+      "referenceAxisId": 5,
+      "sharedComments": 5,
+      "similarity": 0.2941,
+      "swapped": false
+     },
+     {
+      "runAxisId": 3,
+      "referenceAxisId": 7,
+      "sharedComments": 9,
+      "similarity": 0.5294,
+      "swapped": false
+     },
+     {
+      "runAxisId": 4,
+      "referenceAxisId": 2,
+      "sharedComments": 9,
+      "similarity": 0.6,
+      "swapped": true
+     },
+     {
+      "runAxisId": 5,
+      "referenceAxisId": 15,
+      "sharedComments": 8,
+      "similarity": 0.8,
+      "swapped": true
+     }
+    ],
+    "stances": 105,
+    "rows": 5,
+    "axesBelowFloor": 0,
+    "multiStage": {
+     "agreement": 0.6024,
+     "precision": 0.8523,
+     "recall": 0.4658,
+     "given": 88,
+     "correct": 75,
+     "referenceStances": 161,
+     "axes": 5,
+     "pairedAxes": 4,
+     "referenceAxes": 8,
+     "pairedPeopleShare": 0.6855,
+     "pairs": [
+      {
+       "runAxisId": 1,
+       "referenceAxisId": 1,
+       "sharedComments": 25,
+       "similarity": 0.5952,
+       "swapped": false
+      },
+      {
+       "runAxisId": 2,
+       "referenceAxisId": 7,
+       "sharedComments": 18,
+       "similarity": 0.5143,
+       "swapped": false
+      },
+      {
+       "runAxisId": 3,
+       "referenceAxisId": 6,
+       "sharedComments": 19,
+       "similarity": 0.7917,
+       "swapped": false
+      },
+      {
+       "runAxisId": 4,
+       "referenceAxisId": 4,
+       "sharedComments": 13,
+       "similarity": 0.5,
+       "swapped": false
+      }
+     ]
+    },
+    "usd": 0.789057,
+    "seconds": 114.623,
+    "calls": 2,
+    "promptTokens": 126233,
+    "completionTokens": 14067
+   },
+   "measuredAt": "2026-10-05T02:58:04.922Z"
+  }
+ }
+}

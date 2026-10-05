@@ -1,0 +1,1192 @@
+{
+  "threadId": "22866284",
+  "title": "The Wolfram Physics Project",
+  "url": "https://writings.stephenwolfram.com/2020/04/finally-we-may-have-a-path-to-the-fundamental-theory-of-physics-and-its-beautiful/",
+  "roleChoices": {
+    "extraction": "luna6Low",
+    "consolidation": "sonnet55",
+    "scoring": "opus55",
+    "summary": "sol6Low"
+  },
+  "elapsedSeconds": 37,
+  "rows": [
+    {
+      "axisId": 7,
+      "statementA": "Repeated personal criticism of Wolfram is an obsession that distracts from intellectual discussion and should be discouraged.",
+      "statementB": "Criticism of Wolfram's reputation and conduct is legitimate and reasonable, and should be allowed in discussion.",
+      "authors": 19,
+      "countA": 10,
+      "countB": 9,
+      "countM": 0,
+      "countC": 0,
+      "comments": 31,
+      "commentIdsA": [
+        22868397,
+        22867564,
+        22868740,
+        22869335,
+        22868462,
+        22868702,
+        22868549,
+        22869101,
+        22868745,
+        22869384,
+        22871601,
+        22871834,
+        22876691,
+        22874935,
+        22872263
+      ],
+      "commentIdsB": [
+        22870662,
+        22951439,
+        22868123,
+        22870581,
+        22868610,
+        22869280,
+        22869256,
+        22870837,
+        22871113,
+        22871267,
+        22872843,
+        22871060,
+        22871708,
+        22872317,
+        22872389,
+        22871198
+      ],
+      "commentIdsM": [],
+      "unverifiedComments": [
+        {
+          "commentId": 22868138,
+          "pass1": "B",
+          "pass2": null
+        },
+        {
+          "commentId": 22868611,
+          "pass1": "B",
+          "pass2": null
+        },
+        {
+          "commentId": 22869582,
+          "pass1": null,
+          "pass2": "A"
+        },
+        {
+          "commentId": 22873805,
+          "pass1": "A",
+          "pass2": null
+        },
+        {
+          "commentId": 22874290,
+          "pass1": "B",
+          "pass2": null
+        },
+        {
+          "commentId": 22876482,
+          "pass1": "M",
+          "pass2": "A"
+        },
+        {
+          "commentId": 22921616,
+          "pass1": "B",
+          "pass2": null
+        }
+      ],
+      "group": "split",
+      "rank": 1
+    },
+    {
+      "axisId": 1,
+      "statementA": "The Wolfram Physics Project is a promising, worthwhile direction for fundamental physics that deserves serious attention.",
+      "statementB": "The Wolfram Physics Project is unconvincing, unsupported, or scientifically vacuous, and does not merit serious attention as a physical theory.",
+      "authors": 27,
+      "countA": 15,
+      "countB": 11,
+      "countM": 1,
+      "countC": 0,
+      "comments": 33,
+      "commentIdsA": [
+        22871662,
+        22866988,
+        22867088,
+        22867378,
+        22867564,
+        22868613,
+        22868745,
+        22873365,
+        22868896,
+        22875483,
+        22870828,
+        22872140,
+        22873067,
+        22873252,
+        22874897,
+        22879645,
+        22914912
+      ],
+      "commentIdsB": [
+        22867096,
+        22866926,
+        22867123,
+        22867177,
+        22870662,
+        22867241,
+        22867322,
+        22869155,
+        22869860,
+        22870359,
+        22868856,
+        22871990,
+        22875027,
+        22871113,
+        22877202
+      ],
+      "commentIdsM": [
+        22869485
+      ],
+      "unverifiedComments": [
+        {
+          "commentId": 22867053,
+          "pass1": "B",
+          "pass2": null
+        },
+        {
+          "commentId": 22867086,
+          "pass1": "B",
+          "pass2": null
+        },
+        {
+          "commentId": 22868452,
+          "pass1": "M",
+          "pass2": null
+        },
+        {
+          "commentId": 22868657,
+          "pass1": null,
+          "pass2": "B"
+        },
+        {
+          "commentId": 22869094,
+          "pass1": null,
+          "pass2": "B"
+        },
+        {
+          "commentId": 22869101,
+          "pass1": "A",
+          "pass2": null
+        },
+        {
+          "commentId": 22869287,
+          "pass1": "A",
+          "pass2": null
+        },
+        {
+          "commentId": 22870581,
+          "pass1": "A",
+          "pass2": null
+        },
+        {
+          "commentId": 22871970,
+          "pass1": "B",
+          "pass2": null
+        },
+        {
+          "commentId": 22872323,
+          "pass1": "M",
+          "pass2": null
+        },
+        {
+          "commentId": 22873428,
+          "pass1": "A",
+          "pass2": null
+        },
+        {
+          "commentId": 22875079,
+          "pass1": null,
+          "pass2": "M"
+        },
+        {
+          "commentId": 22876103,
+          "pass1": null,
+          "pass2": "B"
+        },
+        {
+          "commentId": 22879881,
+          "pass1": "B",
+          "pass2": null
+        }
+      ],
+      "group": "split",
+      "rank": 2
+    },
+    {
+      "axisId": 6,
+      "statementA": "Announcing the project publicly and bypassing traditional peer review is acceptable and can aid breakthroughs and feedback.",
+      "statementB": "Ideas should go through established scientific practice such as peer review and attempts at disproof before being promoted publicly.",
+      "authors": 20,
+      "countA": 11,
+      "countB": 8,
+      "countM": 1,
+      "countC": 0,
+      "comments": 24,
+      "commentIdsA": [
+        22867378,
+        22868365,
+        22868371,
+        22868401,
+        22869736,
+        22869331,
+        22870026,
+        22870158,
+        22870365,
+        22870486,
+        22870974
+      ],
+      "commentIdsB": [
+        22870662,
+        22867241,
+        22868091,
+        22868138,
+        22871551,
+        22869256,
+        22869955,
+        22870834,
+        22870547,
+        22870720,
+        22870580,
+        22871631
+      ],
+      "commentIdsM": [
+        22870400
+      ],
+      "unverifiedComments": [
+        {
+          "commentId": 22869287,
+          "pass1": null,
+          "pass2": "B"
+        },
+        {
+          "commentId": 22872317,
+          "pass1": "B",
+          "pass2": null
+        }
+      ],
+      "group": "tooFew",
+      "rank": 3
+    },
+    {
+      "axisId": 4,
+      "statementA": "The project's central ideas largely overlap with existing established work and are not fundamentally new, so presenting them as new is unjustified.",
+      "statementB": "The project's ideas are a genuine, novel contribution that lacks exact equivalents in existing work.",
+      "authors": 19,
+      "countA": 13,
+      "countB": 6,
+      "countM": 0,
+      "countC": 0,
+      "comments": 26,
+      "commentIdsA": [
+        22867096,
+        22878163,
+        22866779,
+        22867738,
+        22867157,
+        22867177,
+        22867432,
+        22867551,
+        22874466,
+        22874494,
+        22876511,
+        22867216,
+        22869155,
+        22899513,
+        22869094,
+        22871990,
+        22870549,
+        22874352,
+        22873667,
+        22875961
+      ],
+      "commentIdsB": [
+        22966845,
+        22872490,
+        22873469,
+        22870581,
+        22868357,
+        22869331
+      ],
+      "commentIdsM": [],
+      "unverifiedComments": [
+        {
+          "commentId": 22868138,
+          "pass1": null,
+          "pass2": "A"
+        },
+        {
+          "commentId": 22871665,
+          "pass1": "M",
+          "pass2": "A"
+        },
+        {
+          "commentId": 22872656,
+          "pass1": null,
+          "pass2": "A"
+        }
+      ],
+      "group": "tooFew",
+      "rank": 4
+    },
+    {
+      "axisId": 3,
+      "statementA": "The Wolfram model has not shown testable predictions, and a proposed fundamental theory must provide them to be taken seriously.",
+      "statementB": "The Wolfram model offers testable predictions, or should be judged as exploratory research that need not yet make them.",
+      "authors": 15,
+      "countA": 10,
+      "countB": 5,
+      "countM": 0,
+      "countC": 0,
+      "comments": 18,
+      "commentIdsA": [
+        22868537,
+        22867205,
+        22871970,
+        22868452,
+        22868657,
+        22871551,
+        22868611,
+        22868856,
+        22871990,
+        22875027,
+        22869596
+      ],
+      "commentIdsB": [
+        22918165,
+        22868745,
+        22868925,
+        22869274,
+        22873428,
+        22875483,
+        22914912
+      ],
+      "commentIdsM": [],
+      "unverifiedComments": [
+        {
+          "commentId": 22872154,
+          "pass1": "B",
+          "pass2": null
+        },
+        {
+          "commentId": 22873365,
+          "pass1": null,
+          "pass2": "B"
+        }
+      ],
+      "group": "tooFew",
+      "rank": 5
+    },
+    {
+      "axisId": 2,
+      "statementA": "The project is mostly hand-waving, repackaged ideas, and impressive visualizations without substantive physical results.",
+      "statementB": "The project has produced substantive physical results, such as derivations of spacetime structure and Einstein's equations.",
+      "authors": 13,
+      "countA": 8,
+      "countB": 5,
+      "countM": 0,
+      "countC": 0,
+      "comments": 16,
+      "commentIdsA": [
+        22867157,
+        22867118,
+        22867322,
+        22868657,
+        22868915,
+        22868856,
+        22869154,
+        22871146,
+        22871990,
+        22877202
+      ],
+      "commentIdsB": [
+        22868943,
+        22869204,
+        22869274,
+        22873067,
+        22879645,
+        22914912
+      ],
+      "commentIdsM": [],
+      "unverifiedComments": [
+        {
+          "commentId": 22866779,
+          "pass1": "A",
+          "pass2": null
+        },
+        {
+          "commentId": 22868613,
+          "pass1": "B",
+          "pass2": null
+        },
+        {
+          "commentId": 22868834,
+          "pass1": "B",
+          "pass2": null
+        },
+        {
+          "commentId": 22869094,
+          "pass1": "M",
+          "pass2": null
+        },
+        {
+          "commentId": 22872323,
+          "pass1": null,
+          "pass2": "A"
+        },
+        {
+          "commentId": 22873365,
+          "pass1": "B",
+          "pass2": null
+        },
+        {
+          "commentId": 22882028,
+          "pass1": "A",
+          "pass2": null
+        }
+      ],
+      "group": "tooFew",
+      "rank": 6
+    },
+    {
+      "axisId": 5,
+      "statementA": "Starting from first principles with a fresh approach can be a productive way to develop ideas, even if previously explored.",
+      "statementB": "Researchers should build on the existing literature rather than reinventing ideas.",
+      "authors": 7,
+      "countA": 5,
+      "countB": 2,
+      "countM": 0,
+      "countC": 0,
+      "comments": 9,
+      "commentIdsA": [
+        22867618,
+        22868747,
+        22869029,
+        22869331,
+        22873252
+      ],
+      "commentIdsB": [
+        22867432,
+        22867551,
+        22871806,
+        22868611
+      ],
+      "commentIdsM": [],
+      "unverifiedComments": [
+        {
+          "commentId": 22867378,
+          "pass1": null,
+          "pass2": "A"
+        },
+        {
+          "commentId": 22868401,
+          "pass1": null,
+          "pass2": "A"
+        },
+        {
+          "commentId": 22868452,
+          "pass1": null,
+          "pass2": "A"
+        },
+        {
+          "commentId": 22869101,
+          "pass1": null,
+          "pass2": "A"
+        },
+        {
+          "commentId": 22869485,
+          "pass1": null,
+          "pass2": "A"
+        },
+        {
+          "commentId": 22873365,
+          "pass1": "A",
+          "pass2": null
+        },
+        {
+          "commentId": 22875483,
+          "pass1": null,
+          "pass2": "A"
+        },
+        {
+          "commentId": 22876511,
+          "pass1": null,
+          "pass2": "B"
+        },
+        {
+          "commentId": 22876728,
+          "pass1": null,
+          "pass2": "A"
+        },
+        {
+          "commentId": 22878163,
+          "pass1": "B",
+          "pass2": null
+        }
+      ],
+      "group": "tooFew",
+      "rank": 7
+    },
+    {
+      "axisId": 8,
+      "statementA": "Apparent randomness can arise from deterministic processes.",
+      "statementB": "Physical randomness is fundamentally nondeterministic and cannot arise from a deterministic system.",
+      "authors": 4,
+      "countA": 3,
+      "countB": 1,
+      "countM": 0,
+      "countC": 0,
+      "comments": 4,
+      "commentIdsA": [
+        22869856,
+        22871282,
+        22872121
+      ],
+      "commentIdsB": [
+        22867629
+      ],
+      "commentIdsM": [],
+      "unverifiedComments": [
+        {
+          "commentId": 22872408,
+          "pass1": "A",
+          "pass2": null
+        },
+        {
+          "commentId": 22874110,
+          "pass1": "A",
+          "pass2": null
+        }
+      ],
+      "group": "tooFew",
+      "rank": 8
+    }
+  ],
+  "synthesis": {
+    "sections": [
+      {
+        "text": "The central disagreement is whether the project deserves serious attention as a possible route into fundamental physics[[axis:1:A]], or whether its claims remain too unsupported to treat it as a credible physical theory[[axis:1:B]]. Supporters see promise in exploring simple rules and an underexplored line of inquiry. Skeptics ask what the work establishes beyond an intriguing framework, with some pointing to earlier research on complexity. The divide is less about whether Wolfram is capable than about how much scientific weight to give the project now.",
+        "axisIds": [
+          1
+        ],
+        "group": "split"
+      },
+      {
+        "text": "The discussion also splits over whether repeated criticism of Wolfram personally distracts from examining the proposal and should give way to specific technical critique[[axis:7:A]], or whether his conduct and reputation are legitimate subjects of criticism[[axis:7:B]]. The first view worries that dismissive labels obscure questions about the model. The second treats claims about originality and the way the work is promoted as relevant to evaluating it. That tension shapes the conversation: a critique can address the science directly while still questioning how its claims are presented.",
+        "axisIds": [
+          7
+        ],
+        "group": "split"
+      }
+    ],
+    "caveats": []
+  },
+  "synthesisError": null,
+  "synthesisFailure": null,
+  "unverifiedAxes": [],
+  "axes": [
+    {
+      "id": 1,
+      "statementA": "The Wolfram Physics Project is a promising, worthwhile direction for fundamental physics that deserves serious attention.",
+      "statementB": "The Wolfram Physics Project is unconvincing, unsupported, or scientifically vacuous, and does not merit serious attention as a physical theory.",
+      "candidates": [
+        1,
+        8,
+        26,
+        29,
+        37,
+        41,
+        43,
+        21,
+        30,
+        40
+      ]
+    },
+    {
+      "id": 2,
+      "statementA": "The project has produced substantive physical results, such as derivations of spacetime structure and Einstein's equations.",
+      "statementB": "The project is mostly hand-waving, repackaged ideas, and impressive visualizations without substantive physical results.",
+      "candidates": [
+        3,
+        24,
+        34
+      ]
+    },
+    {
+      "id": 3,
+      "statementA": "The Wolfram model offers testable predictions, or should be judged as exploratory research that need not yet make them.",
+      "statementB": "The Wolfram model has not shown testable predictions, and a proposed fundamental theory must provide them to be taken seriously.",
+      "candidates": [
+        6,
+        20,
+        33
+      ]
+    },
+    {
+      "id": 4,
+      "statementA": "The project's central ideas largely overlap with existing established work and are not fundamentally new, so presenting them as new is unjustified.",
+      "statementB": "The project's ideas are a genuine, novel contribution that lacks exact equivalents in existing work.",
+      "candidates": [
+        2,
+        4,
+        7,
+        19
+      ]
+    },
+    {
+      "id": 5,
+      "statementA": "Researchers should build on the existing literature rather than reinventing ideas.",
+      "statementB": "Starting from first principles with a fresh approach can be a productive way to develop ideas, even if previously explored.",
+      "candidates": [
+        5
+      ]
+    },
+    {
+      "id": 6,
+      "statementA": "Announcing the project publicly and bypassing traditional peer review is acceptable and can aid breakthroughs and feedback.",
+      "statementB": "Ideas should go through established scientific practice such as peer review and attempts at disproof before being promoted publicly.",
+      "candidates": [
+        14,
+        18,
+        23,
+        25
+      ]
+    },
+    {
+      "id": 7,
+      "statementA": "Criticism of Wolfram's reputation and conduct is legitimate and reasonable, and should be allowed in discussion.",
+      "statementB": "Repeated personal criticism of Wolfram is an obsession that distracts from intellectual discussion and should be discouraged.",
+      "candidates": [
+        38,
+        39,
+        11,
+        17
+      ]
+    },
+    {
+      "id": 8,
+      "statementA": "Physical randomness is fundamentally nondeterministic and cannot arise from a deterministic system.",
+      "statementB": "Apparent randomness can arise from deterministic processes.",
+      "candidates": [
+        9,
+        42
+      ]
+    }
+  ],
+  "candidates": [
+    {
+      "statementA": "Wolfram’s physics project is an interesting and potentially useful direction of research.",
+      "statementB": "Wolfram’s physics project is mostly an unsupported or unoriginal diversion rather than a useful advance.",
+      "commentsA": [
+        22866988,
+        22867088,
+        22871662,
+        22872323
+      ],
+      "commentsB": [
+        22866779,
+        22867096,
+        22867738,
+        22866926
+      ]
+    },
+    {
+      "statementA": "Wolfram was right to treat the emergence of complexity from simple rules as a significant insight, even if he was not the first to make it.",
+      "statementB": "The idea that complexity can emerge from simple rules was already established before Wolfram, so presenting it as his discovery is not justified.",
+      "commentsA": [
+        22871662,
+        22876728
+      ],
+      "commentsB": [
+        22867096,
+        22878163
+      ]
+    },
+    {
+      "statementA": "Wolfram's account of reality is largely hand-waving rather than a substantive derivation of physics.",
+      "statementB": "Wolfram's account includes substantive derivations of spacetime structure and the Einstein field equations, not merely hand-waving.",
+      "commentsA": [
+        22867157
+      ],
+      "commentsB": [
+        22868943
+      ]
+    },
+    {
+      "statementA": "Bringing ideas from computer science into physics is unlikely to produce a new fundamental theory when those ideas are already well studied and have long been known across the fields.",
+      "statementB": "Bringing ideas from computer science into physics can produce major advances even when the ideas themselves are not new to computer science.",
+      "commentsA": [
+        22867177,
+        22867432,
+        22867551
+      ],
+      "commentsB": [
+        22867232,
+        22867473,
+        22875450
+      ]
+    },
+    {
+      "statementA": "It is generally better to learn and build on existing literature than to reinvent ideas that have already been developed.",
+      "statementB": "Starting from first principles or taking a fresh approach can be an efficient and productive way to develop ideas, even when they have been explored before.",
+      "commentsA": [
+        22867432,
+        22867551
+      ],
+      "commentsB": [
+        22867618,
+        22868747,
+        22869029
+      ]
+    },
+    {
+      "statementA": "The Wolfram model can yield useful testable predictions, even if those predictions emerge through its connection to higher-level physical theories.",
+      "statementB": "The Wolfram model has not shown how it can yield useful testable predictions or otherwise provide a clear predictive advantage.",
+      "commentsA": [
+        22918165
+      ],
+      "commentsB": [
+        22868537,
+        22867205
+      ]
+    },
+    {
+      "statementA": "The project’s central ideas substantially overlap with well-developed work in existing fields, so they are not fundamentally new.",
+      "statementB": "The project’s central ideas do not have exact equivalents in existing work, and identifying or developing them could be a genuine contribution.",
+      "commentsA": [
+        22874466,
+        22874494,
+        22876511,
+        22867241
+      ],
+      "commentsB": [
+        22873469,
+        22872490
+      ]
+    },
+    {
+      "statementA": "Wolfram’s work offers a revolutionary and potentially foundational contribution to science.",
+      "statementB": "Wolfram’s work is scientifically vacuous and does not offer a meaningful contribution to science.",
+      "commentsA": [
+        22867378,
+        22867564
+      ],
+      "commentsB": [
+        22867322,
+        22871970
+      ]
+    },
+    {
+      "statementA": "Physical randomness is fundamentally nondeterministic and cannot be produced by a deterministic computational system.",
+      "statementB": "Physical randomness can arise from deterministic processes, including processes that are unpredictable or appear random.",
+      "commentsA": [
+        22867629
+      ],
+      "commentsB": [
+        22869856,
+        22871282,
+        22872121,
+        22874389
+      ]
+    },
+    {
+      "statementA": "Theoretical physics as a whole is dead or no longer making meaningful progress.",
+      "statementB": "Theoretical physics as a whole remains active and is making meaningful progress.",
+      "commentsA": [
+        22867378
+      ],
+      "commentsB": [
+        22868027,
+        22869563
+      ]
+    },
+    {
+      "statementA": "Wolfram is able to recognize how his self-promotion affects others and chooses not to change it.",
+      "statementB": "Wolfram does not recognize how his self-promotion affects others.",
+      "commentsA": [
+        22868123,
+        22870581
+      ],
+      "commentsB": [
+        22867702,
+        22868740
+      ]
+    },
+    {
+      "statementA": "The Wolfram Physics Project is compatible with Bell's theorem.",
+      "statementB": "The Wolfram Physics Project is incompatible with Bell's theorem.",
+      "commentsA": [
+        22868834
+      ],
+      "commentsB": [
+        22867633
+      ]
+    },
+    {
+      "statementA": "The Wolfram Physics Project is a local theory.",
+      "statementB": "The Wolfram Physics Project is not a local theory.",
+      "commentsA": [
+        22867633,
+        22872968
+      ],
+      "commentsB": [
+        22870871
+      ]
+    },
+    {
+      "statementA": "Researchers should publish their physics ideas in appropriate venues and submit them to peer review.",
+      "statementB": "A researcher pursuing potentially revolutionary ideas can reasonably bypass traditional publication and peer-review processes.",
+      "commentsA": [
+        22868091
+      ],
+      "commentsB": [
+        22868365,
+        22868371
+      ]
+    },
+    {
+      "statementA": "Cellular-automaton formulations can make fundamental physical models simpler and more comprehensible than conventional mathematical formulations.",
+      "statementB": "Cellular-automaton formulations only seem simpler because they are vaguer, and expressing specific mathematical claims in them would be more complicated.",
+      "commentsA": [
+        22869189,
+        22869860
+      ],
+      "commentsB": [
+        22869553
+      ]
+    },
+    {
+      "statementA": "The physical universe may be fundamentally discrete or based on a cellular-automaton-like system.",
+      "statementB": "Assuming that the physical universe has a single, simple cellular-automaton-like foundation is arbitrary and should not be accepted without evidence.",
+      "commentsA": [
+        22868452
+      ],
+      "commentsB": [
+        22870279
+      ]
+    },
+    {
+      "statementA": "A creator’s work should be judged separately from their personality, which is irrelevant to the value of their contribution to knowledge.",
+      "statementB": "A creator’s personality and behavior should matter when judging them, even if their work is admirable.",
+      "commentsA": [
+        22868702
+      ],
+      "commentsB": [
+        22868610
+      ]
+    },
+    {
+      "statementA": "Taking an unconventional path outside established peer-review practices can help produce scientific breakthroughs.",
+      "statementB": "Scientific ideas should be tested and communicated through established scientific practices, including showing the work and trying to disprove the ideas before promoting them to a lay audience.",
+      "commentsA": [
+        22868401,
+        22869736
+      ],
+      "commentsB": [
+        22869287,
+        22871551,
+        22869256
+      ]
+    },
+    {
+      "statementA": "There is little existing theoretical mathematics addressing arbitrary iterated transformation rules on graphs.",
+      "statementB": "There is a substantial existing literature on graph transformation rules, including graph grammars.",
+      "commentsA": [
+        22868357
+      ],
+      "commentsB": [
+        22899513
+      ]
+    },
+    {
+      "statementA": "The Wolfram Physics Project offers testable predictions.",
+      "statementB": "The Wolfram Physics Project does not offer testable predictions.",
+      "commentsA": [
+        22868745,
+        22868925
+      ],
+      "commentsB": [
+        22868611
+      ]
+    },
+    {
+      "statementA": "The Wolfram Physics Project’s general structure meaningfully matches our reality.",
+      "statementB": "The Wolfram Physics Project does not yet account for key features of established physics, such as the particle hierarchy.",
+      "commentsA": [
+        22868613
+      ],
+      "commentsB": [
+        22868915
+      ]
+    },
+    {
+      "statementA": "The project’s homepage has a discussion forum.",
+      "statementB": "The project’s homepage has no discussion forum.",
+      "commentsA": [
+        22869186
+      ],
+      "commentsB": [
+        22868611
+      ]
+    },
+    {
+      "statementA": "Researchers may do better by freeing themselves from traditional scientific processes.",
+      "statementB": "Researchers should engage with the outside scientific community and its processes.",
+      "commentsA": [
+        22869331
+      ],
+      "commentsB": [
+        22868611
+      ]
+    },
+    {
+      "statementA": "The Wolfram Physics Project has produced substantive physical results rather than merely repackaging mathematical ideas and presenting them with impressive visualizations.",
+      "statementB": "The Wolfram Physics Project has not yet produced substantive physical results and mainly repackages ideas with impressive visualizations.",
+      "commentsA": [
+        22869094,
+        22869274
+      ],
+      "commentsB": [
+        22868856,
+        22869154
+      ]
+    },
+    {
+      "statementA": "Announcing the project publicly before journal peer review is complete is appropriate and can help obtain useful feedback.",
+      "statementB": "The project should not have been publicly announced with a press blitz before its results had been peer reviewed or accepted.",
+      "commentsA": [
+        22869741,
+        22870026,
+        22870158,
+        22870365,
+        22870486,
+        22870684,
+        22870974
+      ],
+      "commentsB": [
+        22869955,
+        22870400,
+        22870834,
+        22870547,
+        22870580,
+        22871631
+      ]
+    },
+    {
+      "statementA": "The Wolfram Physics Project’s computational framework reveals physics relationships that make it worthwhile to pursue as a research direction.",
+      "statementB": "The Wolfram Physics Project’s graph framework does not do enough substantive work to amount to a meaningful physical theory.",
+      "commentsA": [
+        22873365
+      ],
+      "commentsB": [
+        22871146
+      ]
+    },
+    {
+      "statementA": "A fundamental theory of the universe must posit a bottom-level base structure.",
+      "statementB": "The universe may have no bottom-level base structure.",
+      "commentsA": [
+        22873394
+      ],
+      "commentsB": [
+        22880621
+      ]
+    },
+    {
+      "statementA": "If a theory's predictions are perfectly consistent with experiment, it counts as the bottom level for practical purposes.",
+      "statementB": "Even a proposed fundamental theory cannot establish that its structure is truly the bottom rather than an event horizon.",
+      "commentsA": [
+        22882360
+      ],
+      "commentsB": [
+        22880621
+      ]
+    },
+    {
+      "statementA": "The Wolfram Physics Project is a promising and worthwhile framework for exploring how physics might emerge from computation.",
+      "statementB": "The Wolfram Physics Project is an inadequately motivated and unconvincing approach to fundamental physics.",
+      "commentsA": [
+        22870828,
+        22873428
+      ],
+      "commentsB": [
+        22871990
+      ]
+    },
+    {
+      "statementA": "The project’s flexibility is an advantage because models that recover relativity- and quantum-like effects are worth exploring even if they may not describe reality fully.",
+      "statementB": "The project’s flexibility makes its recovery of familiar physical properties unsurprising and leaves its model selection unconvincing.",
+      "commentsA": [
+        22873428
+      ],
+      "commentsB": [
+        22870828
+      ]
+    },
+    {
+      "statementA": "A fundamental theory should favor simplicity because fewer rules and parameters make it more predictive and better supported.",
+      "statementB": "A fundamental theory need not be simple or elegant to be a good account of reality.",
+      "commentsA": [
+        22873428
+      ],
+      "commentsB": [
+        22871990
+      ]
+    },
+    {
+      "statementA": "A theory of fundamental physics should explain what executes its underlying computational rules.",
+      "statementB": "A theory can be useful without explaining the underlying mechanism that makes its rules operate.",
+      "commentsA": [
+        22871990
+      ],
+      "commentsB": [
+        22873428
+      ]
+    },
+    {
+      "statementA": "The project should be judged as exploratory research rather than as a fully established theory that already must make testable predictions.",
+      "statementB": "A proposed theory of fundamental physics must make testable predictions now to be taken seriously.",
+      "commentsA": [
+        22873428
+      ],
+      "commentsB": [
+        22871990
+      ]
+    },
+    {
+      "statementA": "Gorard’s papers explain the project’s ideas clearly and appear reasonable.",
+      "statementB": "Gorard’s papers have not demonstrated enough to merit confidence in their ideas.",
+      "commentsA": [
+        22870828
+      ],
+      "commentsB": []
+    },
+    {
+      "statementA": "Our universe is likely generated by a simple, short formal program or rule.",
+      "statementB": "There is no good reason to assume that our universe is generated by a simple, short formal program or rule.",
+      "commentsA": [
+        22875483
+      ],
+      "commentsB": [
+        22875027
+      ]
+    },
+    {
+      "statementA": "There is a specific fundamental rule or theory that is correct for our universe.",
+      "statementB": "There can be multiple useful, valid ways to model the universe, with no single exclusive fundamental theory that is correct for it.",
+      "commentsA": [
+        22869714
+      ],
+      "commentsB": [
+        22869222,
+        22870085
+      ]
+    },
+    {
+      "statementA": "The project merits serious attention even without testable results yet, because it may lead to testable results or useful insights.",
+      "statementB": "Without testable predictions or another compelling reason, the project does not merit serious attention or exploration.",
+      "commentsA": [
+        22875483
+      ],
+      "commentsB": [
+        22875027
+      ]
+    },
+    {
+      "statementA": "HN should allow discussion of Wolfram's reputation and criticism because suppressing it leaves readers with a misleading or incomplete picture.",
+      "statementB": "HN should discourage repetitive personal criticism of Wolfram because it distracts from intellectual discussion.",
+      "commentsA": [
+        22870837,
+        22871113,
+        22871267,
+        22872843,
+        22871198
+      ],
+      "commentsB": [
+        22869384,
+        22871601
+      ]
+    },
+    {
+      "statementA": "The criticism of Wolfram is a reasonable response to his conduct and claims, not a collective obsession that mirrors his self-obsession.",
+      "statementB": "The community's fixation on Wolfram becomes an obsession that mirrors the behavior it condemns.",
+      "commentsA": [
+        22871060,
+        22871708,
+        22872317,
+        22872389
+      ],
+      "commentsB": [
+        22871834
+      ]
+    },
+    {
+      "statementA": "Wolfram's ideas deserve positive attention on their merits.",
+      "statementB": "Wolfram's theories get traction mainly because of his fame, rather than because their merits warrant it.",
+      "commentsA": [
+        22871267
+      ],
+      "commentsB": [
+        22871113
+      ]
+    },
+    {
+      "statementA": "Wolfram’s hypergraph-rewriting framework is a promising way to derive features of quantum mechanics and general relativity.",
+      "statementB": "Wolfram’s framework is unlikely to produce useful physical results because its possible rules are untestable or lack a convincing motivation.",
+      "commentsA": [
+        22872140,
+        22873067
+      ],
+      "commentsB": [
+        22869596,
+        22872408,
+        22872656
+      ]
+    },
+    {
+      "statementA": "Wolfram’s framework is nondeterministic, with rule applications branching into different possible outcomes.",
+      "statementB": "Wolfram’s framework is deterministic because every possible sequence of rule applications happens separately.",
+      "commentsA": [
+        22871665
+      ],
+      "commentsB": [
+        22874110
+      ]
+    },
+    {
+      "statementA": "The Wolfram Physics Project is a worthwhile and scientifically promising approach to fundamental physics.",
+      "statementB": "The Wolfram Physics Project is not a credible or worthwhile scientific approach to fundamental physics.",
+      "commentsA": [
+        22873252,
+        22874897,
+        22879645
+      ],
+      "commentsB": [
+        22877202
+      ]
+    }
+  ],
+  "cost": 1.0826739400000003,
+  "calls": 53,
+  "warnings": [],
+  "stats": {
+    "comments": 323,
+    "authors": 184,
+    "cachedCalls": 0,
+    "cachedCost": 0,
+    "cacheWriteFailures": 0,
+    "axesBelowFloor": 0,
+    "classifiedPairs": 208,
+    "reviewedPairs": 163,
+    "conflictingStances": 2,
+    "singlePassStances": 45,
+    "agreedStances": 161
+  }
+}

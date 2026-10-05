@@ -49,7 +49,7 @@ function graded({ precision, recall }) {
     return { agreement: rounded(lib.agreementOf(precision, recall)), precision: rounded(precision), recall: rounded(recall) };
 }
 
-// The measured cost and time of the role's own calls.
+// The measured cost and latency of the role's own calls.
 function measured(meter, role) {
     const stage = meter.stage(ROLE_STAGE[role]);
     return { usd: stage.usd, calls: stage.calls, failedCalls: stage.failedCalls, meanCallSeconds: rounded(stage.meanCallSeconds),
@@ -165,9 +165,9 @@ function writeReadmeTables() {
                 const cells = page.pickerCells(role, key);
                 const result = page.benchmarkResult(role, key);
                 const graded = result !== undefined && !result.failed;
-                return `| ${cells.model} | ${cells.effort} | ${cells.cost} | ${cells.time} | ${cells.agreement} | ${graded ? percent(result.precision) : ''} | ${graded ? percent(result.recall) : ''} |`;
+                return `| ${cells.model} | ${cells.effort} | ${cells.cost} | ${cells.latency} | ${cells.agreement} | ${graded ? percent(result.precision) : ''} | ${graded ? percent(result.recall) : ''} |`;
             });
-        return [`### ${role[0].toUpperCase()}${role.slice(1)}`, '', `| Model | Reasoning effort | Cost / ${page.PICKER_COMMENTS} comments | Time / ${page.PICKER_COMMENTS} comments | Agreement with silver | Precision | Recall |`,
+        return [`### ${role[0].toUpperCase()}${role.slice(1)}`, '', `| Model | Reasoning effort | Cost / ${page.PICKER_COMMENTS} comments | Latency / ${page.PICKER_COMMENTS} comments | Agreement with silver | Precision | Recall |`,
             '| --- | --- | ---: | ---: | ---: | ---: | ---: |', ...rows].join('\n');
     });
     const readme = fs.readFileSync(README_PATH, 'utf8');

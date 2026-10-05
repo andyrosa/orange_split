@@ -24,8 +24,8 @@ const SILVER_MODELS = Object.freeze([
 const SILVER_MAX_TOKENS = Object.freeze({ Extract: 64000, Consolidate: 128000, Score: 64000, Synthesize: 32000 });
 const JUDGE_MAX_TOKENS = 64000;
 
-// A stage handler is MODEL (send the call to the configured model) or a function that returns the fixed
-// response JSON for the call.
+// A stage handler is MODEL (send every call of the stage to the configured model) or a function that returns
+// the fixed response JSON for the call, or MODEL to send that one call to the configured model.
 const MODEL = Symbol('model');
 
 function readArgument(name) {
@@ -133,12 +133,12 @@ function makeMeter() {
                 throw error;
             }
         },
-        // The measured totals of one stage: dollars, calls, and the mean and longest call time.
+        // The measured totals of one stage: dollars, calls, and the mean and longest call latency.
         stage(stageKey) {
             const stageCalls = calls.filter(call => call.stage === stageKey);
-            // A successful call always has its time; a failed call has it unless an earlier version stored it.
+            // A successful call always has its latency; a failed call has it unless an earlier version stored it.
             const untimed = stageCalls.filter(call => call.seconds === null);
-            if (untimed.some(call => !call.failed)) throw new Error(`${untimed.length} ${stageKey} calls have no recorded time`);
+            if (untimed.some(call => !call.failed)) throw new Error(`${untimed.length} ${stageKey} calls have no recorded latency`);
             const timed = stageCalls.filter(call => call.seconds !== null).map(call => call.seconds);
             const sum = values => values.reduce((total, value) => total + value, 0);
             return {
@@ -157,13 +157,14 @@ function makeMeter() {
 const FIXED_USAGE = Object.freeze({ promptTokens: 0, completionTokens: 0, cost: 0 });
 
 // Runs the page pipeline on the thread. handlers maps each stage key (extract, consolidate, score,
-// synthesize) to MODEL or to a function returning that call's fixed response.
+// synthesize) to MODEL or to a function returning that call's fixed response, or MODEL for that call.
 async function runStages({ thread, config, handlers, modelCallChat, label }) {
     const callChat = async call => {
         const handler = handlers[call.stage];
         if (handler === undefined) throw new Error(`${label}: no handler for stage ${call.stage}`);
-        if (handler === MODEL) return modelCallChat(call);
-        return { json: handler(call), usage: FIXED_USAGE };
+        const fixed = handler === MODEL ? MODEL : handler(call);
+        if (fixed === MODEL) return modelCallChat(call);
+        return { json: fixed, usage: FIXED_USAGE };
     };
     let lastLine = '';
     return core.runPipeline({
